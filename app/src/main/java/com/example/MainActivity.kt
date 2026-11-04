@@ -13,10 +13,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,20 +29,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.data.model.MediaItem
 import com.example.data.model.MediaRepository
 import com.example.ui.components.NavDestination
 import com.example.ui.components.SearchOverlay
-import com.example.ui.components.SubscribeModalSheet
+import com.example.ui.components.SettingsModalSheet
 import com.example.ui.components.VideoPlayerSheet
 import com.example.ui.components.VideoPulseBottomBar
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.LiveTVScreen
 import com.example.ui.screens.MySpaceScreen
 import com.example.ui.screens.ShortsScreen
-import com.example.ui.theme.Charcoal950
+import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -48,31 +53,50 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
-                VideoPulseApp()
+            var currentThemeMode by remember { mutableStateOf(ThemeMode.DARK) }
+            var currentLanguage by remember { mutableStateOf(AppLanguage.ARABIC) }
+
+            MyApplicationTheme(themeMode = currentThemeMode) {
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides (if (currentLanguage.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr)
+                ) {
+                    VideoPulseApp(
+                        currentThemeMode = currentThemeMode,
+                        onThemeModeChange = { currentThemeMode = it },
+                        currentLanguage = currentLanguage,
+                        onLanguageChange = { currentLanguage = it }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-fun VideoPulseApp() {
+fun VideoPulseApp(
+    currentThemeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    currentLanguage: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit
+) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
-    var isSubscribeSheetOpen by remember { mutableStateOf(false) }
+    var isSettingsSheetOpen by remember { mutableStateOf(false) }
     var isSearchOverlayOpen by remember { mutableStateOf(false) }
+
+    val isArabic = currentLanguage == AppLanguage.ARABIC
 
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isSearchOverlayOpen || isSubscribeSheetOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isSearchOverlayOpen || isSettingsSheetOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
             isSearchOverlayOpen -> isSearchOverlayOpen = false
-            isSubscribeSheetOpen -> isSubscribeSheetOpen = false
+            isSettingsSheetOpen -> isSettingsSheetOpen = false
             activePlayerMedia != null -> activePlayerMedia = null
             currentDestination != NavDestination.HOME -> currentDestination = NavDestination.HOME
         }
@@ -81,11 +105,11 @@ fun VideoPulseApp() {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Charcoal950)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            containerColor = Charcoal950,
+            containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 // Fixed bottom bar with glowing active indicators for Home, Live TV, Shorts, My Space
                 VideoPulseBottomBar(
@@ -101,7 +125,7 @@ fun VideoPulseApp() {
                     .fillMaxSize()
                     .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
-                // Tab Transitions with 120fps smooth animated content
+                // Tab Transitions with smooth animated content
                 AnimatedContent(
                     targetState = currentDestination,
                     transitionSpec = {
@@ -115,17 +139,20 @@ fun VideoPulseApp() {
                                 onMediaClick = { media ->
                                     activePlayerMedia = media
                                 },
-                                onOpenSubscribe = {
-                                    isSubscribeSheetOpen = true
+                                onOpenSettings = {
+                                    isSettingsSheetOpen = true
                                 },
                                 onOpenSearch = {
                                     isSearchOverlayOpen = true
                                 },
                                 onOpenNotifications = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar("No new notifications")
+                                        snackbarHostState.showSnackbar(
+                                            if (isArabic) "لا توجد إشعارات جديدة" else "No new notifications"
+                                        )
                                     }
-                                }
+                                },
+                                isArabic = isArabic
                             )
                         }
 
@@ -161,7 +188,7 @@ fun VideoPulseApp() {
                                     activePlayerMedia = media
                                 },
                                 onOpenSubscribe = {
-                                    isSubscribeSheetOpen = true
+                                    isSettingsSheetOpen = true
                                 }
                             )
                         }
@@ -199,16 +226,15 @@ fun VideoPulseApp() {
             }
         )
 
-        // VIP Subscribe Modal Sheet
-        SubscribeModalSheet(
-            isOpen = isSubscribeSheetOpen,
+        // Settings Modal Sheet (Language, Theme Mode, Developer Info)
+        SettingsModalSheet(
+            isOpen = isSettingsSheetOpen,
+            currentThemeMode = currentThemeMode,
+            onThemeModeChange = onThemeModeChange,
+            currentLanguage = currentLanguage,
+            onLanguageChange = onLanguageChange,
             onDismiss = {
-                isSubscribeSheetOpen = false
-            },
-            onSubscriptionSuccess = {
-                scope.launch {
-                    snackbarHostState.showSnackbar("Welcome to Video Pulse VIP!")
-                }
+                isSettingsSheetOpen = false
             }
         )
 

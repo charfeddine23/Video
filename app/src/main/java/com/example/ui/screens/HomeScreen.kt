@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -40,9 +41,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     onMediaClick: (MediaItem) -> Unit,
-    onOpenSubscribe: () -> Unit,
+    onOpenSettings: () -> Unit,
     onOpenSearch: () -> Unit,
     onOpenNotifications: () -> Unit,
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
@@ -61,7 +63,7 @@ fun HomeScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Charcoal950)
+            .background(MaterialTheme.colorScheme.background)
             .testTag("home_screen")
     ) {
         LazyColumn(
@@ -69,12 +71,13 @@ fun HomeScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 120.dp) // Generous space so floating pill doesn't obscure content
         ) {
-            // Requirement 1: Header with Subscribe pill on top-left and Search on top-right
+            // Header with Settings button on top-left and Search on top-right
             item(key = "header") {
                 VideoPulseHeader(
-                    onSubscribeClick = onOpenSubscribe,
+                    onSettingsClick = onOpenSettings,
                     onSearchClick = onOpenSearch,
-                    onNotificationsClick = onOpenNotifications
+                    onNotificationsClick = onOpenNotifications,
+                    isArabic = isArabic
                 )
             }
 

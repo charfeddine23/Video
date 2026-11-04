@@ -23,7 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -43,19 +42,17 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.Charcoal900
-import com.example.ui.theme.Charcoal950
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
 import com.example.ui.theme.TextPrimary
 
 @Composable
 fun VideoPulseHeader(
-    onSubscribeClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     onSearchClick: () -> Unit,
     onNotificationsClick: () -> Unit = {},
+    isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -84,33 +81,33 @@ fun VideoPulseHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Requirement 1: Pill-shaped "Subscribe" button with a white background and dark text on the top left
+            // Replaced Subscribe button with Settings button on top left
             Surface(
                 modifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
                     .clickable {
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSubscribeClick()
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onSettingsClick()
                     }
-                    .testTag("header_subscribe_button"),
+                    .testTag("header_settings_button"),
                 shape = RoundedCornerShape(24.dp),
                 color = Color.White,
                 shadowElevation = 6.dp
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "VIP Subscribe",
-                        tint = Color(0xFFFF9800),
-                        modifier = Modifier.size(15.dp)
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = TextDark,
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Subscribe",
+                        text = if (isArabic) "الإعدادات" else "Settings",
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = TextDark,
@@ -146,14 +143,14 @@ fun VideoPulseHeader(
                     text = "VIDEO PULSE",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary,
+                        color = MaterialTheme.colorScheme.onBackground,
                         letterSpacing = 2.sp,
                         fontSize = 14.sp
                     )
                 )
             }
 
-            // Requirement 1: Clean search icon on the top right
+            // Clean search icon & notifications on the top right
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -174,7 +171,7 @@ fun VideoPulseHeader(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search movies and shows",
-                        tint = TextPrimary,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -195,7 +192,7 @@ fun VideoPulseHeader(
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Notifications",
-                        tint = TextPrimary,
+                        tint = MaterialTheme.colorScheme.onBackground,
                         modifier = Modifier.size(18.dp)
                     )
                 }

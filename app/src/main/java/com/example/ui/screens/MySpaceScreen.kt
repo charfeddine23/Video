@@ -554,6 +554,40 @@ fun MySpaceScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
+                                text = "Developer",
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 11.sp)
+                            )
+                            Text(
+                                text = "Developed by: Charfeddine Ka",
+                                style = MaterialTheme.typography.bodySmall.copy(color = PulseCyan, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Last Updated",
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 11.sp)
+                            )
+                            Text(
+                                text = "November 4, 2026",
+                                style = MaterialTheme.typography.bodySmall.copy(color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
                                 text = "Package ID",
                                 style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 11.sp)
                             )
