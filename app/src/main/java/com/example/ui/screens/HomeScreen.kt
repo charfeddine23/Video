@@ -32,6 +32,7 @@ import com.example.data.model.MediaItem
 import com.example.data.model.MediaRepository
 import com.example.ui.components.FloatingFilterTabs
 import com.example.ui.components.HeroSpotlightCard
+import com.example.ui.components.LocalVideosSheet
 import com.example.ui.components.MediaRowSection
 import com.example.ui.components.VideoPulseHeader
 import com.example.ui.theme.Charcoal900
@@ -51,7 +52,8 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var selectedCategory by remember { mutableStateOf("TV Shows") }
+    var selectedCategory by remember { mutableStateOf("Videos") }
+    var isLocalVideosSheetOpen by remember { mutableStateOf(false) }
     val myListIds = remember { mutableStateListOf<String>() }
 
     val hero = MediaRepository.heroItem
@@ -157,13 +159,33 @@ fun HomeScreen(
             selectedCategory = selectedCategory,
             onCategorySelected = { cat ->
                 selectedCategory = cat
+                if (cat == "Videos") {
+                    isLocalVideosSheetOpen = true
+                }
                 scope.launch {
-                    snackbarHostState.showSnackbar("Filtered by: $cat")
+                    snackbarHostState.showSnackbar(
+                        if (cat == "Videos") {
+                            if (isArabic) "الفيديوهات الموجودة في الجهاز محلياً" else "Device Local Videos"
+                        } else {
+                            "Filtered by: $cat"
+                        }
+                    )
                 }
             },
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 68.dp) // Floats comfortably right above the fixed bottom navigation bar
+        )
+
+        // Local Device Videos Modal Sheet
+        LocalVideosSheet(
+            isOpen = isLocalVideosSheetOpen,
+            isArabic = isArabic,
+            onDismiss = { isLocalVideosSheetOpen = false },
+            onPlayVideo = { media ->
+                isLocalVideosSheetOpen = false
+                onMediaClick(media)
+            }
         )
 
         // Feedback Snackbar

@@ -300,5 +300,56 @@ object MediaRepository {
         )
     )
 
-    val categories = listOf("TV Shows", "Movies", "Listen", "Sports", "Watch for Free")
+    val categories = listOf("Videos", "Movies", "Listen", "Sports", "Watch for Free")
+
+    val defaultLocalVideos = listOf(
+        LocalDeviceVideo(
+            id = "loc_1",
+            title = "El_Sitt_Oumour_S01E01_4K.mp4",
+            durationText = "48:12",
+            sizeText = "1.24 GB",
+            resolutionText = "4K Ultra HD",
+            dateAddedText = "Downloaded Today",
+            thumbnailRes = R.drawable.img_hero_poster
+        ),
+        LocalDeviceVideo(
+            id = "loc_2",
+            title = "Cyber_Pulse_Teaser_Final.mp4",
+            durationText = "03:45",
+            sizeText = "182 MB",
+            resolutionText = "1080p 60fps",
+            dateAddedText = "Yesterday",
+            thumbnailRes = R.drawable.img_poster_cyberpunk
+        ),
+        LocalDeviceVideo(
+            id = "loc_3",
+            title = "Shadow_Protocol_Action_Scene.mp4",
+            durationText = "12:30",
+            sizeText = "420 MB",
+            resolutionText = "4K HDR",
+            dateAddedText = "2 days ago",
+            thumbnailRes = R.drawable.img_poster_action
+        ),
+        LocalDeviceVideo(
+            id = "loc_4",
+            title = "Camera_Video_20261104.mp4",
+            durationText = "01:15",
+            sizeText = "68 MB",
+            resolutionText = "1080p FHD",
+            dateAddedText = "Device Storage",
+            thumbnailRes = R.drawable.img_hero_poster
+        )
+    )
 }
+
+data class LocalDeviceVideo(
+    val id: String,
+    val title: String,
+    val durationText: String,
+    val sizeText: String,
+    val resolutionText: String = "1080p FHD",
+    val dateAddedText: String = "Today",
+    val uriString: String? = null,
+    val thumbnailRes: Int = R.drawable.img_hero_poster,
+    val isFromGallery: Boolean = false
+)
