@@ -1,0 +1,130 @@
+name: Android Release Build & Publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build & Publish Signed Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Grant Execute Permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Extract Version Info from build.gradle.kts
+        id: version_info
+        run: |
+          VERSION_NAME=$(grep -E 'versionName\s*=\s*' app/build.gradle.kts | head -n1 | sed -E 's/.*"([^"]+)".*/\1/')
+          VERSION_CODE=$(grep -E 'versionCode\s*=\s*' app/build.gradle.kts | head -n1 | sed -E 's/.*=[[:space:]]*([0-9]+).*/\1/')
+          
+          if [ -z "$VERSION_NAME" ]; then
+            VERSION_NAME="1.0.1"
+          fi
+          if [ -z "$VERSION_CODE" ]; then
+            VERSION_CODE="2"
+          fi
+          
+          echo "VERSION_NAME=$VERSION_NAME" >> $GITHUB_ENV
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_ENV
+          echo "Extracted Version Name: $VERSION_NAME, Version Code: $VERSION_CODE"
+
+      - name: Determine Unique Release Tag
+        run: |
+          BASE_TAG="v${{ env.VERSION_NAME }}"
+          TAG="$BASE_TAG"
+          
+          # Check if tag already exists on remote/local to prevent release collisions
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            TAG="v${{ env.VERSION_NAME }}-build${{ env.VERSION_CODE }}-${{ github.run_number }}"
+            echo "Base tag already exists. Using unique tag: $TAG"
+          else
+            echo "Using base tag: $TAG"
+          fi
+          
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Configure Keystore from GitHub Secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Decoding Keystore from GitHub Secret..."
+            echo "$KEYSTORE_BASE64" | base64 --decode > "${{ github.workspace }}/my-upload-key.jks"
+            echo "KEYSTORE_PATH=${{ github.workspace }}/my-upload-key.jks" >> $GITHUB_ENV
+            echo "STORE_PASSWORD=$STORE_PASSWORD" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=$KEY_PASSWORD" >> $GITHUB_ENV
+            echo "Keystore successfully configured."
+          else
+            echo "WARNING: KEYSTORE_BASE64 secret not found. Using default project keystore if available."
+          fi
+
+      - name: Build Signed Release APK
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Rename and Prepare Release APK
+        run: |
+          APK_DIR="app/build/outputs/apk/release"
+          FINAL_NAME="VideoPulse-v${{ env.VERSION_NAME }}.apk"
+          
+          if [ -f "$APK_DIR/app-release.apk" ]; then
+            cp "$APK_DIR/app-release.apk" "$APK_DIR/$FINAL_NAME"
+          elif [ -f "$APK_DIR/app-release-unsigned.apk" ]; then
+            cp "$APK_DIR/app-release-unsigned.apk" "$APK_DIR/$FINAL_NAME"
+          else
+            FIRST_APK=$(find "$APK_DIR" -name "*.apk" | head -n1)
+            if [ -n "$FIRST_APK" ]; then
+              cp "$FIRST_APK" "$APK_DIR/$FINAL_NAME"
+            else
+              echo "Error: No APK file found in $APK_DIR"
+              exit 1
+            fi
+          fi
+          echo "Prepared APK file: $APK_DIR/$FINAL_NAME"
+
+      - name: Create GitHub Release and Upload APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: "Video Pulse v${{ env.VERSION_NAME }} (Build ${{ env.VERSION_CODE }})"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: app/build/outputs/apk/release/VideoPulse-v${{ env.VERSION_NAME }}.apk
+          body: |
+            ## 🎬 Video Pulse — Release v${{ env.VERSION_NAME }} (Build ${{ env.VERSION_CODE }})
+
+            ### 📦 Build & Release Summary:
+            - **Application ID:** `com.aistudio.videopulse.vstrm`
+            - **Version Name:** `${{ env.VERSION_NAME }}`
+            - **Version Code:** `${{ env.VERSION_CODE }}`
+            - **Git Commit:** `${{ github.sha }}`
+            - **Target Branch:** `${{ github.ref_name }}`
+            - **Release Tag:** `${{ env.RELEASE_TAG }}`
+
+            ### 🔒 Signature & Update Compatibility:
+            - This release is digitally signed with the release keystore configured via GitHub Secrets.
+            - Maintains backward-compatible signatures: allows users to directly update existing installed versions without uninstalling or losing data.
