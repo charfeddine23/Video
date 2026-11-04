@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Card
@@ -82,6 +84,7 @@ fun SettingsModalSheet(
     onThemeModeChange: (ThemeMode) -> Unit,
     currentLanguage: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
+    onCheckForUpdates: () -> Unit = {},
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -427,6 +430,36 @@ fun SettingsModalSheet(
                                 fontWeight = FontWeight.Medium
                             )
                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onCheckForUpdates()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = TextDark, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isArabic) "التحقق من وجود تحديثات" else "Check for Updates",
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextDark
+                                )
+                            )
+                        }
                     }
                 }
             }

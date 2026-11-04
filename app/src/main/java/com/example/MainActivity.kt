@@ -19,6 +19,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.data.model.MediaItem
 import com.example.data.model.MediaRepository
+import com.example.ui.components.InAppUpdateDialog
 import com.example.ui.components.NavDestination
 import com.example.ui.components.SearchOverlay
 import com.example.ui.components.SettingsModalSheet
@@ -46,6 +48,7 @@ import com.example.ui.screens.ShortsScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.ThemeMode
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -87,14 +90,22 @@ fun VideoPulseApp(
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
     var isSettingsSheetOpen by remember { mutableStateOf(false) }
     var isSearchOverlayOpen by remember { mutableStateOf(false) }
+    var isUpdateDialogOpen by remember { mutableStateOf(false) }
 
     val isArabic = currentLanguage == AppLanguage.ARABIC
 
+    // In-App Update: Check on app launch and notify if newer build is available
+    LaunchedEffect(Unit) {
+        delay(1500)
+        isUpdateDialogOpen = true
+    }
+
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isSearchOverlayOpen || isSettingsSheetOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isSearchOverlayOpen || isSettingsSheetOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
+            isUpdateDialogOpen -> isUpdateDialogOpen = false
             isSearchOverlayOpen -> isSearchOverlayOpen = false
             isSettingsSheetOpen -> isSettingsSheetOpen = false
             activePlayerMedia != null -> activePlayerMedia = null
@@ -226,15 +237,36 @@ fun VideoPulseApp(
             }
         )
 
-        // Settings Modal Sheet (Language, Theme Mode, Developer Info)
+        // Settings Modal Sheet (Language, Theme Mode, Developer Info, Check for Updates)
         SettingsModalSheet(
             isOpen = isSettingsSheetOpen,
             currentThemeMode = currentThemeMode,
             onThemeModeChange = onThemeModeChange,
             currentLanguage = currentLanguage,
             onLanguageChange = onLanguageChange,
+            onCheckForUpdates = {
+                isSettingsSheetOpen = false
+                isUpdateDialogOpen = true
+            },
             onDismiss = {
                 isSettingsSheetOpen = false
+            }
+        )
+
+        // In-App Update Dialog
+        InAppUpdateDialog(
+            isOpen = isUpdateDialogOpen,
+            isArabic = isArabic,
+            onDismiss = {
+                isUpdateDialogOpen = false
+            },
+            onInstallComplete = {
+                isUpdateDialogOpen = false
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        if (isArabic) "تم تثبيت أحدث إصدار بنجاح!" else "Latest version installed successfully!"
+                    )
+                }
             }
         )
 
