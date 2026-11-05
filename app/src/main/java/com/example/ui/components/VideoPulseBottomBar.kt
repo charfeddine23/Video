@@ -23,13 +23,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircleOutline
+import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,7 +65,7 @@ enum class NavDestination(
     val unselectedIcon: ImageVector
 ) {
     HOME("Home", Icons.Filled.Home, Icons.Outlined.Home),
-    LIVE_TV("Live TV", Icons.Filled.LiveTv, Icons.Outlined.LiveTv),
+    VIDEOS("Videos", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary),
     SHORTS("Shorts", Icons.Filled.PlayCircleOutline, Icons.Outlined.PlayCircle),
     MY_SPACE("My Space", Icons.Filled.Person, Icons.Outlined.Person)
 }

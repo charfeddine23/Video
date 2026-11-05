@@ -21,6 +21,7 @@ data class MediaItem(
     val backdropRes: Int = R.drawable.img_hero_poster,
     val progress: Float = 0f, // For "Continue Watching"
     val isFeatured: Boolean = false,
+    val uriString: String? = null,
     val episodes: List<Episode> = emptyList()
 )
 

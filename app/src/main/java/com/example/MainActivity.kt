@@ -20,6 +20,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,21 +34,24 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.MediaItem
 import com.example.data.model.MediaRepository
+import com.example.ui.components.ExoVideoPlayer
 import com.example.ui.components.InAppUpdateDialog
 import com.example.ui.components.NavDestination
 import com.example.ui.components.SearchOverlay
 import com.example.ui.components.SettingsModalSheet
-import com.example.ui.components.VideoPlayerSheet
 import com.example.ui.components.VideoPulseBottomBar
+import com.example.ui.screens.DeviceVideosScreen
 import com.example.ui.screens.HomeScreen
-import com.example.ui.screens.LiveTVScreen
+import com.example.ui.screens.MilestoneRoadmapScreen
 import com.example.ui.screens.MySpaceScreen
 import com.example.ui.screens.ShortsScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.ThemeMode
+import com.example.ui.viewmodel.StreakViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -80,17 +84,21 @@ fun VideoPulseApp(
     currentThemeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     currentLanguage: AppLanguage,
-    onLanguageChange: (AppLanguage) -> Unit
+    onLanguageChange: (AppLanguage) -> Unit,
+    streakViewModel: StreakViewModel = viewModel()
 ) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val streakState by streakViewModel.uiState.collectAsState()
 
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
     var isSettingsSheetOpen by remember { mutableStateOf(false) }
     var isSearchOverlayOpen by remember { mutableStateOf(false) }
     var isUpdateDialogOpen by remember { mutableStateOf(false) }
+    var isRoadmapOpen by remember { mutableStateOf(false) }
 
     val isArabic = currentLanguage == AppLanguage.ARABIC
 
@@ -102,13 +110,14 @@ fun VideoPulseApp(
 
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isSearchOverlayOpen || isSettingsSheetOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isRoadmapOpen || isSearchOverlayOpen || isSettingsSheetOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
+            isRoadmapOpen -> isRoadmapOpen = false
+            activePlayerMedia != null -> activePlayerMedia = null
             isUpdateDialogOpen -> isUpdateDialogOpen = false
             isSearchOverlayOpen -> isSearchOverlayOpen = false
             isSettingsSheetOpen -> isSettingsSheetOpen = false
-            activePlayerMedia != null -> activePlayerMedia = null
             currentDestination != NavDestination.HOME -> currentDestination = NavDestination.HOME
         }
     }
@@ -122,7 +131,7 @@ fun VideoPulseApp(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
-                // Fixed bottom bar with glowing active indicators for Home, Live TV, Shorts, My Space
+                // Fixed bottom bar with Home, Videos (all device videos), Shorts, My Space
                 VideoPulseBottomBar(
                     currentDestination = currentDestination,
                     onDestinationSelected = { dest ->
@@ -147,6 +156,7 @@ fun VideoPulseApp(
                     when (destination) {
                         NavDestination.HOME -> {
                             HomeScreen(
+                                streakViewModel = streakViewModel,
                                 onMediaClick = { media ->
                                     activePlayerMedia = media
                                 },
@@ -163,29 +173,23 @@ fun VideoPulseApp(
                                         )
                                     }
                                 },
+                                onNavigateToRoadmap = {
+                                    isRoadmapOpen = true
+                                },
+                                onOpenVideosScreen = {
+                                    currentDestination = NavDestination.VIDEOS
+                                },
                                 isArabic = isArabic
                             )
                         }
 
-                        NavDestination.LIVE_TV -> {
-                            LiveTVScreen(
-                                onChannelClick = { channel ->
-                                    activePlayerMedia = MediaItem(
-                                        id = channel.id,
-                                        title = channel.channelName,
-                                        titleArabic = channel.currentShow,
-                                        subtitleBadge = "LIVE STREAM",
-                                        episodesFreeBadge = "Broadcast HD",
-                                        year = "2026",
-                                        seasonsOrDuration = "Live On-Air",
-                                        maturityRating = "All Ages",
-                                        qualityTag = "Ultra HD 60fps",
-                                        genresText = "Live Broadcast | ${channel.category}",
-                                        description = "Streaming live now: ${channel.currentShow}. Multi-audio track and interactive stream statistics available.",
-                                        posterRes = R.drawable.img_hero_poster,
-                                        backdropRes = R.drawable.img_hero_poster
-                                    )
-                                }
+                        NavDestination.VIDEOS -> {
+                            // User request: "live TV بدلها سميها videos ويجي فيها كل فيديوهات الجهاز"
+                            DeviceVideosScreen(
+                                onPlayVideo = { media ->
+                                    activePlayerMedia = media
+                                },
+                                isArabic = isArabic
                             )
                         }
 
@@ -206,6 +210,19 @@ fun VideoPulseApp(
                     }
                 }
             }
+        }
+
+        // Fullscreen Milestone Roadmap Screen (Triggered by 1-second long-press on flame)
+        if (isRoadmapOpen) {
+            MilestoneRoadmapScreen(
+                streakViewModel = streakViewModel,
+                streakDays = streakState.streakDays,
+                shieldsCount = streakState.shieldsCount,
+                onBack = {
+                    isRoadmapOpen = false
+                },
+                isArabic = isArabic
+            )
         }
 
         // Search Overlay
@@ -229,13 +246,16 @@ fun VideoPulseApp(
             )
         }
 
-        // Video Player Modal Sheet
-        VideoPlayerSheet(
-            mediaItem = activePlayerMedia,
-            onDismiss = {
-                activePlayerMedia = null
-            }
-        )
+        // Full-screen ExoPlayer playback component for local and streaming media
+        if (activePlayerMedia != null) {
+            ExoVideoPlayer(
+                mediaItem = activePlayerMedia!!,
+                streakViewModel = streakViewModel,
+                onClose = {
+                    activePlayerMedia = null
+                }
+            )
+        }
 
         // Settings Modal Sheet (Language, Theme Mode, Developer Info, Check for Updates)
         SettingsModalSheet(
