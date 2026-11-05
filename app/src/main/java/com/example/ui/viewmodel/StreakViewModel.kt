@@ -188,6 +188,15 @@ class StreakViewModel : ViewModel() {
         }
     }
 
+    fun setStreak(days: Int) {
+        _uiState.update { current ->
+            current.copy(
+                streakDays = days.coerceAtLeast(0),
+                feedbackMessage = if (days == 0) "❄️ Streak reset to 0! Visuals frozen with snowfall." else "🔥 Streak set to $days days! Living liquid aura restored."
+            )
+        }
+    }
+
     fun clearFeedback() {
         _uiState.update { it.copy(feedbackMessage = null) }
     }

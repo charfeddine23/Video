@@ -102,14 +102,27 @@ fun FlameParticleComponent(
 
     // Rising particle sparks
     val particles = remember { mutableStateListOf<FlameParticle>() }
-    val particleColors = remember {
-        listOf(
-            Color(0xFFFF3D00), // Hot Orange/Red
-            Color(0xFFFF9100), // Vivid Orange
-            Color(0xFFFF2D73), // Hot Neon Pink
-            Color(0xFFFFEA00), // Luminous Gold
-            Color(0xFFFF6D00)  // Deep Amber
-        )
+    val isFrozen = streakDays == 0
+
+    // Particle colors based on frozen state
+    val particleColors = remember(isFrozen) {
+        if (isFrozen) {
+            listOf(
+                Color(0xFF80DEEA), // Ice Cyan
+                Color(0xFFE0F7FA), // Glacial White
+                Color(0xFF00E5FF), // Electric Frost
+                Color(0xFFB2EBF2), // Pale Frost
+                Color(0xFF4DD0E1)  // Crystalline Cyan
+            )
+        } else {
+            listOf(
+                Color(0xFFFF3D00), // Hot Orange/Red
+                Color(0xFFFF9100), // Vivid Orange
+                Color(0xFFFF2D73), // Hot Neon Pink
+                Color(0xFFFFEA00), // Luminous Gold
+                Color(0xFFFF6D00)  // Deep Amber
+            )
+        }
     }
 
     // Particle update simulation loop
@@ -208,12 +221,20 @@ fun FlameParticleComponent(
                     .drawBehind {
                         drawCircle(
                             brush = Brush.radialGradient(
-                                colors = listOf(
-                                    Color(0xFFFF5722).copy(alpha = 0.5f * glowAlpha),
-                                    Color(0xFFFF2D73).copy(alpha = 0.35f * glowAlpha),
-                                    Color(0xFFFF9100).copy(alpha = 0.15f * glowAlpha),
-                                    Color.Transparent
-                                ),
+                                colors = if (isFrozen) {
+                                    listOf(
+                                        Color(0xFF00E5FF).copy(alpha = 0.45f * glowAlpha),
+                                        Color(0xFF80DEEA).copy(alpha = 0.25f * glowAlpha),
+                                        Color.Transparent
+                                    )
+                                } else {
+                                    listOf(
+                                        Color(0xFFFF5722).copy(alpha = 0.5f * glowAlpha),
+                                        Color(0xFFFF2D73).copy(alpha = 0.35f * glowAlpha),
+                                        Color(0xFFFF9100).copy(alpha = 0.15f * glowAlpha),
+                                        Color.Transparent
+                                    )
+                                },
                                 radius = size.width * 0.75f
                             )
                         )
@@ -225,12 +246,21 @@ fun FlameParticleComponent(
                 if (chargeProgress.value > 0f) {
                     drawArc(
                         brush = Brush.sweepGradient(
-                            listOf(
-                                Color(0xFFFF5722),
-                                Color(0xFFFF2D73),
-                                Color(0xFF00F2FE),
-                                Color(0xFFFF5722)
-                            )
+                            if (isFrozen) {
+                                listOf(
+                                    Color(0xFF00E5FF),
+                                    Color(0xFF80DEEA),
+                                    Color(0xFFE0F7FA),
+                                    Color(0xFF00E5FF)
+                                )
+                            } else {
+                                listOf(
+                                    Color(0xFFFF5722),
+                                    Color(0xFFFF2D73),
+                                    Color(0xFF00F2FE),
+                                    Color(0xFFFF5722)
+                                )
+                            }
                         ),
                         startAngle = -90f,
                         sweepAngle = 360f * chargeProgress.value,
@@ -247,11 +277,19 @@ fun FlameParticleComponent(
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            listOf(
-                                Color(0x33FF5722),
-                                Color(0x1A121826),
-                                Color(0x800B0F19)
-                            )
+                            if (isFrozen) {
+                                listOf(
+                                    Color(0x3300E5FF),
+                                    Color(0x1A081324),
+                                    Color(0x800B0F19)
+                                )
+                            } else {
+                                listOf(
+                                    Color(0x33FF5722),
+                                    Color(0x1A121826),
+                                    Color(0x800B0F19)
+                                )
+                            }
                         )
                     ),
                 contentAlignment = Alignment.Center
@@ -259,23 +297,31 @@ fun FlameParticleComponent(
                 // Central Glowing Animated Flame Icon
                 Icon(
                     imageVector = Icons.Default.LocalFireDepartment,
-                    contentDescription = "Active Streak Flame - Long press 1s for Roadmap",
+                    contentDescription = if (isFrozen) "Frozen Streak Flame - Long press 1s for Roadmap" else "Active Streak Flame - Long press 1s for Roadmap",
                     modifier = Modifier
                         .size(76.dp)
                         .scale(flameScale)
                         .drawBehind {
                             drawCircle(
                                 brush = Brush.radialGradient(
-                                    listOf(
-                                        Color(0xFFFFD54F).copy(alpha = 0.85f),
-                                        Color(0xFFFF3D00).copy(alpha = 0.5f),
-                                        Color.Transparent
-                                    ),
+                                    if (isFrozen) {
+                                        listOf(
+                                            Color(0xFFE0F7FA).copy(alpha = 0.85f),
+                                            Color(0xFF00E5FF).copy(alpha = 0.5f),
+                                            Color.Transparent
+                                        )
+                                    } else {
+                                        listOf(
+                                            Color(0xFFFFD54F).copy(alpha = 0.85f),
+                                            Color(0xFFFF3D00).copy(alpha = 0.5f),
+                                            Color.Transparent
+                                        )
+                                    },
                                     radius = size.width * 0.6f
                                 )
                             )
                         },
-                    tint = Color(0xFFFF6D00)
+                    tint = if (isFrozen) Color(0xFF80DEEA) else Color(0xFFFF6D00)
                 )
             }
         }
@@ -284,17 +330,17 @@ fun FlameParticleComponent(
 
         // Instructional hint label
         Text(
-            text = "اضغط مطولاً (1 ثانية) لفتح خارطة الإنجازات",
+            text = if (isFrozen) "السلسلة مجمدة • اضغط مطولاً لمعاينة خارطة الإنجازات" else "اضغط مطولاً (1 ثانية) لفتح خارطة الإنجازات",
             style = MaterialTheme.typography.labelSmall.copy(
-                color = Color.White.copy(alpha = 0.7f),
+                color = if (isFrozen) Color(0xFF80DEEA) else Color.White.copy(alpha = 0.7f),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
             )
         )
         Text(
-            text = "Hold 1s on flame to open Milestone Roadmap",
+            text = if (isFrozen) "Streak is frozen • Hold 1s on flame to open Roadmap" else "Hold 1s on flame to open Milestone Roadmap",
             style = MaterialTheme.typography.labelSmall.copy(
-                color = Color(0xFF00F2FE).copy(alpha = 0.85f),
+                color = if (isFrozen) Color(0xFFB2EBF2) else Color(0xFF00F2FE).copy(alpha = 0.85f),
                 fontSize = 10.sp,
                 letterSpacing = 0.3.sp
             )

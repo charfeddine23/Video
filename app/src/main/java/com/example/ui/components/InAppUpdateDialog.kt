@@ -73,10 +73,10 @@ import com.example.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 
 data class AppUpdateInfo(
-    val latestVersionName: String = "1.0.3",
-    val latestVersionCode: Int = 4,
-    val releaseTitle: String = "Video Pulse Spring Update",
-    val releaseTitleAr: String = "تحديث ربيع Video Pulse الجديد",
+    val latestVersionName: String = "1.0.6",
+    val latestVersionCode: Int = 7,
+    val releaseTitle: String = "Aura Pulse Liquid Glow & Snowfall Update",
+    val releaseTitleAr: String = "تحديث Aura Pulse الجديد (الهالة السائلة وتساقط الثلوج)",
     val releaseNotesEn: List<String> = listOf(
         "120 FPS Ultra Motion video stability enhancements",
         "Full Arabic & English native RTL/LTR interface support",

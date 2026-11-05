@@ -50,6 +50,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.AutoAwesome
+import com.example.ui.components.AuraPulseBrandHeader
 import com.example.ui.components.FlameParticleComponent
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
@@ -110,51 +113,14 @@ fun HomeScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Minimal Header (Branding only, no settings button)
-            item(key = "minimal_header") {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(10.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(listOf(Color(0xFFFF5722), PulseCyan))
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "VIDEO PULSE",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
-                                letterSpacing = 2.5.sp,
-                                fontSize = 15.sp
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = if (isArabic) "نظام المشاهدة اليومي وحماية السلسلة" else "Offline Media Player & Streak Vault",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF64748B),
-                            fontSize = 11.sp,
-                            letterSpacing = 0.5.sp
-                        )
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
+            // Requirement 1, 2, 3: Official App Branding "Aura Pulse" with Dynamic Liquid Glow (Streak > 0)
+            // or Streak Freeze & Falling Snow Effect (Streak == 0)
+            item(key = "aura_pulse_brand_header") {
+                AuraPulseBrandHeader(
+                    streakDays = uiState.streakDays,
+                    isArabic = isArabic,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
             }
 
             // Central Glowing Animated Flame Component
@@ -467,39 +433,134 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Fast simulation test chip for rapid testing
-            item(key = "test_watch_advancement") {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0x1410B981),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x2610B981)),
+            // Visual State Demonstration & Testing Controls
+            item(key = "test_visual_states") {
+                Column(
                     modifier = Modifier
-                        .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            streakViewModel.tickGenuineWatchTime(60, isSeeking = false)
-                        }
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    Text(
+                        text = if (isArabic) "تجربة المؤثرات البصرية (Aura & Freeze Demo)" else "Visual FX Demonstration (Aura & Freeze)",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color(0xFF64748B),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
+
                     Row(
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.HourglassTop,
-                            contentDescription = null,
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = if (isArabic) "محاكاة مشاهدة (+1 دقيقة لاختبار الهدف)" else "Simulate Genuine Playback (+1 min for testing)",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF10B981),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 11.sp
+                        // Trigger Freeze & Snowfall (Streak = 0)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0x2600E5FF),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6680DEEA)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    streakViewModel.setStreak(0)
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AcUnit,
+                                    contentDescription = null,
+                                    tint = Color(0xFF80DEEA),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isArabic) "❄️ تجميد وتساقط ثلوج (0)" else "❄️ Freeze & Snow (0)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFFE0F7FA),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.5.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Trigger Living Liquid Glow (Streak = 14)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0x2600F2FE),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6600F2FE)),
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    streakViewModel.setStreak(14)
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = PulseCyan,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isArabic) "✨ هالة حية نشطة (14)" else "✨ Living Aura (14d)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = PulseCyan,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.5.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Fast simulation test chip for rapid testing
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0x1410B981),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x2610B981)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                streakViewModel.tickGenuineWatchTime(60, isSeeking = false)
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.HourglassTop,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(14.dp)
                             )
-                        )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isArabic) "محاكاة مشاهدة (+1 دقيقة لاختبار الهدف)" else "Simulate Genuine Playback (+1 min for testing)",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFF10B981),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
                     }
                 }
             }

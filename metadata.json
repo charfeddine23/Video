@@ -1,6 +1,6 @@
 {
-  "name": "Video Pulse",
-  "description": "Modern sleek mobile video streaming app featuring spotlight hero banners, cinematic dark UI, and smooth playback experience.",
+  "name": "Aura Pulse",
+  "description": "Modern sleek offline media player featuring Liquid Glass M5 design, dynamic aura glow, streak freeze animations, and milestone rewards.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

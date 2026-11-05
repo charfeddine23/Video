@@ -208,7 +208,7 @@ fun MySpaceScreen(
                                         )
                                     )
                                     Text(
-                                        text = if (isArabic) "مستخدم Video Pulse المميز" else "Video Pulse Elite Member",
+                                        text = if (isArabic) "مستخدم Aura Pulse المميز" else "Aura Pulse Elite Member",
                                         style = MaterialTheme.typography.bodySmall.copy(
                                             color = PulseCyan,
                                             fontSize = 11.sp,
