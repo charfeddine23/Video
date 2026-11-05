@@ -1,8 +1,6 @@
 package com.example.ui.screens
 
-import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,28 +35,36 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ViewAgenda
-import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,17 +80,21 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.LocalDeviceVideo
 import com.example.data.model.MediaItem
-import com.example.data.model.MediaRepository
+import com.example.data.util.LocalMediaScanner
 import com.example.ui.components.SmartFallbackCover
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class WatchViewMode(val titleEn: String, val titleAr: String, val icon: ImageVector) {
     FOLDERS("Folders", "مجلدات", Icons.Default.Folder),
@@ -108,74 +118,109 @@ fun WatchScreen(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
 
     var selectedViewMode by remember { mutableStateOf(WatchViewMode.LIST) }
     var searchQuery by remember { mutableStateOf("") }
     var activeFolderId by remember { mutableStateOf<String?>(null) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    val localVideos = remember {
-        mutableStateListOf<LocalDeviceVideo>().apply {
-            addAll(MediaRepository.defaultLocalVideos)
+    var hasStoragePermission by remember {
+        mutableStateOf(LocalMediaScanner.hasStorageOrVideoPermission(context))
+    }
+
+    // ONLY real local videos from the device storage (starts empty with NO mock/dummy videos)
+    val localVideos = remember { mutableStateListOf<LocalDeviceVideo>() }
+
+    // Helper to refresh / scan device videos
+    val scanVideosJob: () -> Unit = {
+        scope.launch {
+            isLoading = true
+            val scanned = withContext(Dispatchers.IO) {
+                LocalMediaScanner.scanDeviceVideos(context)
+            }
+            // Preserve any user-imported files from the system picker
+            val userImported = localVideos.filter { it.id.startsWith("picked_") }
+            val existingUris = userImported.mapNotNull { it.uriString }.toSet()
+            val freshList = (userImported + scanned.filter { it.uriString !in existingUris })
+
+            localVideos.clear()
+            localVideos.addAll(freshList)
+            isLoading = false
         }
     }
 
-    // Google Play compliant zero-permission Photo/Video Picker
-    val videoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri != null) {
+    // Permission launcher for accessing local device videos
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ ->
+        val granted = LocalMediaScanner.hasStorageOrVideoPermission(context)
+        hasStoragePermission = granted
+        if (granted) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            val displayName = queryDisplayName(context, uri) ?: "Video_${System.currentTimeMillis()}.mp4"
-            val newVideo = LocalDeviceVideo(
-                id = "picked_${System.currentTimeMillis()}",
-                title = displayName,
-                durationText = "04:20",
-                sizeText = "Local Storage",
-                resolutionText = "1080p FHD",
-                dateAddedText = "Just now",
-                uriString = uri.toString(),
-                thumbnailRes = 0, // 0 triggers SmartFallbackCover!
-                isFromGallery = true
-            )
-            localVideos.add(0, newVideo)
+            scanVideosJob()
         }
     }
 
-    // Dynamic folders grouped from local videos
-    val folders = remember(localVideos.size) {
-        listOf(
-            VideoFolder(
-                id = "f_camera",
-                name = "Camera (الكاميرا)",
-                count = (localVideos.size * 0.4).toInt().coerceAtLeast(3),
-                totalSize = "1.84 GB",
-                videos = localVideos.take(3)
-            ),
-            VideoFolder(
-                id = "f_downloads",
-                name = "Downloads (التحميلات)",
-                count = (localVideos.size * 0.35).toInt().coerceAtLeast(4),
-                totalSize = "2.60 GB",
-                videos = localVideos.drop(1)
-            ),
-            VideoFolder(
-                id = "f_whatsapp",
-                name = "Media Vault (المستودع)",
-                count = 5,
-                totalSize = "890 MB",
-                videos = localVideos
-            ),
-            VideoFolder(
-                id = "f_screen_records",
-                name = "Screen Records (تسجيلات)",
-                count = 2,
-                totalSize = "340 MB",
-                videos = localVideos.take(2)
-            )
-        )
+    // Android System File Picker command launcher (Opens Phone Files / SAF)
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri>? ->
+        if (!uris.isNullOrEmpty()) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            scope.launch {
+                val newVideos = withContext(Dispatchers.IO) {
+                    uris.map { uri -> LocalMediaScanner.parseUriToLocalVideo(context, uri) }
+                }
+                for (vid in newVideos) {
+                    if (localVideos.none { it.uriString == vid.uriString }) {
+                        localVideos.add(0, vid)
+                    }
+                }
+            }
+        }
     }
 
-    val filteredVideos = remember(searchQuery, localVideos.size, activeFolderId) {
+    // Android Visual Media Picker launcher (Photo & Video Picker)
+    val quickMediaPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris: List<Uri>? ->
+        if (!uris.isNullOrEmpty()) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            scope.launch {
+                val newVideos = withContext(Dispatchers.IO) {
+                    uris.map { uri -> LocalMediaScanner.parseUriToLocalVideo(context, uri) }
+                }
+                for (vid in newVideos) {
+                    if (localVideos.none { it.uriString == vid.uriString }) {
+                        localVideos.add(0, vid)
+                    }
+                }
+            }
+        }
+    }
+
+    // Scan videos automatically when storage permission is available
+    LaunchedEffect(hasStoragePermission) {
+        if (hasStoragePermission) {
+            scanVideosJob()
+        }
+    }
+
+    // Dynamic folders grouped strictly from actual local videos found on the phone
+    val folders = remember(localVideos.toList()) {
+        localVideos.groupBy { it.folderName }.map { (folderName, videos) ->
+            VideoFolder(
+                id = folderName,
+                name = folderName,
+                count = videos.size,
+                totalSize = calculateTotalFolderSize(videos),
+                videos = videos
+            )
+        }.sortedByDescending { it.count }
+    }
+
+    val filteredVideos = remember(searchQuery, localVideos.toList(), activeFolderId) {
         val baseList = if (activeFolderId != null) {
             folders.find { it.id == activeFolderId }?.videos ?: localVideos
         } else {
@@ -219,7 +264,10 @@ fun WatchScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     if (activeFolderId != null) {
                         IconButton(
                             onClick = { activeFolderId = null },
@@ -260,15 +308,17 @@ fun WatchScreen(
                             text = if (activeFolderId != null) {
                                 folders.find { it.id == activeFolderId }?.name ?: "Folder"
                             } else {
-                                if (isArabic) "مشاهدة (Watch)" else "Watch"
+                                if (isArabic) "فيديوهات الهاتف" else "Phone Videos"
                             },
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White
-                            )
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (isArabic) "مستعرض الوسائط ومشغل الفيديو المحلي M5" else "Local Storage Browser & M5 Player Engine",
+                            text = if (isArabic) "${localVideos.size} فيديو محلي على الهاتف" else "${localVideos.size} local device videos",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF94A3B8),
                                 fontSize = 11.sp
@@ -277,35 +327,149 @@ fun WatchScreen(
                     }
                 }
 
-                // Import Video Button
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0x3300F2FE),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Rescan / Refresh Button
+                    IconButton(
+                        onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            videoPickerLauncher.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                            if (hasStoragePermission) {
+                                scanVideosJob()
+                            } else {
+                                permissionLauncher.launch(LocalMediaScanner.getRequiredPermissions())
+                            }
+                        },
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x1F121826))
+                            .border(1.dp, Color(0x2EFFFFFF), CircleShape)
+                            .testTag("watch_refresh_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh scan",
+                            tint = PulseCyan,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Open Phone Files Command Button
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0x3300F2FE),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f)),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                filePickerLauncher.launch(arrayOf("video/*"))
+                            }
+                            .testTag("watch_open_files_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.FileOpen, null, tint = PulseCyan, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isArabic) "فتح ملفات الهاتف" else "Open Files",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = PulseCyan,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.5.sp
+                                )
                             )
                         }
-                        .testTag("watch_import_button")
+                    }
+                }
+            }
+
+            // Permission Request Banner (if permission is not yet granted)
+            if (!hasStoragePermission) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, PulseCyan.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .testTag("storage_permission_banner"),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0x3300F2FE))
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Add, null, tint = PulseCyan, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = null,
+                                tint = PulseCyan,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (isArabic) "إذن قراءة ملفات الفيديو في الهاتف" else "Device Storage Permission Required",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = if (isArabic) "استيراد" else "Import",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                color = PulseCyan,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
+                            text = if (isArabic) {
+                                "يحتاج التطبيق لإذن قراءة ملفات الفيديو لعرض جميع مقاطع الفيديو المحفوظة في ذاكرة هاتفك وتشغيلها مباشرة."
+                            } else {
+                                "Grant video access permission to automatically discover and list all videos on your device storage."
+                            },
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color(0xFFCBD5E1),
+                                fontSize = 11.5.sp,
+                                lineHeight = 16.sp
                             )
                         )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    permissionLauncher.launch(LocalMediaScanner.getRequiredPermissions())
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PulseCyan,
+                                    contentColor = TextDark
+                                ),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = if (isArabic) "منح الصلاحية الآن" else "Grant Permission",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.5.sp
+                                )
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    filePickerLauncher.launch(arrayOf("video/*"))
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x66FFFFFF)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    text = if (isArabic) "تصفح ملفات الهاتف" else "Browse Files",
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 11.5.sp
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -370,7 +534,7 @@ fun WatchScreen(
                     .padding(horizontal = 20.dp, vertical = 6.dp),
                 placeholder = {
                     Text(
-                        text = if (isArabic) "ابحث في الفيديوهات المحلية..." else "Search local media files...",
+                        text = if (isArabic) "ابحث في فيديوهات الهاتف..." else "Search phone videos...",
                         color = Color(0xFF64748B),
                         fontSize = 12.sp
                     )
@@ -395,6 +559,146 @@ fun WatchScreen(
                 )
             )
 
+            // Loading Indicator
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            color = PulseCyan,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = if (isArabic) "جاري فحص فيديوهات الهاتف..." else "Scanning device videos...",
+                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8))
+                        )
+                    }
+                }
+            }
+
+            // Empty State (if no real videos on the phone yet)
+            if (!isLoading && filteredVideos.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(22.dp))
+                            .border(1.dp, Color(0x2AFFFFFF), RoundedCornerShape(22.dp)),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(68.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x2600F2FE)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FolderOpen,
+                                    contentDescription = null,
+                                    tint = PulseCyan,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = if (searchQuery.isNotBlank()) {
+                                    if (isArabic) "لا توجد نتائج مطابقة" else "No Matching Videos"
+                                } else {
+                                    if (isArabic) "لا توجد فيديوهات في الهاتف" else "No Videos Found on Phone"
+                                },
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    textAlign = TextAlign.Center
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = if (searchQuery.isNotBlank()) {
+                                    if (isArabic) "جرب البحث باسم ملف آخر." else "Try searching with a different file name."
+                                } else {
+                                    if (isArabic) {
+                                        "لم يتم العثور على أي مقطع فيديو في ذاكرة الهاتف. اضغط على زر فتح ملفات الهاتف لاختيار الفيديوهات أو امنح صلاحية الوصول."
+                                    } else {
+                                        "No local videos found on your phone. Tap 'Open Phone Files' to choose videos from device storage, or grant permissions."
+                                    }
+                                },
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF94A3B8),
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 18.sp
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Button(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    filePickerLauncher.launch(arrayOf("video/*"))
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = PulseCyan,
+                                    contentColor = TextDark
+                                ),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth(0.9f)
+                            ) {
+                                Icon(Icons.Default.FileOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (isArabic) "فتح ملفات الهاتف" else "Open Phone Files",
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    quickMediaPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
+                                    )
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33FFFFFF)),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth(0.9f)
+                            ) {
+                                Text(
+                                    text = if (isArabic) "معرض الفيديوهات (Picker)" else "Video Gallery Picker",
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             // Content Area based on View Mode
             AnimatedContent(
                 targetState = if (activeFolderId != null) WatchViewMode.LIST else selectedViewMode,
@@ -403,7 +707,7 @@ fun WatchScreen(
             ) { mode ->
                 when (mode) {
                     WatchViewMode.FOLDERS -> {
-                        // 1. Folders View
+                        // 1. Folders View (derived strictly from actual local folders on phone)
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -755,21 +1059,28 @@ fun MagazineGridItemCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = video.resolutionText,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = PulseCyan,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color(0x3300F2FE)
+                    ) {
+                        Text(
+                            text = video.resolutionText,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = PulseCyan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
+                            )
                         )
-                    )
+                    }
+
                     Text(
                         text = video.sizeText,
                         style = MaterialTheme.typography.bodySmall.copy(
@@ -781,6 +1092,10 @@ fun MagazineGridItemCard(
             }
         }
     }
+}
+
+private fun calculateTotalFolderSize(videos: List<LocalDeviceVideo>): String {
+    return if (videos.isEmpty()) "0 MB" else "${videos.size} items"
 }
 
 private fun LocalDeviceVideo.toMediaItem(): MediaItem {
@@ -800,16 +1115,4 @@ private fun LocalDeviceVideo.toMediaItem(): MediaItem {
         backdropRes = if (thumbnailRes != 0) thumbnailRes else R.drawable.img_hero_poster,
         uriString = uriString
     )
-}
-
-private fun queryDisplayName(context: Context, uri: Uri): String? {
-    if (uri.scheme == "content") {
-        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-            if (nameIndex != -1 && cursor.moveToFirst()) {
-                return cursor.getString(nameIndex)
-            }
-        }
-    }
-    return uri.lastPathSegment
 }

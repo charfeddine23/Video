@@ -82,9 +82,17 @@ fun DeviceVideosScreen(
 
     var searchQuery by remember { mutableStateOf("") }
 
-    val localVideos = remember {
-        mutableStateListOf<LocalDeviceVideo>().apply {
-            addAll(MediaRepository.defaultLocalVideos)
+    val localVideos = remember { mutableStateListOf<LocalDeviceVideo>() }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (com.example.data.util.LocalMediaScanner.hasStorageOrVideoPermission(context)) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val scanned = com.example.data.util.LocalMediaScanner.scanDeviceVideos(context)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    localVideos.clear()
+                    localVideos.addAll(scanned)
+                }
+            }
         }
     }
 
@@ -94,18 +102,7 @@ fun DeviceVideosScreen(
     ) { uri: Uri? ->
         if (uri != null) {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            val displayName = queryDisplayName(context, uri) ?: "Device_Video_${System.currentTimeMillis()}.mp4"
-            val newVideo = LocalDeviceVideo(
-                id = "picked_${System.currentTimeMillis()}",
-                title = displayName,
-                durationText = "Imported",
-                sizeText = "Local Storage",
-                resolutionText = "1080p FHD",
-                dateAddedText = "Just now",
-                uriString = uri.toString(),
-                thumbnailRes = R.drawable.img_hero_poster,
-                isFromGallery = true
-            )
+            val newVideo = com.example.data.util.LocalMediaScanner.parseUriToLocalVideo(context, uri)
             localVideos.add(0, newVideo)
         }
     }
