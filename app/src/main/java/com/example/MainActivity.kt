@@ -28,26 +28,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.MediaItem
-import com.example.data.model.MediaRepository
 import com.example.ui.components.ExoVideoPlayer
 import com.example.ui.components.InAppUpdateDialog
 import com.example.ui.components.NavDestination
-import com.example.ui.components.SearchOverlay
-import com.example.ui.components.SettingsModalSheet
 import com.example.ui.components.VideoPulseBottomBar
-import com.example.ui.screens.DeviceVideosScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MilestoneRoadmapScreen
 import com.example.ui.screens.MySpaceScreen
-import com.example.ui.screens.ShortsScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.ThemeMode
@@ -87,7 +79,6 @@ fun VideoPulseApp(
     onLanguageChange: (AppLanguage) -> Unit,
     streakViewModel: StreakViewModel = viewModel()
 ) {
-    val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -95,8 +86,6 @@ fun VideoPulseApp(
 
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
-    var isSettingsSheetOpen by remember { mutableStateOf(false) }
-    var isSearchOverlayOpen by remember { mutableStateOf(false) }
     var isUpdateDialogOpen by remember { mutableStateOf(false) }
     var isRoadmapOpen by remember { mutableStateOf(false) }
 
@@ -110,14 +99,12 @@ fun VideoPulseApp(
 
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isRoadmapOpen || isSearchOverlayOpen || isSettingsSheetOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isRoadmapOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
             isRoadmapOpen -> isRoadmapOpen = false
             activePlayerMedia != null -> activePlayerMedia = null
             isUpdateDialogOpen -> isUpdateDialogOpen = false
-            isSearchOverlayOpen -> isSearchOverlayOpen = false
-            isSettingsSheetOpen -> isSettingsSheetOpen = false
             currentDestination != NavDestination.HOME -> currentDestination = NavDestination.HOME
         }
     }
@@ -131,7 +118,7 @@ fun VideoPulseApp(
             modifier = Modifier.fillMaxSize(),
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
-                // Fixed bottom bar with Home, Videos (all device videos), Shorts, My Space
+                // Requirement 2: Clean bottom bar featuring Home and My Space
                 VideoPulseBottomBar(
                     currentDestination = currentDestination,
                     onDestinationSelected = { dest ->
@@ -145,7 +132,6 @@ fun VideoPulseApp(
                     .fillMaxSize()
                     .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
-                // Tab Transitions with smooth animated content
                 AnimatedContent(
                     targetState = currentDestination,
                     transitionSpec = {
@@ -155,55 +141,29 @@ fun VideoPulseApp(
                 ) { destination ->
                     when (destination) {
                         NavDestination.HOME -> {
+                            // Requirement 3: Retains only minimalist liquid glass background,
+                            // glowing animated flame icon (triggers roadmap on 1s long press),
+                            // current streak status, and daily 5-minute watch progress
                             HomeScreen(
                                 streakViewModel = streakViewModel,
-                                onMediaClick = { media ->
-                                    activePlayerMedia = media
-                                },
-                                onOpenSettings = {
-                                    isSettingsSheetOpen = true
-                                },
-                                onOpenSearch = {
-                                    isSearchOverlayOpen = true
-                                },
-                                onOpenNotifications = {
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            if (isArabic) "لا توجد إشعارات جديدة" else "No new notifications"
-                                        )
-                                    }
-                                },
                                 onNavigateToRoadmap = {
                                     isRoadmapOpen = true
                                 },
-                                onOpenVideosScreen = {
-                                    currentDestination = NavDestination.VIDEOS
-                                },
                                 isArabic = isArabic
                             )
-                        }
-
-                        NavDestination.VIDEOS -> {
-                            // User request: "live TV بدلها سميها videos ويجي فيها كل فيديوهات الجهاز"
-                            DeviceVideosScreen(
-                                onPlayVideo = { media ->
-                                    activePlayerMedia = media
-                                },
-                                isArabic = isArabic
-                            )
-                        }
-
-                        NavDestination.SHORTS -> {
-                            ShortsScreen()
                         }
 
                         NavDestination.MY_SPACE -> {
+                            // Requirement 4: "My Space" Screen (New Settings & Rewards Hub)
+                            // Purges legacy settings and introduces User Status Header & Milestone Feature Vault
                             MySpaceScreen(
-                                onMediaClick = { media ->
-                                    activePlayerMedia = media
-                                },
-                                onOpenSubscribe = {
-                                    isSettingsSheetOpen = true
+                                streakViewModel = streakViewModel,
+                                currentThemeMode = currentThemeMode,
+                                onThemeModeChange = onThemeModeChange,
+                                currentLanguage = currentLanguage,
+                                onLanguageChange = onLanguageChange,
+                                onOpenRoadmap = {
+                                    isRoadmapOpen = true
                                 }
                             )
                         }
@@ -212,7 +172,7 @@ fun VideoPulseApp(
             }
         }
 
-        // Fullscreen Milestone Roadmap Screen (Triggered by 1-second long-press on flame)
+        // Milestone Roadmap Screen (Triggered by 1-second long-press on flame or via roadmap button)
         if (isRoadmapOpen) {
             MilestoneRoadmapScreen(
                 streakViewModel = streakViewModel,
@@ -225,28 +185,7 @@ fun VideoPulseApp(
             )
         }
 
-        // Search Overlay
-        if (isSearchOverlayOpen) {
-            val allMedia = remember {
-                listOf(MediaRepository.heroItem) +
-                        MediaRepository.continueWatchingList +
-                        MediaRepository.pulseOriginals +
-                        MediaRepository.trendingNow +
-                        MediaRepository.sportsAndLiveList
-            }
-            SearchOverlay(
-                allMedia = allMedia.distinctBy { it.id },
-                onMediaClick = { media ->
-                    isSearchOverlayOpen = false
-                    activePlayerMedia = media
-                },
-                onClose = {
-                    isSearchOverlayOpen = false
-                }
-            )
-        }
-
-        // Full-screen ExoPlayer playback component for local and streaming media
+        // Full-screen ExoPlayer playback component
         if (activePlayerMedia != null) {
             ExoVideoPlayer(
                 mediaItem = activePlayerMedia!!,
@@ -256,22 +195,6 @@ fun VideoPulseApp(
                 }
             )
         }
-
-        // Settings Modal Sheet (Language, Theme Mode, Developer Info, Check for Updates)
-        SettingsModalSheet(
-            isOpen = isSettingsSheetOpen,
-            currentThemeMode = currentThemeMode,
-            onThemeModeChange = onThemeModeChange,
-            currentLanguage = currentLanguage,
-            onLanguageChange = onLanguageChange,
-            onCheckForUpdates = {
-                isSettingsSheetOpen = false
-                isUpdateDialogOpen = true
-            },
-            onDismiss = {
-                isSettingsSheetOpen = false
-            }
-        )
 
         // In-App Update Dialog
         InAppUpdateDialog(

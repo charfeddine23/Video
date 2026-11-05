@@ -65,8 +65,6 @@ enum class NavDestination(
     val unselectedIcon: ImageVector
 ) {
     HOME("Home", Icons.Filled.Home, Icons.Outlined.Home),
-    VIDEOS("Videos", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary),
-    SHORTS("Shorts", Icons.Filled.PlayCircleOutline, Icons.Outlined.PlayCircle),
     MY_SPACE("My Space", Icons.Filled.Person, Icons.Outlined.Person)
 }
 
