@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Aura Pulse"
+rootProject.name = "Video Pulse"
 
 include(":app")

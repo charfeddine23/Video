@@ -1,5 +1,5 @@
 {
-  "name": "Aura Pulse",
+  "name": "Video Pulse",
   "description": "Modern sleek offline media player featuring Liquid Glass M5 design, dynamic aura glow, streak freeze animations, and milestone rewards.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

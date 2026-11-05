@@ -40,6 +40,8 @@ import com.example.ui.components.VideoPulseBottomBar
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MilestoneRoadmapScreen
 import com.example.ui.screens.MySpaceScreen
+import com.example.ui.screens.ShortsScreen
+import com.example.ui.screens.WatchScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.ThemeMode
@@ -141,9 +143,6 @@ fun VideoPulseApp(
                 ) { destination ->
                     when (destination) {
                         NavDestination.HOME -> {
-                            // Requirement 3: Retains only minimalist liquid glass background,
-                            // glowing animated flame icon (triggers roadmap on 1s long press),
-                            // current streak status, and daily 5-minute watch progress
                             HomeScreen(
                                 streakViewModel = streakViewModel,
                                 onNavigateToRoadmap = {
@@ -153,9 +152,23 @@ fun VideoPulseApp(
                             )
                         }
 
+                        NavDestination.WATCH -> {
+                            // Tab 3: Watch (Placeholder for Part 2 with offline media player)
+                            WatchScreen(
+                                onPlayMedia = { media ->
+                                    activePlayerMedia = media
+                                },
+                                isArabic = isArabic
+                            )
+                        }
+
+                        NavDestination.SHORTS -> {
+                            // Tab 2: Shorts (Short-form video feed placeholder)
+                            ShortsScreen()
+                        }
+
                         NavDestination.MY_SPACE -> {
-                            // Requirement 4: "My Space" Screen (New Settings & Rewards Hub)
-                            // Purges legacy settings and introduces User Status Header & Milestone Feature Vault
+                            // Tab 1: "My Space" Screen (Settings & Rewards Hub)
                             MySpaceScreen(
                                 streakViewModel = streakViewModel,
                                 currentThemeMode = currentThemeMode,

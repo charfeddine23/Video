@@ -350,9 +350,9 @@ fun AuraPulseBrandHeader(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Official App Title: "Aura Pulse"
+                // Official App Title: "Video Pulse"
                 Text(
-                    text = "AURA PULSE",
+                    text = "VIDEO PULSE",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Black,
                         fontSize = 32.sp,
