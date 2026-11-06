@@ -54,8 +54,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            var currentThemeMode by remember { mutableStateOf(ThemeMode.DARK) }
-            var currentLanguage by remember { mutableStateOf(AppLanguage.ARABIC) }
+            val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(applicationContext) }
+            var currentThemeMode by remember { mutableStateOf(prefsRepo.loadThemeMode()) }
+            var currentLanguage by remember { mutableStateOf(prefsRepo.loadLanguage()) }
 
             MyApplicationTheme(themeMode = currentThemeMode) {
                 CompositionLocalProvider(
@@ -63,9 +64,15 @@ class MainActivity : ComponentActivity() {
                 ) {
                     VideoPulseApp(
                         currentThemeMode = currentThemeMode,
-                        onThemeModeChange = { currentThemeMode = it },
+                        onThemeModeChange = {
+                            currentThemeMode = it
+                            prefsRepo.saveThemeMode(it)
+                        },
                         currentLanguage = currentLanguage,
-                        onLanguageChange = { currentLanguage = it }
+                        onLanguageChange = {
+                            currentLanguage = it
+                            prefsRepo.saveLanguage(it)
+                        }
                     )
                 }
             }

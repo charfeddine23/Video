@@ -1,12 +1,12 @@
 package com.example.ui.viewmodel
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import com.example.data.preferences.StreakPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 enum class MilestoneStatus {
     UNLOCKED,
@@ -43,9 +43,14 @@ data class StreakUiState(
         get() = ((dailyGoalSeconds - dailyWatchSeconds).coerceAtLeast(0)) % 60
 }
 
-class StreakViewModel : ViewModel() {
+class StreakViewModel(
+    application: Application
+) : AndroidViewModel(application) {
 
-    private val _uiState = MutableStateFlow(StreakUiState())
+    private val repository = StreakPreferencesRepository.getInstance(application)
+
+    // Load initial state directly from persistent local storage on startup
+    private val _uiState = MutableStateFlow(repository.loadInitialState())
     val uiState: StateFlow<StreakUiState> = _uiState.asStateFlow()
 
     val milestones = listOf(
@@ -126,6 +131,7 @@ class StreakViewModel : ViewModel() {
     /**
      * Ticks actual playback time towards the 5-minute daily watch goal.
      * Core Rule: Seeking or fast-forwarding MUST NOT count.
+     * Automatically persists state to disk immediately.
      */
     fun tickGenuineWatchTime(seconds: Int = 1, isSeeking: Boolean = false) {
         if (isSeeking) return
@@ -136,22 +142,25 @@ class StreakViewModel : ViewModel() {
             val newlyCompleted = reachedGoal && !current.isGoalCompletedToday
             val newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
 
-            current.copy(
+            val newState = current.copy(
                 dailyWatchSeconds = updatedSeconds,
                 isGoalCompletedToday = reachedGoal || current.isGoalCompletedToday,
                 streakDays = newStreak,
                 feedbackMessage = if (newlyCompleted) "🎉 5-Minute Daily Goal Completed! Streak: ${newStreak} Days!" else current.feedbackMessage
             )
+            repository.saveStreakState(newState)
+            newState
         }
     }
 
     /**
      * Consumes 1 shield to protect streak if user missed a day.
      * Strict Penalty: If 0 shields, streak resets to 0 and all features lock!
+     * Persists immediately to local storage.
      */
     fun simulateMissedDay() {
         _uiState.update { current ->
-            if (current.shieldsCount > 0) {
+            val newState = if (current.shieldsCount > 0) {
                 val newShields = current.shieldsCount - 1
                 current.copy(
                     shieldsCount = newShields,
@@ -167,15 +176,17 @@ class StreakViewModel : ViewModel() {
                     feedbackMessage = "⚠️ Day missed with 0 shields! Streak reset to 0. All milestones locked!"
                 )
             }
+            repository.saveStreakState(newState)
+            newState
         }
     }
 
     /**
-     * Add a shield up to max 30
+     * Add a shield up to max 30 and save immediately.
      */
     fun addShield() {
         _uiState.update { current ->
-            if (current.shieldsCount < current.maxShields) {
+            val newState = if (current.shieldsCount < current.maxShields) {
                 current.copy(
                     shieldsCount = current.shieldsCount + 1,
                     feedbackMessage = "🛡️ Shield added! Inventory: ${current.shieldsCount + 1}/${current.maxShields}"
@@ -185,15 +196,22 @@ class StreakViewModel : ViewModel() {
                     feedbackMessage = "🛡️ Shield inventory is full (max 30 shields)."
                 )
             }
+            repository.saveStreakState(newState)
+            newState
         }
     }
 
+    /**
+     * Set streak count and persist to local storage.
+     */
     fun setStreak(days: Int) {
         _uiState.update { current ->
-            current.copy(
+            val newState = current.copy(
                 streakDays = days.coerceAtLeast(0),
                 feedbackMessage = if (days == 0) "❄️ Streak reset to 0! Visuals frozen with snowfall." else "🔥 Streak set to $days days! Living liquid aura restored."
             )
+            repository.saveStreakState(newState)
+            newState
         }
     }
 

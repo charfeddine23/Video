@@ -87,29 +87,33 @@ object LocalMediaScanner {
                 val bucketCol = c.getColumnIndex(MediaStore.Video.Media.BUCKET_DISPLAY_NAME)
 
                 while (c.moveToNext()) {
-                    val id = if (idCol >= 0) c.getLong(idCol) else 0L
-                    val name = (if (nameCol >= 0) c.getString(nameCol) else null) ?: "Video_$id.mp4"
-                    val durationMs = if (durationCol >= 0) c.getLong(durationCol) else 0L
-                    val sizeBytes = if (sizeCol >= 0) c.getLong(sizeCol) else 0L
-                    val width = if (widthCol >= 0) c.getInt(widthCol) else 0
-                    val height = if (heightCol >= 0) c.getInt(heightCol) else 0
-                    val dateAddedSecs = if (dateCol >= 0) c.getLong(dateCol) else 0L
-                    val bucketName = if (bucketCol >= 0) c.getString(bucketCol) else null
+                    val id = if (idCol >= 0 && !c.isNull(idCol)) c.getLong(idCol) else videos.size.toLong()
+                    val name = (if (nameCol >= 0 && !c.isNull(nameCol)) c.getString(nameCol) else null) ?: "Video_$id.mp4"
+                    val durationMs = if (durationCol >= 0 && !c.isNull(durationCol)) c.getLong(durationCol) else 0L
+                    val sizeBytes = if (sizeCol >= 0 && !c.isNull(sizeCol)) c.getLong(sizeCol) else 0L
+                    val width = if (widthCol >= 0 && !c.isNull(widthCol)) c.getInt(widthCol) else 0
+                    val height = if (heightCol >= 0 && !c.isNull(heightCol)) c.getInt(heightCol) else 0
+                    val dateAddedSecs = if (dateCol >= 0 && !c.isNull(dateCol)) c.getLong(dateCol) else 0L
+                    val bucketName = if (bucketCol >= 0 && !c.isNull(bucketCol)) c.getString(bucketCol) else null
 
-                    val contentUri = ContentUris.withAppendedId(
-                        MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                        id
-                    )
+                    val contentUri = try {
+                        ContentUris.withAppendedId(
+                            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
+                    } catch (_: Throwable) {
+                        null
+                    }
 
                     videos.add(
                         LocalDeviceVideo(
-                            id = "device_vid_$id",
+                            id = "device_vid_${id}_${videos.size}",
                             title = name,
                             durationText = formatDuration(durationMs),
                             sizeText = formatSize(sizeBytes),
                             resolutionText = formatResolution(width, height),
                             dateAddedText = formatDate(dateAddedSecs * 1000L),
-                            uriString = contentUri.toString(),
+                            uriString = contentUri?.toString(),
                             thumbnailRes = 0,
                             isFromGallery = true,
                             folderName = bucketName?.ifBlank { "Internal Storage" } ?: "Internal Storage"
@@ -117,8 +121,8 @@ object LocalMediaScanner {
                     )
                 }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Throwable) {
+            // Guard against any security or cursor errors
         }
         return videos
     }

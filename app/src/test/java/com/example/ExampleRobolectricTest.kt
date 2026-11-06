@@ -26,4 +26,27 @@ class ExampleRobolectricTest {
     assertEquals("الست أمور", hero.titleArabic)
     assertEquals("Top 01 in TV Shows", hero.subtitleBadge)
   }
+
+  @Test
+  fun `verify streak preferences repository persists state across app restart`() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val repo = com.example.data.preferences.StreakPreferencesRepository.getInstance(context)
+
+    // Save custom state
+    val customState = com.example.ui.viewmodel.StreakUiState(
+        streakDays = 21,
+        shieldsCount = 25,
+        maxShields = 30,
+        dailyWatchSeconds = 240,
+        dailyGoalSeconds = 300,
+        isGoalCompletedToday = false
+    )
+    repo.saveStreakState(customState)
+
+    // Reload and assert equality
+    val loaded = repo.loadInitialState()
+    assertEquals(21, loaded.streakDays)
+    assertEquals(25, loaded.shieldsCount)
+    assertEquals(240, loaded.dailyWatchSeconds)
+  }
 }

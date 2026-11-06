@@ -209,15 +209,16 @@ fun WatchScreen(
 
     // Dynamic folders grouped strictly from actual local videos found on the phone
     val folders = remember(localVideos.toList()) {
-        localVideos.groupBy { it.folderName }.map { (folderName, videos) ->
+        localVideos.groupBy { it.folderName.ifBlank { "Internal Storage" } }.map { (folderName, videos) ->
+            val safeFolderName = folderName.ifBlank { "Internal Storage" }
             VideoFolder(
-                id = folderName,
-                name = folderName,
+                id = "folder_${safeFolderName.hashCode()}_${videos.size}",
+                name = safeFolderName,
                 count = videos.size,
                 totalSize = calculateTotalFolderSize(videos),
                 videos = videos
             )
-        }.sortedByDescending { it.count }
+        }.distinctBy { it.id }.sortedByDescending { it.count }
     }
 
     val filteredVideos = remember(searchQuery, localVideos.toList(), activeFolderId) {
@@ -226,8 +227,9 @@ fun WatchScreen(
         } else {
             localVideos
         }
-        if (searchQuery.isBlank()) baseList
+        val matched = if (searchQuery.isBlank()) baseList
         else baseList.filter { it.title.contains(searchQuery, ignoreCase = true) }
+        matched.distinctBy { it.id }
     }
 
     Box(
@@ -794,7 +796,7 @@ fun FolderItemCard(
             // Smart Fallback Cover for Folder
             Box(modifier = Modifier.size(72.dp)) {
                 SmartFallbackCover(
-                    title = folder.name.substringBefore(" ("),
+                    title = folder.name.ifBlank { "Folder" }.substringBefore(" ("),
                     subtitle = "${folder.count} vids",
                     icon = Icons.Default.Folder,
                     aspectRatio = 1f,

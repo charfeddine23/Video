@@ -60,7 +60,8 @@ fun SmartFallbackCover(
         listOf(Color(0xFF4A044E), Color(0xFF1E1B4B), Color(0xFF090D16))
     )
 
-    val currentGradient = gradientBrushes[gradientVariant % gradientBrushes.size]
+    val safeVariantIndex = ((gradientVariant.toLong() and 0x7FFFFFFFL) % gradientBrushes.size).toInt()
+    val currentGradient = gradientBrushes[safeVariantIndex]
 
     Box(
         modifier = modifier
