@@ -49,4 +49,13 @@ class ExampleRobolectricTest {
     assertEquals(25, loaded.shieldsCount)
     assertEquals(240, loaded.dailyWatchSeconds)
   }
+
+  @Test
+  fun `verify fresh StreakUiState default values are 0 streak, 3 shields, 0s watch time`() {
+    val defaultState = com.example.ui.viewmodel.StreakUiState()
+    assertEquals(0, defaultState.streakDays)
+    assertEquals(3, defaultState.shieldsCount)
+    assertEquals(0, defaultState.dailyWatchSeconds)
+    assertEquals(300, defaultState.dailyGoalSeconds)
+  }
 }

@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Headset
@@ -82,11 +83,14 @@ fun MySpaceScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     currentLanguage: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
-    onOpenRoadmap: () -> Unit,
+    onOpenRoadmap: () -> Unit = {},
+    onNavigateToEditProfile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
     val uiState by streakViewModel.uiState.collectAsState()
+    val userName by streakViewModel.userName.collectAsState()
+    val userAvatarPreset by streakViewModel.userAvatarPreset.collectAsState()
     val isArabic = currentLanguage == AppLanguage.ARABIC
 
     // Interactive feature vault toggle states
@@ -98,6 +102,7 @@ fun MySpaceScreen(
     var pipModeEnabled by remember { mutableStateOf(true) }
 
     val streakDays = uiState.streakDays
+    val userTierBadge = streakViewModel.getUserTierBadge(streakDays, isArabic)
 
     Box(
         modifier = modifier
@@ -144,13 +149,6 @@ fun MySpaceScreen(
                             color = Color.White
                         )
                     )
-                    Text(
-                        text = if (isArabic) "مركز المكافآت والإعدادات المتقدمة" else "Rewards Hub & Feature Vault",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF94A3B8),
-                            fontSize = 12.sp
-                        )
-                    )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -173,24 +171,36 @@ fun MySpaceScreen(
                     colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
-                        // User Profile Summary Row
+                        // User Profile Summary Row (Clickable to Edit Profile)
+                        val preset = defaultAvatarPresets.find { it.id == userAvatarPreset }
+                            ?: defaultAvatarPresets[0]
+
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onNavigateToEditProfile()
+                                }
+                                .padding(vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(52.dp)
+                                        .size(54.dp)
                                         .clip(CircleShape)
-                                        .background(
-                                            Brush.linearGradient(listOf(PulseCyan, PulseViolet))
-                                        ),
+                                        .background(Brush.linearGradient(preset.gradient))
+                                        .border(1.5.dp, Color.White.copy(alpha = 0.5f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Person,
+                                        imageVector = preset.icon,
                                         contentDescription = null,
                                         tint = TextDark,
                                         modifier = Modifier.size(28.dp)
@@ -200,39 +210,43 @@ fun MySpaceScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 Column {
-                                    Text(
-                                        text = "Charfeddine Ka",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = userName,
+                                            style = MaterialTheme.typography.titleMedium.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
                                         )
-                                    )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Profile",
+                                            tint = PulseCyan.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = if (isArabic) "مستخدم Aura Pulse المميز" else "Aura Pulse Elite Member",
+                                        text = userTierBadge,
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = PulseCyan,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Medium
+                                            color = if (streakDays > 180) Color(0xFFFFD700) else PulseCyan,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     )
                                 }
                             }
 
-                            // View Roadmap path button
+                            // Edit Profile Pill Button
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0x3300F2FE),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onOpenRoadmap()
-                                    }
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0x2600F2FE),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.4f))
                             ) {
                                 Text(
-                                    text = if (isArabic) "خارطة المكافآت 🗺️" else "Roadmap 🗺️",
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    text = if (isArabic) "تعديل ✏️" else "Edit ✏️",
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = PulseCyan,
                                         fontWeight = FontWeight.Bold,
@@ -343,73 +357,6 @@ fun MySpaceScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Quick Shield Actions: Add Shield & Simulate Missed Day
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0x2200F2FE),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x4400F2FE)),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        streakViewModel.addShield()
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(Icons.Default.Add, null, tint = PulseCyan, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = if (isArabic) "إضافة درع (+1 🛡️)" else "+1 Shield (Max 30)",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = PulseCyan,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 10.5.sp
-                                        )
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = Color(0x22EF4444),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x44EF4444)),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        streakViewModel.simulateMissedDay()
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(Icons.Default.Warning, null, tint = Color(0xFFEF4444), modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = if (isArabic) "محاكاة تفويت يوم" else "Simulate Missed Day",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFFEF4444),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 10.5.sp
-                                        )
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
 
@@ -889,7 +836,7 @@ fun MySpaceScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = "Developed by: Charfeddine Ka",
+                                        text = "Developed by: Charfeddine Kahlessenane",
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,

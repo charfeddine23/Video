@@ -24,10 +24,10 @@ data class MilestoneItem(
 )
 
 data class StreakUiState(
-    val streakDays: Int = 14,
-    val shieldsCount: Int = 18,
+    val streakDays: Int = 0,
+    val shieldsCount: Int = 3,
     val maxShields: Int = 30,
-    val dailyWatchSeconds: Int = 180, // 3 min / 5 min
+    val dailyWatchSeconds: Int = 0, // 0 sec / 5 min
     val dailyGoalSeconds: Int = 300, // 5 minutes actual playback
     val isGoalCompletedToday: Boolean = false,
     val isGenuinePlaybackActive: Boolean = false,
@@ -52,6 +52,34 @@ class StreakViewModel(
     // Load initial state directly from persistent local storage on startup
     private val _uiState = MutableStateFlow(repository.loadInitialState())
     val uiState: StateFlow<StreakUiState> = _uiState.asStateFlow()
+
+    private val _userName = MutableStateFlow(repository.getUserName())
+    val userName: StateFlow<String> = _userName.asStateFlow()
+
+    private val _userAvatarUri = MutableStateFlow(repository.getUserAvatarUri())
+    val userAvatarUri: StateFlow<String?> = _userAvatarUri.asStateFlow()
+
+    private val _userAvatarPreset = MutableStateFlow(repository.getUserAvatarPreset())
+    val userAvatarPreset: StateFlow<Int> = _userAvatarPreset.asStateFlow()
+
+    fun updateProfile(name: String, avatarUri: String?, presetId: Int) {
+        val safeName = name.trim().ifBlank { "Charfeddine Kahlessenane" }
+        repository.saveUserName(safeName)
+        repository.saveUserAvatarUri(avatarUri)
+        repository.saveUserAvatarPreset(presetId)
+        _userName.value = safeName
+        _userAvatarUri.value = avatarUri
+        _userAvatarPreset.value = presetId
+    }
+
+    fun getUserTierBadge(streakDays: Int, isArabic: Boolean): String {
+        return when {
+            streakDays <= 20 -> if (isArabic) "مستخدم عادي" else "Standard User"
+            streakDays in 21..60 -> if (isArabic) "مستخدم مميز" else "Special User"
+            streakDays in 61..180 -> if (isArabic) "مستخدم مميز" else "VIP User"
+            else -> "Vip II Member"
+        }
+    }
 
     val milestones = listOf(
         MilestoneItem(
@@ -141,12 +169,18 @@ class StreakViewModel(
             val reachedGoal = updatedSeconds >= current.dailyGoalSeconds
             val newlyCompleted = reachedGoal && !current.isGoalCompletedToday
             val newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
+            val newShields = if (newlyCompleted && current.shieldsCount < current.maxShields) {
+                current.shieldsCount + 1
+            } else current.shieldsCount
 
             val newState = current.copy(
                 dailyWatchSeconds = updatedSeconds,
                 isGoalCompletedToday = reachedGoal || current.isGoalCompletedToday,
                 streakDays = newStreak,
-                feedbackMessage = if (newlyCompleted) "🎉 5-Minute Daily Goal Completed! Streak: ${newStreak} Days!" else current.feedbackMessage
+                shieldsCount = newShields,
+                feedbackMessage = if (newlyCompleted) {
+                    "🎉 أتممت هدف الـ 5 دقائق اليومي! السترايك: ${newStreak} يوماً، وكسبت درعاً جديداً 🛡️ (${newShields}/${current.maxShields})"
+                } else current.feedbackMessage
             )
             repository.saveStreakState(newState)
             newState

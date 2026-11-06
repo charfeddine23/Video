@@ -97,6 +97,7 @@ fun VideoPulseApp(
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
     var isUpdateDialogOpen by remember { mutableStateOf(false) }
     var isRoadmapOpen by remember { mutableStateOf(false) }
+    var isEditingProfile by remember { mutableStateOf(false) }
 
     val isArabic = currentLanguage == AppLanguage.ARABIC
 
@@ -108,9 +109,10 @@ fun VideoPulseApp(
 
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isRoadmapOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isEditingProfile || isRoadmapOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
+            isEditingProfile -> isEditingProfile = false
             isRoadmapOpen -> isRoadmapOpen = false
             activePlayerMedia != null -> activePlayerMedia = null
             isUpdateDialogOpen -> isUpdateDialogOpen = false
@@ -184,6 +186,9 @@ fun VideoPulseApp(
                                 onLanguageChange = onLanguageChange,
                                 onOpenRoadmap = {
                                     isRoadmapOpen = true
+                                },
+                                onNavigateToEditProfile = {
+                                    isEditingProfile = true
                                 }
                             )
                         }
@@ -192,7 +197,18 @@ fun VideoPulseApp(
             }
         }
 
-        // Milestone Roadmap Screen (Triggered by 1-second long-press on flame or via roadmap button)
+        // Edit Profile Screen Overlay
+        if (isEditingProfile) {
+            com.example.ui.screens.EditProfileScreen(
+                streakViewModel = streakViewModel,
+                onNavigateBack = {
+                    isEditingProfile = false
+                },
+                isArabic = isArabic
+            )
+        }
+
+        // Milestone Roadmap Screen (Triggered by 1-second long-press on flame)
         if (isRoadmapOpen) {
             MilestoneRoadmapScreen(
                 streakViewModel = streakViewModel,

@@ -295,7 +295,7 @@ fun SettingsModalSheet(
                             Column {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "Charfeddine Ka",
+                                        text = "Charfeddine Kahlessenane",
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onSurface
@@ -310,7 +310,7 @@ fun SettingsModalSheet(
                                     )
                                 }
                                 Text(
-                                    text = "Developed by: Charfeddine Ka",
+                                    text = "Developed by: Charfeddine Kahlessenane",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = PulseCyan,
                                         fontWeight = FontWeight.SemiBold,
