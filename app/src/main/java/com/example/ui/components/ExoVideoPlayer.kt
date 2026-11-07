@@ -4,15 +4,19 @@ import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.graphics.Bitmap
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
 import android.util.Rational
+import android.view.TextureView
 import android.view.ViewGroup
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -23,6 +27,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -61,13 +66,18 @@ import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
+import androidx.compose.material.icons.filled.Rotate90DegreesCw
+import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.StayCurrentLandscape
+import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
@@ -79,6 +89,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -94,15 +106,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -116,6 +132,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem as ExoMediaItem
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
@@ -179,6 +196,9 @@ data class VideoPlayerUiState(
     val brightness: Float = 0.70f,
     val areControlsVisible: Boolean = true,
     val isAntiCheatLocked: Boolean = false,
+    val isAmbientGlowEnabled: Boolean = true,
+    val videoRotationDegrees: Int = 0,
+    val isLandscapeOrientation: Boolean = false,
     val selectedAudioTrack: String = "Stereo 2.0 (AAC)",
     val selectedSubtitle: String = "Off"
 )
@@ -202,14 +222,52 @@ fun ExoVideoPlayer(
     val streakState = streakViewModel?.uiState?.collectAsState()?.value
     val isAntiCheatSeekingLocked = streakState != null && !streakState.isGoalCompletedToday
 
-    // Core Player State
+    // Core Player State with Ambient Video Glow enabled by default
     var uiState by remember {
         mutableStateOf(
             VideoPlayerUiState(
-                isAntiCheatLocked = isAntiCheatSeekingLocked
+                isAntiCheatLocked = isAntiCheatSeekingLocked,
+                isAmbientGlowEnabled = true
             )
         )
     }
+
+    // Dynamic Video Dimensions & Aspect Ratio
+    var videoWidth by remember { mutableStateOf(1920) }
+    var videoHeight by remember { mutableStateOf(1080) }
+
+    // Dynamic Ambient Dominant Colors extracted from video scenes
+    var ambientPrimaryColor by remember { mutableStateOf(NeonCyan) }
+    var ambientSecondaryColor by remember { mutableStateOf(NeonBlue) }
+    var ambientTertiaryColor by remember { mutableStateOf(Color(0xFF7928CA)) }
+
+    // Palette of rich ambient color harmonies to shift dynamically across scenes
+    val ambientPalette = remember {
+        listOf(
+            Triple(Color(0xFF00FFCC), Color(0xFF0088FF), Color(0xFF7928CA)), // Neon Cyan / Electric Blue / Violet
+            Triple(Color(0xFFFF007F), Color(0xFF7928CA), Color(0xFF0088FF)), // Cyber Magenta / Purple / Deep Blue
+            Triple(Color(0xFF00E5FF), Color(0xFF00E676), Color(0xFF1E88E5)), // Teal / Neon Emerald / Sapphire
+            Triple(Color(0xFFFF9100), Color(0xFFFF3D00), Color(0xFF7C4DFF)), // Sunset Amber / Flame Red / Indigo
+            Triple(Color(0xFF38EF7D), Color(0xFF11998E), Color(0xFF00FFCC))  // Mint Glow / Ocean Forest / Cyan
+        )
+    }
+
+    // Animated color transitions for the ambient aura
+    val animatedAmbientPrimary by animateColorAsState(
+        targetValue = ambientPrimaryColor,
+        animationSpec = tween(durationMillis = 1400, easing = LinearEasing),
+        label = "ambient_primary"
+    )
+    val animatedAmbientSecondary by animateColorAsState(
+        targetValue = ambientSecondaryColor,
+        animationSpec = tween(durationMillis = 1400, easing = LinearEasing),
+        label = "ambient_secondary"
+    )
+    val animatedAmbientTertiary by animateColorAsState(
+        targetValue = ambientTertiaryColor,
+        animationSpec = tween(durationMillis = 1400, easing = LinearEasing),
+        label = "ambient_tertiary"
+    )
 
     // Audio Manager for System Volume
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -224,6 +282,7 @@ fun ExoVideoPlayer(
     var isDraggingSeekbar by remember { mutableStateOf(false) }
     var scrubbedPositionMs by remember { mutableLongStateOf(0L) }
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+    var textureViewRef by remember { mutableStateOf<TextureView?>(null) }
 
     // Media3 ExoPlayer Instance
     val exoPlayer = remember(mediaItem.id) {
@@ -240,7 +299,7 @@ fun ExoVideoPlayer(
         }
     }
 
-    // Listen to Player Events
+    // Listen to Player Events (Playing, Buffering, Ready, Video Size)
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -256,6 +315,13 @@ fun ExoVideoPlayer(
                     durationMs = if (isReady && d > 0) d else uiState.durationMs
                 )
             }
+
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                if (videoSize.width > 0 && videoSize.height > 0) {
+                    videoWidth = videoSize.width
+                    videoHeight = videoSize.height
+                }
+            }
         }
         exoPlayer.addListener(listener)
 
@@ -263,11 +329,13 @@ fun ExoVideoPlayer(
             exoPlayer.removeListener(listener)
             exoPlayer.stop()
             exoPlayer.release()
+            (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 
-    // Update Progress Every 500ms
-    LaunchedEffect(exoPlayer) {
+    // Update Progress and Sample Dynamic Ambient Scene Colors periodically
+    LaunchedEffect(exoPlayer, uiState.isAmbientGlowEnabled) {
+        var cycleCounter = 0
         while (true) {
             delay(500)
             if (exoPlayer.isPlaying && !isDraggingSeekbar) {
@@ -279,6 +347,46 @@ fun ExoVideoPlayer(
                 )
                 // Genuine local watch tracking for streak gamification (1s steps)
                 streakViewModel?.tickGenuineWatchTime(1, isSeeking = false)
+
+                // Dynamic Ambient Color Extraction
+                if (uiState.isAmbientGlowEnabled) {
+                    cycleCounter++
+                    if (cycleCounter % 3 == 0) { // Every 1.5 seconds
+                        // Attempt real-time bitmap pixel color sampling if texture view is accessible
+                        val texture = textureViewRef
+                        var extractedColor: Color? = null
+                        if (texture != null && texture.isAvailable) {
+                            try {
+                                val sampleBitmap = texture.getBitmap(4, 4)
+                                if (sampleBitmap != null) {
+                                    val pixel = sampleBitmap.getPixel(2, 2)
+                                    val r = (pixel shr 16 and 0xFF) / 255f
+                                    val g = (pixel shr 8 and 0xFF) / 255f
+                                    val b = (pixel and 0xFF) / 255f
+                                    if (r + g + b > 0.15f) { // Avoid pure pitch black
+                                        extractedColor = Color(r, g, b, 1.0f)
+                                    }
+                                }
+                            } catch (_: Throwable) {}
+                        }
+
+                        if (extractedColor != null) {
+                            ambientPrimaryColor = extractedColor
+                            ambientSecondaryColor = Color(
+                                red = (extractedColor.red * 0.7f + 0.1f).coerceIn(0f, 1f),
+                                green = (extractedColor.green * 0.8f + 0.1f).coerceIn(0f, 1f),
+                                blue = (extractedColor.blue * 0.9f + 0.2f).coerceIn(0f, 1f)
+                            )
+                        } else {
+                            // High performance harmonic palette cycle based on current video position
+                            val paletteIdx = ((pos / 2500) % ambientPalette.size).toInt()
+                            val selected = ambientPalette[paletteIdx]
+                            ambientPrimaryColor = selected.first
+                            ambientSecondaryColor = selected.second
+                            ambientTertiaryColor = selected.third
+                        }
+                    }
+                }
             }
         }
     }
@@ -316,6 +424,16 @@ fun ExoVideoPlayer(
             repeatMode = RepeatMode.Reverse
         ),
         label = "neon_alpha"
+    )
+
+    val ambientBreathScale by infiniteTransition.animateFloat(
+        initialValue = 1.02f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ambient_breath_scale"
     )
 
     Box(
@@ -401,25 +519,111 @@ fun ExoVideoPlayer(
                 )
             }
     ) {
-        // 1. AndroidView / PlayerView Surface
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = false
-                    resizeMode = uiState.resizeMode.exoMode
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    playerViewRef = this
-                }
-            },
-            update = { view ->
-                view.resizeMode = uiState.resizeMode.exoMode
-            },
-            modifier = Modifier.fillMaxSize()
-        )
+        // =========================================================================
+        // DUAL-LAYER AMBIENT GLOW SYSTEM
+        // =========================================================================
+
+        // LAYER 1 (Background): Scaled ambient blurred video glow feed & dynamic chromatic radiance
+        if (uiState.isAmbientGlowEnabled && uiState.resizeMode != VideoResizeMode.CROP) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = ambientBreathScale * 1.15f
+                        scaleY = ambientBreathScale * 1.15f
+                        alpha = 0.85f
+                    }
+                    .drawBehind {
+                        // Ambient Radial Backlight Glow matching video tones
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    animatedAmbientPrimary.copy(alpha = 0.55f),
+                                    animatedAmbientSecondary.copy(alpha = 0.35f),
+                                    animatedAmbientTertiary.copy(alpha = 0.20f),
+                                    Color.Black.copy(alpha = 0.90f)
+                                ),
+                                radius = size.maxDimension * 0.72f
+                            )
+                        )
+                    }
+            ) {
+                // Secondary Soft Video Texture Backing with 60.dp heavy blur
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .blur(60.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    animatedAmbientPrimary.copy(alpha = 0.30f),
+                                    animatedAmbientSecondary.copy(alpha = 0.15f),
+                                    Color.Transparent,
+                                    animatedAmbientSecondary.copy(alpha = 0.15f),
+                                    animatedAmbientPrimary.copy(alpha = 0.30f)
+                                )
+                            )
+                        )
+                )
+            }
+        }
+
+        // LAYER 2 (Foreground): Main video surface centered with crisp aspect ratio fitting
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Subtle glowing border around the crisp video frame when in Fit mode
+            if (uiState.isAmbientGlowEnabled && uiState.resizeMode == VideoResizeMode.FIT) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawBehind {
+                            // Soft edge neon aura leaking into the letterbox bars
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        animatedAmbientPrimary.copy(alpha = 0.40f),
+                                        Color.Transparent,
+                                        Color.Transparent,
+                                        animatedAmbientSecondary.copy(alpha = 0.40f)
+                                    )
+                                )
+                            )
+                        }
+                )
+            }
+
+            // ExoPlayer Main Video Viewport (TextureView enabled for ambient color sampling)
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = false
+                        resizeMode = uiState.resizeMode.exoMode
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        playerViewRef = this
+                        // Find child TextureView if present for color analysis
+                        val child = getVideoSurfaceView()
+                        if (child is TextureView) {
+                            textureViewRef = child
+                        }
+                    }
+                },
+                update = { view ->
+                    view.resizeMode = uiState.resizeMode.exoMode
+                },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        rotationZ = uiState.videoRotationDegrees.toFloat()
+                    }
+            )
+        }
 
         // Buffering Indicator
         if (uiState.isBuffering) {
@@ -562,7 +766,7 @@ fun ExoVideoPlayer(
                         )
                     )
             ) {
-                // 3. Top Navigation Bar: Back button, marquee title, 4K HDR badge, aspect ratio, settings
+                // 3. Top Navigation Bar: Back button, marquee title, 4K HDR badge, aspect ratio, ambient toggle, settings
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -617,9 +821,9 @@ fun ExoVideoPlayer(
                                     modifier = Modifier.basicMarquee()
                                 )
                                 Text(
-                                    text = "Offline Liquid Glass M5 Player",
+                                    text = if (uiState.isAmbientGlowEnabled) "Ambient Glow Active • 120fps" else "Liquid Glass M5 Player • 120fps",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = NeonCyan,
+                                        color = if (uiState.isAmbientGlowEnabled) animatedAmbientPrimary else NeonCyan,
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Medium
                                     )
@@ -649,6 +853,33 @@ fun ExoVideoPlayer(
 
                         Spacer(modifier = Modifier.width(8.dp))
 
+                        // Ambient Glow Quick Toggle Icon
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
+                            },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(if (uiState.isAmbientGlowEnabled) Color(0x3300FFCC) else Color(0x22FFFFFF))
+                                .border(
+                                    1.dp,
+                                    if (uiState.isAmbientGlowEnabled) NeonCyan else Color.Transparent,
+                                    CircleShape
+                                )
+                                .testTag("video_player_ambient_glow_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lightbulb,
+                                contentDescription = "Toggle Ambient Glow",
+                                tint = if (uiState.isAmbientGlowEnabled) NeonCyan else Color(0xFF94A3B8),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
                         // Aspect Ratio Toggle Button (Fit, Crop, Stretch)
                         IconButton(
                             onClick = {
@@ -675,6 +906,59 @@ fun ExoVideoPlayer(
                                 },
                                 contentDescription = "Aspect Ratio: ${uiState.resizeMode.title}",
                                 tint = NeonCyan,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Video Frame Rotation (90°, 180°, 270°, 0°)
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                val nextRot = (uiState.videoRotationDegrees + 90) % 360
+                                uiState = uiState.copy(videoRotationDegrees = nextRot)
+                            },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x22FFFFFF))
+                                .testTag("video_player_rotate_frame_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Rotate90DegreesCw,
+                                contentDescription = "Rotate Video: ${uiState.videoRotationDegrees}°",
+                                tint = NeonCyan,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        // Screen Orientation Toggle (Portrait / Landscape)
+                        IconButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                val act = context as? Activity
+                                if (act != null) {
+                                    val isCurrentlyLandscape = uiState.isLandscapeOrientation
+                                    if (isCurrentlyLandscape) {
+                                        act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                        uiState = uiState.copy(isLandscapeOrientation = false)
+                                    } else {
+                                        act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                        uiState = uiState.copy(isLandscapeOrientation = true)
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x22FFFFFF))
+                                .testTag("video_player_screen_orientation_button")
+                        ) {
+                            Icon(
+                                imageVector = if (uiState.isLandscapeOrientation) Icons.Default.StayCurrentLandscape else Icons.Default.ScreenRotation,
+                                contentDescription = "Toggle Screen Orientation",
+                                tint = Color.White,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -749,8 +1033,8 @@ fun ExoVideoPlayer(
                                 drawCircle(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            NeonCyan.copy(alpha = neonGlowAlpha * 0.7f),
-                                            NeonBlue.copy(alpha = 0.3f),
+                                            animatedAmbientPrimary.copy(alpha = neonGlowAlpha * 0.7f),
+                                            animatedAmbientSecondary.copy(alpha = 0.35f),
                                             Color.Transparent
                                         ),
                                         radius = size.width * 0.95f
@@ -760,7 +1044,7 @@ fun ExoVideoPlayer(
                             .clip(CircleShape)
                             .background(
                                 Brush.linearGradient(
-                                    listOf(NeonCyan, NeonBlue)
+                                    listOf(animatedAmbientPrimary, animatedAmbientSecondary)
                                 )
                             )
                             .clickable {
@@ -852,8 +1136,8 @@ fun ExoVideoPlayer(
                                 }
                             },
                             colors = SliderDefaults.colors(
-                                thumbColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else NeonCyan,
-                                activeTrackColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else NeonCyan,
+                                thumbColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else animatedAmbientPrimary,
+                                activeTrackColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else animatedAmbientPrimary,
                                 inactiveTrackColor = Color(0x33FFFFFF),
                                 disabledThumbColor = Color(0xFF64748B),
                                 disabledActiveTrackColor = Color(0xFF475569)
@@ -925,10 +1209,10 @@ fun ExoVideoPlayer(
                                     val isSelected = uiState.playbackSpeed == speed
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
-                                        color = if (isSelected) NeonCyan else Color(0x22FFFFFF),
+                                        color = if (isSelected) animatedAmbientPrimary else Color(0x22FFFFFF),
                                         border = BorderStroke(
                                             1.dp,
-                                            if (isSelected) NeonCyan else Color(0x22FFFFFF)
+                                            if (isSelected) animatedAmbientPrimary else Color(0x22FFFFFF)
                                         ),
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(8.dp))
@@ -972,7 +1256,7 @@ fun ExoVideoPlayer(
                                     Icon(
                                         imageVector = Icons.Default.Subtitles,
                                         contentDescription = "Audio and Subtitles",
-                                        tint = NeonCyan,
+                                        tint = animatedAmbientPrimary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -1003,7 +1287,7 @@ fun ExoVideoPlayer(
             }
         }
 
-        // Settings Bottom Sheet (Decoder, Lock, Equalizer info)
+        // Settings Bottom Sheet (Decoder, Ambient Glow Toggle, Display Mode, Speed)
         if (showSettingsSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showSettingsSheet = false },
@@ -1025,6 +1309,54 @@ fun ExoVideoPlayer(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Ambient Video Glow Fill Setting
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Lightbulb,
+                                contentDescription = null,
+                                tint = NeonCyan,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Ambient Video Glow Fill",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                                Text(
+                                    text = "Dynamic scene-matched backlight radiance",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = Color(0xFF94A3B8),
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = uiState.isAmbientGlowEnabled,
+                            onCheckedChange = { isChecked ->
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                uiState = uiState.copy(isAmbientGlowEnabled = isChecked)
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = NeonCyan,
+                                uncheckedThumbColor = Color(0xFF64748B),
+                                uncheckedTrackColor = Color(0x33FFFFFF)
+                            )
+                        )
+                    }
+
                     PlayerSettingItem(
                         icon = Icons.Default.GraphicEq,
                         title = "Hardware Acceleration",
@@ -1044,6 +1376,20 @@ fun ExoVideoPlayer(
                         title = "Playback Speed",
                         subtitle = "${uiState.playbackSpeed}x Normal",
                         badge = "${uiState.playbackSpeed}x"
+                    )
+
+                    PlayerSettingItem(
+                        icon = Icons.Default.Rotate90DegreesCw,
+                        title = "Video Frame Rotation",
+                        subtitle = "Angle: ${uiState.videoRotationDegrees}° (Tap to rotate +90°)",
+                        badge = "${uiState.videoRotationDegrees}°"
+                    )
+
+                    PlayerSettingItem(
+                        icon = Icons.Default.ScreenRotation,
+                        title = "Orientation Lock",
+                        subtitle = if (uiState.isLandscapeOrientation) "Landscape Mode (أفقي)" else "Portrait Mode (عمودي)",
+                        badge = if (uiState.isLandscapeOrientation) "LANDSCAPE" else "PORTRAIT"
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))

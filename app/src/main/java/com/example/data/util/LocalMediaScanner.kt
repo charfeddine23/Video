@@ -134,10 +134,6 @@ object LocalMediaScanner {
                         null
                     }
 
-                    val thumbnailBitmap = if (contentUri != null) {
-                        extractRandomMidpointThumbnail(context, contentUri, durationMs)
-                    } else null
-
                     videos.add(
                         LocalDeviceVideo(
                             id = "device_vid_${id}_${videos.size}",
@@ -148,7 +144,7 @@ object LocalMediaScanner {
                             dateAddedText = formatDate(dateAddedSecs * 1000L),
                             uriString = contentUri?.toString(),
                             thumbnailRes = 0,
-                            bitmap = thumbnailBitmap,
+                            bitmap = null,
                             isFromGallery = true,
                             folderName = bucketName?.ifBlank { "Internal Storage" } ?: "Internal Storage"
                         )
@@ -215,8 +211,6 @@ object LocalMediaScanner {
             "Phone Files (ملفات الهاتف)"
         }
 
-        val thumbnailBitmap = extractRandomMidpointThumbnail(context, uri, durationMs)
-
         return LocalDeviceVideo(
             id = "picked_${System.currentTimeMillis()}_${(1000..9999).random()}",
             title = displayName ?: "Video.mp4",
@@ -226,7 +220,7 @@ object LocalMediaScanner {
             dateAddedText = "Device File",
             uriString = uri.toString(),
             thumbnailRes = 0,
-            bitmap = thumbnailBitmap,
+            bitmap = null,
             isFromGallery = true,
             folderName = folderName
         )

@@ -141,7 +141,7 @@ fun WatchScreen(
     // ONLY real local videos from the device storage (starts empty with NO mock/dummy videos)
     val localVideos = remember { mutableStateListOf<LocalDeviceVideo>() }
 
-    // Helper to refresh / scan device videos
+    // Helper to refresh / scan device videos instantaneously
     val scanVideosJob: () -> Unit = {
         scope.launch {
             isLoading = true
@@ -153,9 +153,37 @@ fun WatchScreen(
             val existingUris = userImported.mapNotNull { it.uriString }.toSet()
             val freshList = (userImported + scanned.filter { it.uriString !in existingUris })
 
+            // Instant display of all videos in zero milliseconds
             localVideos.clear()
             localVideos.addAll(freshList)
             isLoading = false
+
+            // Asynchronously fetch thumbnails in background coroutine without blocking UI
+            launch(Dispatchers.IO) {
+                freshList.forEachIndexed { index, vid ->
+                    if (vid.bitmap == null && !vid.uriString.isNullOrBlank()) {
+                        val uri = Uri.parse(vid.uriString)
+                        val durMs = try {
+                            val parts = vid.durationText.split(":")
+                            if (parts.size == 2) {
+                                (parts[0].toLong() * 60 + parts[1].toLong()) * 1000L
+                            } else if (parts.size == 3) {
+                                (parts[0].toLong() * 3600 + parts[1].toLong() * 60 + parts[2].toLong()) * 1000L
+                            } else 60_000L
+                        } catch (_: Exception) { 60_000L }
+
+                        val thumb = LocalMediaScanner.extractRandomMidpointThumbnail(context, uri, durMs)
+                        if (thumb != null) {
+                            withContext(Dispatchers.Main) {
+                                val currentIdx = localVideos.indexOfFirst { it.id == vid.id }
+                                if (currentIdx != -1) {
+                                    localVideos[currentIdx] = localVideos[currentIdx].copy(bitmap = thumb)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
