@@ -812,55 +812,65 @@ fun MySpaceScreen(
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(18.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0x2600F2FE)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Code,
-                                        contentDescription = null,
-                                        tint = PulseCyan,
-                                        modifier = Modifier.size(20.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0x3300F2FE), Color(0x337928CA))
+                                        )
                                     )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
+                                    .border(1.dp, PulseCyan.copy(alpha = 0.5f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Code,
+                                    contentDescription = null,
+                                    tint = PulseCyan,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Text(
-                                        text = "Developed by: Charfeddine Kahlessenane",
+                                        text = "Charfeddine Kahlessenane",
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
-                                            fontSize = 14.sp
-                                        )
-                                    )
-                                    Text(
-                                        text = if (isArabic) "مهندس ومصمم التطبيق" else "Lead Android Engineer & Designer",
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF94A3B8),
-                                            fontSize = 11.sp
-                                        )
+                                            fontSize = 15.sp
+                                        ),
+                                        maxLines = 1
                                     )
                                 }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (isArabic) "المطور الرئيسي ومصمم التطبيق" else "Lead Android Engineer & Designer",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = PulseCyan,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 11.5.sp
+                                    )
+                                )
                             }
-
+                            Spacer(modifier = Modifier.width(8.dp))
                             Surface(
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(10.dp),
                                 color = Color(0x3300F2FE),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f))
+                                border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f))
                             ) {
                                 Text(
                                     text = "v${BuildConfig.VERSION_NAME}",
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = PulseCyan,
                                         fontWeight = FontWeight.Bold,

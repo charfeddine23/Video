@@ -72,7 +72,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.data.preferences.StreakPreferencesRepository
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -119,8 +121,15 @@ fun WatchScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-
-    var selectedViewMode by remember { mutableStateOf(WatchViewMode.LIST) }
+    val prefsRepo = remember { StreakPreferencesRepository.getInstance(context) }
+    var selectedViewMode by remember {
+        val savedMode = try {
+            WatchViewMode.valueOf(prefsRepo.getWatchViewMode())
+        } catch (_: Exception) {
+            WatchViewMode.LIST
+        }
+        mutableStateOf(savedMode)
+    }
     var searchQuery by remember { mutableStateOf("") }
     var activeFolderId by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -498,6 +507,7 @@ fun WatchScreen(
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 selectedViewMode = mode
+                                prefsRepo.saveWatchViewMode(mode.name)
                                 activeFolderId = null
                             }
                             .testTag("view_mode_${mode.name.lowercase()}")
@@ -879,7 +889,14 @@ fun FileListItemCard(
                     .height(58.dp)
                     .clip(RoundedCornerShape(10.dp))
             ) {
-                if (video.thumbnailRes != 0) {
+                if (video.bitmap != null) {
+                    Image(
+                        bitmap = video.bitmap.asImageBitmap(),
+                        contentDescription = video.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else if (video.thumbnailRes != 0) {
                     Image(
                         painter = painterResource(id = video.thumbnailRes),
                         contentDescription = video.title,
@@ -998,7 +1015,14 @@ fun MagazineGridItemCard(
                     .fillMaxWidth()
                     .aspectRatio(1.5f)
             ) {
-                if (video.thumbnailRes != 0) {
+                if (video.bitmap != null) {
+                    Image(
+                        bitmap = video.bitmap.asImageBitmap(),
+                        contentDescription = video.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else if (video.thumbnailRes != 0) {
                     Image(
                         painter = painterResource(id = video.thumbnailRes),
                         contentDescription = video.title,

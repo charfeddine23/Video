@@ -35,6 +35,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_USER_NAME = "key_user_name"
         private const val KEY_USER_AVATAR_URI = "key_user_avatar_uri"
         private const val KEY_USER_AVATAR_PRESET = "key_user_avatar_preset"
+        private const val KEY_WATCH_VIEW_MODE = "key_watch_view_mode"
 
         @Volatile
         private var instance: StreakPreferencesRepository? = null
@@ -192,5 +193,13 @@ class StreakPreferencesRepository private constructor(context: Context) {
 
     fun saveUserAvatarPreset(presetId: Int) {
         prefs.edit().putInt(KEY_USER_AVATAR_PRESET, presetId).commit()
+    }
+
+    fun getWatchViewMode(): String {
+        return prefs.getString(KEY_WATCH_VIEW_MODE, "LIST") ?: "LIST"
+    }
+
+    fun saveWatchViewMode(modeName: String) {
+        prefs.edit().putString(KEY_WATCH_VIEW_MODE, modeName).apply()
     }
 }

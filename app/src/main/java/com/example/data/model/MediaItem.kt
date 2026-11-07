@@ -315,6 +315,7 @@ data class LocalDeviceVideo(
     val dateAddedText: String = "Today",
     val uriString: String? = null,
     val thumbnailRes: Int = 0,
+    val bitmap: android.graphics.Bitmap? = null,
     val isFromGallery: Boolean = false,
     val folderName: String = "Device Storage"
 )

@@ -310,11 +310,11 @@ fun SettingsModalSheet(
                                     )
                                 }
                                 Text(
-                                    text = "Developed by: Charfeddine Kahlessenane",
+                                    text = if (isArabic) "المطور الرئيسي ومصمم التطبيق" else "Lead Android Engineer & Designer",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = PulseCyan,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 11.sp
+                                        fontSize = 11.5.sp
                                     )
                                 )
                             }

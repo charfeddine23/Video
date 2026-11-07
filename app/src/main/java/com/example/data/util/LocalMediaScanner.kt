@@ -5,6 +5,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
@@ -15,8 +16,36 @@ import com.example.data.model.LocalDeviceVideo
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.random.Random
 
 object LocalMediaScanner {
+
+    fun extractRandomMidpointThumbnail(context: Context, uri: Uri, durationMs: Long): Bitmap? {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, uri)
+            // Calculate a target time around the middle (between 35% and 65% of the video)
+            val timeUs = if (durationMs > 1000L) {
+                val minPercent = 0.35
+                val maxPercent = 0.65
+                val randomFactor = minPercent + (Random.nextDouble() * (maxPercent - minPercent))
+                ((durationMs * 1000L) * randomFactor).toLong()
+            } else {
+                (durationMs * 1000L) / 2
+            }
+            // First attempt to get frame at the random midpoint
+            val frame = retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
+                ?: retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_PREVIOUS_SYNC)
+                ?: retriever.frameAtTime
+            frame
+        } catch (_: Throwable) {
+            null
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Throwable) {}
+        }
+    }
 
     fun hasStorageOrVideoPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -105,6 +134,10 @@ object LocalMediaScanner {
                         null
                     }
 
+                    val thumbnailBitmap = if (contentUri != null) {
+                        extractRandomMidpointThumbnail(context, contentUri, durationMs)
+                    } else null
+
                     videos.add(
                         LocalDeviceVideo(
                             id = "device_vid_${id}_${videos.size}",
@@ -115,6 +148,7 @@ object LocalMediaScanner {
                             dateAddedText = formatDate(dateAddedSecs * 1000L),
                             uriString = contentUri?.toString(),
                             thumbnailRes = 0,
+                            bitmap = thumbnailBitmap,
                             isFromGallery = true,
                             folderName = bucketName?.ifBlank { "Internal Storage" } ?: "Internal Storage"
                         )
@@ -181,6 +215,8 @@ object LocalMediaScanner {
             "Phone Files (ملفات الهاتف)"
         }
 
+        val thumbnailBitmap = extractRandomMidpointThumbnail(context, uri, durationMs)
+
         return LocalDeviceVideo(
             id = "picked_${System.currentTimeMillis()}_${(1000..9999).random()}",
             title = displayName ?: "Video.mp4",
@@ -190,6 +226,7 @@ object LocalMediaScanner {
             dateAddedText = "Device File",
             uriString = uri.toString(),
             thumbnailRes = 0,
+            bitmap = thumbnailBitmap,
             isFromGallery = true,
             folderName = folderName
         )

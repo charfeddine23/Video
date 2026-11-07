@@ -34,13 +34,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.MediaItem
 import com.example.ui.components.ExoVideoPlayer
-import com.example.ui.components.InAppUpdateDialog
+
 import com.example.ui.components.NavDestination
 import com.example.ui.components.VideoPulseBottomBar
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MilestoneRoadmapScreen
 import com.example.ui.screens.MySpaceScreen
-import com.example.ui.screens.ShortsScreen
+import com.example.ui.screens.ListenScreen
 import com.example.ui.screens.WatchScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.MyApplicationTheme
@@ -95,27 +95,19 @@ fun VideoPulseApp(
 
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
-    var isUpdateDialogOpen by remember { mutableStateOf(false) }
     var isRoadmapOpen by remember { mutableStateOf(false) }
     var isEditingProfile by remember { mutableStateOf(false) }
 
     val isArabic = currentLanguage == AppLanguage.ARABIC
 
-    // In-App Update: Check on app launch and notify if newer build is available
-    LaunchedEffect(Unit) {
-        delay(1500)
-        isUpdateDialogOpen = true
-    }
-
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isEditingProfile || isRoadmapOpen || isUpdateDialogOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isEditingProfile || isRoadmapOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
             isEditingProfile -> isEditingProfile = false
             isRoadmapOpen -> isRoadmapOpen = false
             activePlayerMedia != null -> activePlayerMedia = null
-            isUpdateDialogOpen -> isUpdateDialogOpen = false
             currentDestination != NavDestination.HOME -> currentDestination = NavDestination.HOME
         }
     }
@@ -171,9 +163,9 @@ fun VideoPulseApp(
                             )
                         }
 
-                        NavDestination.SHORTS -> {
-                            // Tab 2: Shorts (Short-form video feed placeholder)
-                            ShortsScreen()
+                        NavDestination.LISTEN -> {
+                            // Tab 2: Listen Screen (Music & Audio Local Hub)
+                            ListenScreen(isArabic = isArabic)
                         }
 
                         NavDestination.MY_SPACE -> {
@@ -232,22 +224,7 @@ fun VideoPulseApp(
             )
         }
 
-        // In-App Update Dialog
-        InAppUpdateDialog(
-            isOpen = isUpdateDialogOpen,
-            isArabic = isArabic,
-            onDismiss = {
-                isUpdateDialogOpen = false
-            },
-            onInstallComplete = {
-                isUpdateDialogOpen = false
-                scope.launch {
-                    snackbarHostState.showSnackbar(
-                        if (isArabic) "تم تثبيت أحدث إصدار بنجاح!" else "Latest version installed successfully!"
-                    )
-                }
-            }
-        )
+
 
         // Global Snackbar for feedback
         SnackbarHost(
