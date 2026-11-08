@@ -84,6 +84,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.data.preferences.StreakPreferencesRepository
+import com.example.ui.components.ContinueWatchingSection
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -655,6 +656,15 @@ fun WatchScreen(
                         focusedTextColor = Color.White,
                         unfocusedTextColor = Color.White
                     )
+                )
+            }
+
+            // Production-ready "Continue Watching" Section (متابعة المشاهدة)
+            if (activeFolderId == null && searchQuery.isBlank()) {
+                ContinueWatchingSection(
+                    localVideos = localVideos,
+                    onPlayMedia = onPlayMedia,
+                    isArabic = isArabic
                 )
             }
 

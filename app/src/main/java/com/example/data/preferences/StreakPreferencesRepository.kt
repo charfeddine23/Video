@@ -36,6 +36,14 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_USER_AVATAR_URI = "key_user_avatar_uri"
         private const val KEY_USER_AVATAR_PRESET = "key_user_avatar_preset"
         private const val KEY_WATCH_VIEW_MODE = "key_watch_view_mode"
+        private const val KEY_HIDE_FILE_EXTENSIONS = "key_hide_file_extensions"
+        private const val KEY_LAST_WATCHED_ID = "key_last_watched_id"
+        private const val KEY_LAST_WATCHED_TITLE = "key_last_watched_title"
+        private const val KEY_LAST_WATCHED_URI = "key_last_watched_uri"
+        private const val KEY_LAST_WATCHED_DURATION_MS = "key_last_watched_duration_ms"
+        private const val KEY_LAST_WATCHED_POSITION_MS = "key_last_watched_position_ms"
+        private const val KEY_LAST_WATCHED_THUMBNAIL_RES = "key_last_watched_thumbnail_res"
+        private const val KEY_LAST_WATCHED_TIMESTAMP = "key_last_watched_timestamp"
 
         @Volatile
         private var instance: StreakPreferencesRepository? = null
@@ -202,4 +210,82 @@ class StreakPreferencesRepository private constructor(context: Context) {
     fun saveWatchViewMode(modeName: String) {
         prefs.edit().putString(KEY_WATCH_VIEW_MODE, modeName).apply()
     }
+
+    fun getHideFileExtensions(): Boolean {
+        return prefs.getBoolean(KEY_HIDE_FILE_EXTENSIONS, true)
+    }
+
+    fun saveHideFileExtensions(hide: Boolean) {
+        prefs.edit().putBoolean(KEY_HIDE_FILE_EXTENSIONS, hide).apply()
+    }
+
+    fun saveLastWatched(
+        id: String,
+        title: String,
+        uri: String?,
+        durationMs: Long,
+        positionMs: Long,
+        thumbnailRes: Int = 0
+    ) {
+        prefs.edit()
+            .putString(KEY_LAST_WATCHED_ID, id)
+            .putString(KEY_LAST_WATCHED_TITLE, title)
+            .putString(KEY_LAST_WATCHED_URI, uri)
+            .putLong(KEY_LAST_WATCHED_DURATION_MS, durationMs)
+            .putLong(KEY_LAST_WATCHED_POSITION_MS, positionMs)
+            .putInt(KEY_LAST_WATCHED_THUMBNAIL_RES, thumbnailRes)
+            .putLong(KEY_LAST_WATCHED_TIMESTAMP, System.currentTimeMillis())
+            .apply()
+    }
+
+    fun getLastWatched(): LastWatchedVideoInfo? {
+        val id = prefs.getString(KEY_LAST_WATCHED_ID, null) ?: return null
+        val title = prefs.getString(KEY_LAST_WATCHED_TITLE, "") ?: ""
+        val uri = prefs.getString(KEY_LAST_WATCHED_URI, null)
+        val durationMs = prefs.getLong(KEY_LAST_WATCHED_DURATION_MS, 0L)
+        val positionMs = prefs.getLong(KEY_LAST_WATCHED_POSITION_MS, 0L)
+        val thumbRes = prefs.getInt(KEY_LAST_WATCHED_THUMBNAIL_RES, 0)
+        val timestamp = prefs.getLong(KEY_LAST_WATCHED_TIMESTAMP, 0L)
+
+        return LastWatchedVideoInfo(
+            id = id,
+            title = title,
+            uriString = uri,
+            durationMs = durationMs,
+            positionMs = positionMs,
+            thumbnailRes = thumbRes,
+            timestamp = timestamp
+        )
+    }
+
+    fun clearLastWatched() {
+        prefs.edit()
+            .remove(KEY_LAST_WATCHED_ID)
+            .remove(KEY_LAST_WATCHED_TITLE)
+            .remove(KEY_LAST_WATCHED_URI)
+            .remove(KEY_LAST_WATCHED_DURATION_MS)
+            .remove(KEY_LAST_WATCHED_POSITION_MS)
+            .remove(KEY_LAST_WATCHED_THUMBNAIL_RES)
+            .remove(KEY_LAST_WATCHED_TIMESTAMP)
+            .apply()
+    }
+}
+
+data class LastWatchedVideoInfo(
+    val id: String,
+    val title: String,
+    val uriString: String?,
+    val durationMs: Long,
+    val positionMs: Long,
+    val thumbnailRes: Int = 0,
+    val timestamp: Long = 0L
+) {
+    val progress: Float
+        get() = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+
+    val progressPercent: Int
+        get() = (progress * 100).toInt().coerceIn(0, 100)
+
+    val remainingMs: Long
+        get() = (durationMs - positionMs).coerceAtLeast(0L)
 }

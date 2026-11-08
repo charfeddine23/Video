@@ -233,6 +233,7 @@ fun ExoVideoPlayer(
     val streakState = streakViewModel?.uiState?.collectAsState()?.value
     val streakDays = streakState?.streakDays ?: 0
     val isAntiCheatSeekingLocked = streakState != null && !streakState.isGoalCompletedToday
+    val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(context) }
 
     // Core Player State
     var uiState by remember {
@@ -240,7 +241,7 @@ fun ExoVideoPlayer(
             VideoPlayerUiState(
                 isAntiCheatLocked = isAntiCheatSeekingLocked,
                 isAmbientGlowEnabled = true,
-                hideFileExtensions = true,
+                hideFileExtensions = prefsRepo.getHideFileExtensions(),
                 isLandscapeOrientation = isLandscape
             )
         )
@@ -364,6 +365,20 @@ fun ExoVideoPlayer(
         exoPlayer.addListener(listener)
 
         onDispose {
+            try {
+                val pos = exoPlayer.currentPosition
+                val dur = exoPlayer.duration.coerceAtLeast(0L)
+                if (pos > 500L && dur > 0L) {
+                    prefsRepo.saveLastWatched(
+                        id = mediaItem.id,
+                        title = mediaItem.title,
+                        uri = mediaItem.uriString,
+                        durationMs = dur,
+                        positionMs = pos,
+                        thumbnailRes = mediaItem.posterRes
+                    )
+                }
+            } catch (_: Exception) {}
             exoPlayer.removeListener(listener)
             exoPlayer.release()
             (context as? Activity)?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
@@ -380,6 +395,18 @@ fun ExoVideoPlayer(
                 currentPositionMs = pos,
                 durationMs = dur
             )
+
+            // Periodically persist playback progress for Continue Watching
+            if (pos > 1000L && dur > 0L && (pos % 2000L < 300L)) {
+                prefsRepo.saveLastWatched(
+                    id = mediaItem.id,
+                    title = mediaItem.title,
+                    uri = mediaItem.uriString,
+                    durationMs = dur,
+                    positionMs = pos,
+                    thumbnailRes = mediaItem.posterRes
+                )
+            }
 
             // Extract dominant colors from TextureView frame if available
             if (uiState.isAmbientGlowEnabled && (pos % 1000L < 300L)) {
@@ -1495,6 +1522,7 @@ fun ExoVideoPlayer(
                             onCheckedChange = { isChecked ->
                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 uiState = uiState.copy(hideFileExtensions = isChecked)
+                                prefsRepo.saveHideFileExtensions(isChecked)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
