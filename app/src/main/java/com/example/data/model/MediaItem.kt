@@ -319,3 +319,16 @@ data class LocalDeviceVideo(
     val isFromGallery: Boolean = false,
     val folderName: String = "Device Storage"
 )
+
+data class LocalAudioTrack(
+    val id: String,
+    val title: String,
+    val artist: String,
+    val album: String,
+    val durationSeconds: Int,
+    val albumCoverRes: Int,
+    val lyricsLines: List<String> = emptyList(),
+    val audioUri: String? = null,
+    val albumArtUri: String? = null,
+    val isFromDevice: Boolean = false
+)

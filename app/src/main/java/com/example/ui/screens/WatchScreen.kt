@@ -5,6 +5,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -12,6 +19,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -130,6 +139,30 @@ fun WatchScreen(
         }
         mutableStateOf(savedMode)
     }
+    var isFoldersMagazineLayout by remember { mutableStateOf(false) }
+    var lastFolderTapTime by remember { mutableStateOf(0L) }
+
+    // Dynamic luxurious ambient glow animation for Folders tab hint
+    val infiniteTransition = rememberInfiniteTransition(label = "folder_glow")
+    val folderGlowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "folder_glow_alpha"
+    )
+    val folderGlowSpread by infiniteTransition.animateFloat(
+        initialValue = 0.90f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "folder_glow_spread"
+    )
+
     var searchQuery by remember { mutableStateOf("") }
     var activeFolderId by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -305,7 +338,7 @@ fun WatchScreen(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     if (activeFolderId != null) {
                         IconButton(
@@ -347,7 +380,7 @@ fun WatchScreen(
                             text = if (activeFolderId != null) {
                                 folders.find { it.id == activeFolderId }?.name ?: "Folder"
                             } else {
-                                if (isArabic) "فيديوهات الهاتف" else "Phone Videos"
+                                if (isArabic) "فيديوهات" else "Videos"
                             },
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
@@ -357,71 +390,12 @@ fun WatchScreen(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (isArabic) "${localVideos.size} فيديو محلي على الهاتف" else "${localVideos.size} local device videos",
+                            text = if (isArabic) "${localVideos.size} فيديو" else "${localVideos.size} videos",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF94A3B8),
                                 fontSize = 11.sp
                             )
                         )
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Rescan / Refresh Button
-                    IconButton(
-                        onClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            if (hasStoragePermission) {
-                                scanVideosJob()
-                            } else {
-                                permissionLauncher.launch(LocalMediaScanner.getRequiredPermissions())
-                            }
-                        },
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color(0x1F121826))
-                            .border(1.dp, Color(0x2EFFFFFF), CircleShape)
-                            .testTag("watch_refresh_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh scan",
-                            tint = PulseCyan,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Open Phone Files Command Button
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0x3300F2FE),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f)),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                filePickerLauncher.launch(arrayOf("video/*"))
-                            }
-                            .testTag("watch_open_files_button")
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.FileOpen, null, tint = PulseCyan, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isArabic) "فتح ملفات الهاتف" else "Open Files",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    color = PulseCyan,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.5.sp
-                                )
-                            )
-                        }
                     }
                 }
             }
@@ -522,82 +496,167 @@ fun WatchScreen(
             ) {
                 WatchViewMode.values().forEach { mode ->
                     val isSelected = selectedViewMode == mode && activeFolderId == null
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) Color(0x3300F2FE) else Color(0x1F121826),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (isSelected) PulseCyan else Color(0x22FFFFFF)
-                        ),
+                    val isFoldersMode = mode == WatchViewMode.FOLDERS
+
+                    // Dynamic luxurious ambient glowing effect under Folders tab as double-tap hint
+                    Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                selectedViewMode = mode
-                                prefsRepo.saveWatchViewMode(mode.name)
-                                activeFolderId = null
-                            }
-                            .testTag("view_mode_${mode.name.lowercase()}")
+                            .then(
+                                if (isFoldersMode) {
+                                    Modifier.drawBehind {
+                                        // Dynamic high precision neon cyan & pulse violet glow under the button
+                                        drawCircle(
+                                            brush = Brush.radialGradient(
+                                                colors = listOf(
+                                                    PulseCyan.copy(alpha = folderGlowAlpha * 0.75f),
+                                                    PulseViolet.copy(alpha = folderGlowAlpha * 0.45f),
+                                                    Color(0xFF00FFCC).copy(alpha = folderGlowAlpha * 0.25f),
+                                                    Color.Transparent
+                                                ),
+                                                radius = size.maxDimension * folderGlowSpread * 0.78f
+                                            ),
+                                            center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.95f)
+                                        )
+                                    }
+                                } else Modifier
+                            )
                     ) {
-                        Row(
-                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) Color(0x3300F2FE) else Color(0x1F121826),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) PulseCyan else Color(0x22FFFFFF)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .pointerInput(Unit) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            if (isFoldersMode) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                // Double tap: toggle magazine grid layout for folders
+                                                isFoldersMagazineLayout = !isFoldersMagazineLayout
+                                                selectedViewMode = WatchViewMode.FOLDERS
+                                                prefsRepo.saveWatchViewMode(WatchViewMode.FOLDERS.name)
+                                                activeFolderId = null
+                                            }
+                                        },
+                                        onTap = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            val now = System.currentTimeMillis()
+                                            if (isFoldersMode && (now - lastFolderTapTime < 350L)) {
+                                                // Software double tap backup
+                                                isFoldersMagazineLayout = !isFoldersMagazineLayout
+                                            }
+                                            lastFolderTapTime = now
+                                            selectedViewMode = mode
+                                            prefsRepo.saveWatchViewMode(mode.name)
+                                            activeFolderId = null
+                                        }
+                                    )
+                                }
+                                .testTag("view_mode_${mode.name.lowercase()}")
                         ) {
-                            Icon(
-                                imageVector = mode.icon,
-                                contentDescription = null,
-                                tint = if (isSelected) PulseCyan else Color(0xFF94A3B8),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isArabic) mode.titleAr else mode.titleEn,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = if (isSelected) PulseCyan else Color.White,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    fontSize = 10.5.sp
-                                )
-                            )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 7.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isFoldersMode && isFoldersMagazineLayout) Icons.Default.GridView else mode.icon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) PulseCyan else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(5.dp))
+                                    Text(
+                                        text = if (isArabic) {
+                                            if (isFoldersMode && isFoldersMagazineLayout) "مجلدات (مجلة)" else mode.titleAr
+                                        } else {
+                                            if (isFoldersMode && isFoldersMagazineLayout) "Folders (Grid)" else mode.titleEn
+                                        },
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = if (isSelected) PulseCyan else Color.White,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+
+                                // Hint light indicator bar under Folders tab
+                                if (isFoldersMode) {
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .width(28.dp)
+                                            .height(2.5.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.horizontalGradient(
+                                                    listOf(
+                                                        Color.Transparent,
+                                                        PulseCyan.copy(alpha = folderGlowAlpha),
+                                                        PulseViolet.copy(alpha = folderGlowAlpha),
+                                                        Color.Transparent
+                                                    )
+                                                )
+                                            )
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            // Search Bar
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            // Compact / Slim Search Bar
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 6.dp),
-                placeholder = {
-                    Text(
-                        text = if (isArabic) "ابحث في فيديوهات الهاتف..." else "Search phone videos...",
-                        color = Color(0xFF64748B),
-                        fontSize = 12.sp
+                    .padding(horizontal = 24.dp, vertical = 4.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    placeholder = {
+                        Text(
+                            text = if (isArabic) "بحث..." else "Search videos...",
+                            color = Color(0xFF64748B),
+                            fontSize = 11.sp
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = PulseCyan,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PulseCyan,
+                        unfocusedBorderColor = Color(0x22FFFFFF),
+                        focusedContainerColor = Color(0x1F121826),
+                        unfocusedContainerColor = Color(0x1F121826),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
                     )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = PulseCyan,
-                        modifier = Modifier.size(18.dp)
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PulseCyan,
-                    unfocusedBorderColor = Color(0x2AFFFFFF),
-                    focusedContainerColor = Color(0x22121826),
-                    unfocusedContainerColor = Color(0x22121826),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
                 )
-            )
+            }
 
             // Loading Indicator
             if (isLoading) {
@@ -747,20 +806,40 @@ fun WatchScreen(
             ) { mode ->
                 when (mode) {
                     WatchViewMode.FOLDERS -> {
-                        // 1. Folders View (derived strictly from actual local folders on phone)
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(folders, key = { it.id }) { folder ->
-                                FolderItemCard(
-                                    folder = folder,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        activeFolderId = folder.id
-                                    }
-                                )
+                        // 1. Folders View: toggles between Magazine Grid (on double-tap) and Linear Column
+                        if (isFoldersMagazineLayout) {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(2),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(folders, key = { it.id }) { folder ->
+                                    FolderGridCard(
+                                        folder = folder,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            activeFolderId = folder.id
+                                        }
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(folders, key = { it.id }) { folder ->
+                                    FolderItemCard(
+                                        folder = folder,
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            activeFolderId = folder.id
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -811,6 +890,87 @@ fun WatchScreen(
 }
 
 @Composable
+fun FolderGridCard(
+    folder: VideoFolder,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick)
+            .testTag("folder_grid_card_${folder.id}"),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+    ) {
+        Column {
+            // Clean Smart Fallback Cover for Folder in Grid
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1.35f)
+            ) {
+                SmartFallbackCover(
+                    title = "",
+                    subtitle = null,
+                    icon = Icons.Default.Folder,
+                    aspectRatio = 1.35f,
+                    badgeText = null,
+                    gradientVariant = folder.id.hashCode(),
+                    showText = false
+                )
+            }
+
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = folder.name,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0x3300F2FE)
+                    ) {
+                        Text(
+                            text = "${folder.count} Videos",
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = PulseCyan,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.5.sp
+                            )
+                        )
+                    }
+
+                    if (folder.totalSize.isNotBlank()) {
+                        Text(
+                            text = folder.totalSize,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color(0xFF94A3B8),
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun FolderItemCard(
     folder: VideoFolder,
     onClick: () -> Unit
@@ -831,15 +991,16 @@ fun FolderItemCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Smart Fallback Cover for Folder
-            Box(modifier = Modifier.size(72.dp)) {
+            // Clean Smart Fallback Cover for Folder without filename, size, count or items on thumbnail
+            Box(modifier = Modifier.size(68.dp)) {
                 SmartFallbackCover(
-                    title = folder.name.ifBlank { "Folder" }.substringBefore(" ("),
-                    subtitle = "${folder.count} vids",
+                    title = "",
+                    subtitle = null,
                     icon = Icons.Default.Folder,
                     aspectRatio = 1f,
-                    badgeText = "${folder.count}",
-                    gradientVariant = folder.id.hashCode()
+                    badgeText = null,
+                    gradientVariant = folder.id.hashCode(),
+                    showText = false
                 )
             }
 
@@ -1149,7 +1310,7 @@ fun MagazineGridItemCard(
 }
 
 private fun calculateTotalFolderSize(videos: List<LocalDeviceVideo>): String {
-    return if (videos.isEmpty()) "0 MB" else "${videos.size} items"
+    return if (videos.isEmpty()) "" else "${videos.size} vids"
 }
 
 private fun LocalDeviceVideo.toMediaItem(): MediaItem {

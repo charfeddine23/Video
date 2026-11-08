@@ -47,6 +47,28 @@ object LocalMediaScanner {
         }
     }
 
+    fun hasStorageOrAudioPermission(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_MEDIA_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    fun getAudioPermissions(): Array<String> {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(Manifest.permission.READ_MEDIA_AUDIO)
+        } else {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }
+
     fun hasStorageOrVideoPermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val videoGranted = ContextCompat.checkSelfPermission(
@@ -81,6 +103,157 @@ object LocalMediaScanner {
         } else {
             arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
+    }
+
+    fun scanDeviceAudios(context: Context): List<com.example.data.model.LocalAudioTrack> {
+        val tracks = mutableListOf<com.example.data.model.LocalAudioTrack>()
+        val projection = arrayOf(
+            MediaStore.Audio.Media._ID,
+            MediaStore.Audio.Media.TITLE,
+            MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.ALBUM_ID
+        )
+        val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+        val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
+
+        try {
+            val cursor = context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                null,
+                sortOrder
+            )
+            cursor?.use { c ->
+                val idCol = c.getColumnIndex(MediaStore.Audio.Media._ID)
+                val titleCol = c.getColumnIndex(MediaStore.Audio.Media.TITLE)
+                val artistCol = c.getColumnIndex(MediaStore.Audio.Media.ARTIST)
+                val albumCol = c.getColumnIndex(MediaStore.Audio.Media.ALBUM)
+                val durationCol = c.getColumnIndex(MediaStore.Audio.Media.DURATION)
+                val albumIdCol = c.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)
+
+                while (c.moveToNext()) {
+                    val id = if (idCol >= 0 && !c.isNull(idCol)) c.getLong(idCol) else tracks.size.toLong()
+                    val title = (if (titleCol >= 0 && !c.isNull(titleCol)) c.getString(titleCol) else null) ?: "Audio Track #$id"
+                    val artist = (if (artistCol >= 0 && !c.isNull(artistCol)) c.getString(artistCol) else null) ?: "Unknown Artist"
+                    val album = (if (albumCol >= 0 && !c.isNull(albumCol)) c.getString(albumCol) else null) ?: "Device Audio"
+                    val durationMs = if (durationCol >= 0 && !c.isNull(durationCol)) c.getLong(durationCol) else 0L
+                    val albumId = if (albumIdCol >= 0 && !c.isNull(albumIdCol)) c.getLong(albumIdCol) else -1L
+
+                    val contentUri = try {
+                        ContentUris.withAppendedId(
+                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                            id
+                        )
+                    } catch (_: Throwable) {
+                        null
+                    }
+
+                    val albumArtUri = if (albumId > 0) {
+                        try {
+                            ContentUris.withAppendedId(
+                                Uri.parse("content://media/external/audio/albumart"),
+                                albumId
+                            ).toString()
+                        } catch (_: Throwable) {
+                            null
+                        }
+                    } else null
+
+                    val durationSeconds = (durationMs / 1000).toInt().coerceAtLeast(1)
+
+                    tracks.add(
+                        com.example.data.model.LocalAudioTrack(
+                            id = "device_audio_${id}",
+                            title = title,
+                            artist = if (artist.equals("<unknown>", ignoreCase = true)) "Local Device Music" else artist,
+                            album = if (album.equals("<unknown>", ignoreCase = true)) "Storage" else album,
+                            durationSeconds = durationSeconds,
+                            albumCoverRes = com.example.R.drawable.img_hero_poster,
+                            lyricsLines = listOf(
+                                "Playing local audio track from phone storage.",
+                                "Title: $title",
+                                "Artist: $artist"
+                            ),
+                            audioUri = contentUri?.toString(),
+                            albumArtUri = albumArtUri,
+                            isFromDevice = true
+                        )
+                    )
+                }
+            }
+        } catch (_: Throwable) {
+            // Guard against any security or cursor errors
+        }
+        return tracks
+    }
+
+    fun parseUriToAudioTrack(context: Context, uri: Uri): com.example.data.model.LocalAudioTrack {
+        try {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        } catch (_: Exception) {}
+
+        var displayName: String? = null
+        try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && nameIndex != -1) {
+                    displayName = cursor.getString(nameIndex)
+                }
+            }
+        } catch (_: Exception) {}
+
+        if (displayName.isNullOrBlank()) {
+            displayName = uri.lastPathSegment?.substringAfterLast('/') ?: "Audio_${System.currentTimeMillis()}.mp3"
+        }
+
+        var durationMs = 0L
+        var artist = "Local Artist"
+        var album = "Phone Storage"
+        var title = displayName ?: "Audio Track"
+
+        val retriever = MediaMetadataRetriever()
+        try {
+            retriever.setDataSource(context, uri)
+            durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.let {
+                if (it.isNotBlank()) artist = it
+            }
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?.let {
+                if (it.isNotBlank()) album = it
+            }
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.let {
+                if (it.isNotBlank()) title = it
+            }
+        } catch (_: Exception) {
+        } finally {
+            try {
+                retriever.release()
+            } catch (_: Exception) {}
+        }
+
+        val durationSeconds = (durationMs / 1000).toInt().coerceAtLeast(1)
+
+        return com.example.data.model.LocalAudioTrack(
+            id = "picked_audio_${System.currentTimeMillis()}_${(1000..9999).random()}",
+            title = title,
+            artist = artist,
+            album = album,
+            durationSeconds = durationSeconds,
+            albumCoverRes = com.example.R.drawable.img_hero_poster,
+            lyricsLines = listOf(
+                "Playing selected device audio file.",
+                "File: $displayName"
+            ),
+            audioUri = uri.toString(),
+            albumArtUri = null,
+            isFromDevice = true
+        )
     }
 
     fun scanDeviceVideos(context: Context): List<LocalDeviceVideo> {

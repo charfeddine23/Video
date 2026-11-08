@@ -47,7 +47,8 @@ fun SmartFallbackCover(
     icon: ImageVector = Icons.Default.VideoFile,
     aspectRatio: Float = 1.77f,
     badgeText: String? = null,
-    gradientVariant: Int = 0
+    gradientVariant: Int = 0,
+    showText: Boolean = true
 ) {
     val gradientBrushes = listOf(
         // Variant 0: Cyan & Deep Violet
@@ -155,29 +156,31 @@ fun SmartFallbackCover(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            if (showText) {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    fontSize = 12.sp
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            if (!subtitle.isNullOrBlank()) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color(0xFF94A3B8),
-                        fontSize = 10.sp
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 12.sp
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFF94A3B8),
+                            fontSize = 10.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }

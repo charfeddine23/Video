@@ -394,7 +394,7 @@ fun HomeScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Map,
+                                    imageVector = Icons.Default.Security,
                                     contentDescription = null,
                                     tint = PulseCyan,
                                     modifier = Modifier.size(18.dp)
@@ -405,14 +405,14 @@ fun HomeScreen(
 
                             Column {
                                 Text(
-                                    text = if (isArabic) "خارطة طريق المكافآت والمحطات" else "Milestone Feature Roadmap",
+                                    text = if (isArabic) "الإنجازات, الدروع والمكافآت" else "Achievements, Shields & Rewards",
                                     style = MaterialTheme.typography.labelLarge.copy(
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
                                 Text(
-                                    text = if (isArabic) "اضغط مطولاً (1ث) على الشعلة أو انقر هنا" else "Hold flame 1s or tap here to view full path",
+                                    text = if (isArabic) "عرض أنواع الدروع وكمياتها وسجل المكافآت المفتوحة" else "View all shield types, counts & unlocked perks",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = Color(0xFF94A3B8),
                                         fontSize = 11.sp
