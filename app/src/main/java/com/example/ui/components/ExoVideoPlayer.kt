@@ -598,17 +598,19 @@ fun ExoVideoPlayer(
                         dragGestureMode = null
                         dragAccumulatedX = 0f
                         dragAccumulatedY = 0f
-                        uiState = uiState.copy(areControlsVisible = true)
+                        uiState = uiState.copy(areControlsVisible = false)
                     },
                     onDragEnd = {
                         isDraggingGesture = false
                         dragGestureMode = null
                         gestureOverlayType = null
+                        uiState = uiState.copy(areControlsVisible = false)
                     },
                     onDragCancel = {
                         isDraggingGesture = false
                         dragGestureMode = null
                         gestureOverlayType = null
+                        uiState = uiState.copy(areControlsVisible = false)
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
@@ -1034,7 +1036,7 @@ fun ExoVideoPlayer(
                             uiState.hideFileExtensions
                         )
 
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1042,7 +1044,7 @@ fun ExoVideoPlayer(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                // Right Side (Start in RTL): Back Button & Video Title
+                                // Left Side: Back Button & Video Title (العنوان في الجهة اليسرى)
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f, fill = false)
@@ -1090,7 +1092,7 @@ fun ExoVideoPlayer(
 
                                 Spacer(modifier = Modifier.width(12.dp))
 
-                                // Left Side (End in RTL): Quality Badge ONLY (دقة الفيديو فقط)
+                                // Right Side: Quality Badge (دقة الفيديو في الجهة اليمنى)
                                 QualityBadgeChip(
                                     qualityText = mediaItem.qualityTag.ifBlank { "4K HDR" }
                                 )
@@ -1100,6 +1102,7 @@ fun ExoVideoPlayer(
 
                     // -------------------------------------------------------------
                     // CENTER CONTROLS: Forward 10s on LEFT, Play/Pause in Center, Rewind 10s on RIGHT
+                    // Completely free of white circular borders / backgrounds
                     // Hidden during any dragging gesture (Seek/Volume/Brightness/Seekbar)
                     // -------------------------------------------------------------
                     val isAnyDragActive = isDraggingGesture || isDraggingSeekbar || gestureOverlayType != null
@@ -1111,118 +1114,103 @@ fun ExoVideoPlayer(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // FORWARD 10s ON LEFT
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0x770E1422))
-                                    .border(BorderStroke(1.dp, Color(0x33FFFFFF)), CircleShape)
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        if (uiState.isAntiCheatLocked) {
-                                            triggerStrikeLockAlert("Seeking Anti-Cheat")
-                                        } else {
-                                            val target = (exoPlayer.currentPosition + 10_000L).coerceAtMost(uiState.durationMs)
-                                            exoPlayer.seekTo(target)
-                                            uiState = uiState.copy(currentPositionMs = target)
-                                        }
+                            // FORWARD 10s ON LEFT - Clean glowing icon without white circle
+                            IconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (uiState.isAntiCheatLocked) {
+                                        triggerStrikeLockAlert("Seeking Anti-Cheat")
+                                    } else {
+                                        val target = (exoPlayer.currentPosition + 10_000L).coerceAtMost(uiState.durationMs)
+                                        exoPlayer.seekTo(target)
+                                        uiState = uiState.copy(currentPositionMs = target)
                                     }
-                                    .testTag("video_player_forward_10s_button"),
-                                contentAlignment = Alignment.Center
+                                },
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .testTag("video_player_forward_10s_button")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Forward10,
                                     contentDescription = "Forward 10s (Left)",
                                     tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
-                                    modifier = Modifier.size(30.dp)
+                                    modifier = Modifier.size(36.dp)
                                 )
                             }
 
                             Spacer(modifier = Modifier.width(36.dp))
 
-                            // Large Circular Glowing Neon Play/Pause Button
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .drawBehind {
-                                        drawCircle(
-                                            brush = Brush.radialGradient(
-                                                colors = listOf(
-                                                    animatedAmbientPrimary.copy(alpha = neonGlowAlpha * 0.7f),
-                                                    animatedAmbientSecondary.copy(alpha = 0.35f),
-                                                    Color.Transparent
-                                                ),
-                                                radius = size.width * 0.95f
+                            // Large Glowing Neon Play/Pause Button - No white circular frame
+                            IconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    if (exoPlayer.isPlaying) {
+                                        exoPlayer.pause()
+                                        uiState = uiState.copy(isPlaying = false)
+                                        val pos = exoPlayer.currentPosition
+                                        val dur = exoPlayer.duration.coerceAtLeast(0L)
+                                        if (pos > 500L && dur > 0L) {
+                                            prefsRepo.saveVideoProgress(
+                                                id = mediaItem.id,
+                                                uri = mediaItem.uriString,
+                                                title = mediaItem.title,
+                                                durationMs = dur,
+                                                positionMs = pos,
+                                                thumbnailRes = mediaItem.posterRes
                                             )
-                                        )
-                                    }
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(animatedAmbientPrimary, animatedAmbientSecondary)
-                                        )
-                                    )
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        if (exoPlayer.isPlaying) {
-                                            exoPlayer.pause()
-                                            uiState = uiState.copy(isPlaying = false)
-                                            val pos = exoPlayer.currentPosition
-                                            val dur = exoPlayer.duration.coerceAtLeast(0L)
-                                            if (pos > 500L && dur > 0L) {
-                                                prefsRepo.saveVideoProgress(
-                                                    id = mediaItem.id,
-                                                    uri = mediaItem.uriString,
-                                                    title = mediaItem.title,
-                                                    durationMs = dur,
-                                                    positionMs = pos,
-                                                    thumbnailRes = mediaItem.posterRes
-                                                )
-                                            }
-                                        } else {
-                                            exoPlayer.play()
-                                            uiState = uiState.copy(isPlaying = true)
                                         }
+                                    } else {
+                                        exoPlayer.play()
+                                        uiState = uiState.copy(isPlaying = true)
                                     }
-                                    .testTag("video_player_center_play_pause_button"),
-                                contentAlignment = Alignment.Center
+                                },
+                                modifier = Modifier
+                                    .size(76.dp)
+                                    .testTag("video_player_center_play_pause_button")
                             ) {
                                 Icon(
                                     imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                                    tint = Charcoal950,
-                                    modifier = Modifier.size(44.dp)
+                                    tint = animatedAmbientPrimary,
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .drawBehind {
+                                            drawCircle(
+                                                brush = Brush.radialGradient(
+                                                    colors = listOf(
+                                                        animatedAmbientPrimary.copy(alpha = 0.5f),
+                                                        Color.Transparent
+                                                    ),
+                                                    radius = size.width * 0.72f
+                                                )
+                                            )
+                                        }
                                 )
                             }
 
                             Spacer(modifier = Modifier.width(36.dp))
 
-                            // REWIND 10s ON RIGHT
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0x770E1422))
-                                    .border(BorderStroke(1.dp, Color(0x33FFFFFF)), CircleShape)
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        if (uiState.isAntiCheatLocked) {
-                                            triggerStrikeLockAlert("Seeking Anti-Cheat")
-                                        } else {
-                                            val target = (exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L)
-                                            exoPlayer.seekTo(target)
-                                            uiState = uiState.copy(currentPositionMs = target)
-                                        }
+                            // REWIND 10s ON RIGHT - Clean glowing icon without white circle
+                            IconButton(
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (uiState.isAntiCheatLocked) {
+                                        triggerStrikeLockAlert("Seeking Anti-Cheat")
+                                    } else {
+                                        val target = (exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L)
+                                        exoPlayer.seekTo(target)
+                                        uiState = uiState.copy(currentPositionMs = target)
                                     }
-                                    .testTag("video_player_rewind_10s_button"),
-                                contentAlignment = Alignment.Center
+                                },
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .testTag("video_player_rewind_10s_button")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Replay10,
                                     contentDescription = "Rewind 10s (Right)",
                                     tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
-                                    modifier = Modifier.size(30.dp)
+                                    modifier = Modifier.size(36.dp)
                                 )
                             }
                         }
@@ -1397,7 +1385,7 @@ fun ExoVideoPlayer(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        // Audio Track & Subtitles Button
+                                        // Audio Track & Subtitles Button - Clean icon without white circle
                                         IconButton(
                                             onClick = {
                                                 haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -1405,15 +1393,13 @@ fun ExoVideoPlayer(
                                             },
                                             modifier = Modifier
                                                 .size(34.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0x22FFFFFF))
                                                 .testTag("audio_subtitles_button")
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Subtitles,
                                                 contentDescription = "Audio and Subtitles",
                                                 tint = animatedAmbientPrimary,
-                                                modifier = Modifier.size(18.dp)
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
 
@@ -1422,8 +1408,6 @@ fun ExoVideoPlayer(
                                         Box(
                                             modifier = Modifier
                                                 .size(34.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0x22FFFFFF))
                                                 .clickable {
                                                     if (isPipLocked) {
                                                         triggerStrikeLockAlert("Picture-in-Picture (PiP)", 40)
@@ -1473,13 +1457,36 @@ fun ExoVideoPlayer(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .statusBarsPadding()
-                                .padding(start = 16.dp, top = 76.dp),
+                                .padding(start = 16.dp, top = 76.dp)
+                                .drawBehind {
+                                    drawRoundRect(
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                animatedAmbientPrimary.copy(alpha = 0.35f),
+                                                animatedAmbientSecondary.copy(alpha = 0.20f),
+                                                Color(0xFF00FFCC).copy(alpha = 0.30f)
+                                            )
+                                        ),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
+                                        size = size
+                                    )
+                                },
                             shape = RoundedCornerShape(22.dp),
-                            color = GlassContainerBg,
-                            border = BorderStroke(1.dp, GlassBorderStroke)
+                            color = Color(0xD90A0E18),
+                            border = BorderStroke(
+                                1.5.dp,
+                                Brush.verticalGradient(
+                                    listOf(
+                                        animatedAmbientPrimary.copy(alpha = 0.85f),
+                                        animatedAmbientSecondary.copy(alpha = 0.65f),
+                                        NeonCyan.copy(alpha = 0.85f)
+                                    )
+                                )
+                            ),
+                            shadowElevation = 14.dp
                         ) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
@@ -1921,17 +1928,14 @@ private fun AmbientGlowToggleChip(
     IconButton(
         onClick = onToggle,
         modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(if (isEnabled) Color(0x3300FFCC) else Color(0x18FFFFFF))
-            .border(1.dp, if (isEnabled) NeonCyan else Color.Transparent, CircleShape)
+            .size(32.dp)
             .testTag("video_player_ambient_glow_toggle")
     ) {
         Icon(
             imageVector = Icons.Default.Lightbulb,
             contentDescription = "Toggle Ambient Glow",
             tint = if (isEnabled) NeonCyan else Color(0xFF94A3B8),
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -1944,9 +1948,7 @@ private fun AspectRatioButton(
     IconButton(
         onClick = onToggle,
         modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(Color(0x18FFFFFF))
+            .size(32.dp)
             .testTag("video_player_aspect_ratio_button")
     ) {
         Icon(
@@ -1957,7 +1959,7 @@ private fun AspectRatioButton(
             },
             contentDescription = "Aspect Ratio: ${resizeMode.title}",
             tint = NeonCyan,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -1970,16 +1972,14 @@ private fun RotateFrameButton(
     IconButton(
         onClick = onRotate,
         modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(Color(0x18FFFFFF))
+            .size(32.dp)
             .testTag("video_player_rotate_frame_button")
     ) {
         Icon(
             imageVector = Icons.Default.Rotate90DegreesCw,
             contentDescription = "Rotate Video: $rotation°",
             tint = NeonCyan,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -1992,16 +1992,14 @@ private fun ScreenOrientationButton(
     IconButton(
         onClick = onToggle,
         modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(Color(0x18FFFFFF))
+            .size(32.dp)
             .testTag("video_player_screen_orientation_button")
     ) {
         Icon(
             imageVector = if (isLandscape) Icons.Default.StayCurrentPortrait else Icons.Default.StayCurrentLandscape,
             contentDescription = "Toggle Screen Orientation",
             tint = Color.White,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -2013,16 +2011,14 @@ private fun SettingsGearButton(
     IconButton(
         onClick = onClick,
         modifier = Modifier
-            .size(30.dp)
-            .clip(CircleShape)
-            .background(Color(0x18FFFFFF))
+            .size(32.dp)
             .testTag("video_player_settings_button")
     ) {
         Icon(
             imageVector = Icons.Default.Settings,
             contentDescription = "Settings",
             tint = Color.White,
-            modifier = Modifier.size(16.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }
