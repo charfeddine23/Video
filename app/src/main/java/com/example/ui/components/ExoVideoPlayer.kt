@@ -802,7 +802,8 @@ fun ExoVideoPlayer(
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     // -------------------------------------------------------------
-                    // TOP BAR: Responsive (Row in Landscape, Column in Portrait)
+                    // TOP BAR: Clean Liquid Glass Container
+                    // Contains ONLY: Back Arrow & Video Title on the Right, and Quality Badge on the Left
                     // -------------------------------------------------------------
                     Surface(
                         modifier = Modifier
@@ -817,19 +818,18 @@ fun ExoVideoPlayer(
                             uiState.hideFileExtensions
                         )
 
-                        if (isLandscape) {
-                            // LANDSCAPE: Single Horizontal Row
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    .padding(horizontal = 14.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                // Back Button & Title
+                                // Right Side (Start in RTL): Back Button & Video Title
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f, fill = false)
                                 ) {
                                     IconButton(
                                         onClick = {
@@ -852,7 +852,7 @@ fun ExoVideoPlayer(
 
                                     Spacer(modifier = Modifier.width(10.dp))
 
-                                    Column(modifier = Modifier.weight(1f)) {
+                                    Column {
                                         Text(
                                             text = displayTitle,
                                             style = MaterialTheme.typography.titleMedium.copy(
@@ -874,184 +874,18 @@ fun ExoVideoPlayer(
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(12.dp))
 
-                                // Landscape Top Action Chips
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    QualityBadgeChip()
-                                    AmbientGlowToggleChip(
-                                        isEnabled = uiState.isAmbientGlowEnabled,
-                                        onToggle = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
-                                        }
-                                    )
-                                    AspectRatioButton(
-                                        resizeMode = uiState.resizeMode,
-                                        onToggle = {
-                                            val nextMode = when (uiState.resizeMode) {
-                                                VideoResizeMode.FIT -> VideoResizeMode.CROP
-                                                VideoResizeMode.CROP -> VideoResizeMode.STRETCH
-                                                VideoResizeMode.STRETCH -> VideoResizeMode.FIT
-                                            }
-                                            uiState = uiState.copy(resizeMode = nextMode)
-                                            playerViewRef?.resizeMode = nextMode.exoMode
-                                        }
-                                    )
-                                    RotateFrameButton(
-                                        rotation = uiState.videoRotationDegrees,
-                                        onRotate = {
-                                            uiState = uiState.copy(videoRotationDegrees = (uiState.videoRotationDegrees + 90) % 360)
-                                        }
-                                    )
-                                    ScreenOrientationButton(
-                                        isLandscape = isLandscape,
-                                        onToggle = {
-                                            val act = context as? Activity
-                                            act?.requestedOrientation = if (isLandscape) {
-                                                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                                            } else {
-                                                ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                                            }
-                                        }
-                                    )
-                                    SettingsGearButton(
-                                        onClick = { showSettingsSheet = true }
-                                    )
-                                }
-                            }
-                        } else {
-                            // PORTRAIT: Arranged Vertically in Column
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                // Row 1: Back Button, Title, Settings Gear
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        IconButton(
-                                            onClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                onClose()
-                                            },
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
-                                                .background(Color(0x33FFFFFF))
-                                                .testTag("video_player_back_button")
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                                contentDescription = "Back",
-                                                tint = Color.White,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(10.dp))
-
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = displayTitle,
-                                                style = MaterialTheme.typography.titleMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color.White,
-                                                    fontSize = 14.5.sp
-                                                ),
-                                                maxLines = 1,
-                                                modifier = Modifier.basicMarquee()
-                                            )
-                                            Text(
-                                                text = if (uiState.isAmbientGlowEnabled) "Ambient Glow Active • 120fps" else "Liquid Glass M5 Player • 120fps",
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                    color = if (uiState.isAmbientGlowEnabled) animatedAmbientPrimary else NeonCyan,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Medium
-                                                )
-                                            )
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.width(6.dp))
-
-                                    SettingsGearButton(onClick = { showSettingsSheet = true })
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                // Row 2: Status Chips & Action Buttons
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        QualityBadgeChip()
-                                        AmbientGlowToggleChip(
-                                            isEnabled = uiState.isAmbientGlowEnabled,
-                                            onToggle = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
-                                            }
-                                        )
-                                    }
-
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        AspectRatioButton(
-                                            resizeMode = uiState.resizeMode,
-                                            onToggle = {
-                                                val nextMode = when (uiState.resizeMode) {
-                                                    VideoResizeMode.FIT -> VideoResizeMode.CROP
-                                                    VideoResizeMode.CROP -> VideoResizeMode.STRETCH
-                                                    VideoResizeMode.STRETCH -> VideoResizeMode.FIT
-                                                }
-                                                uiState = uiState.copy(resizeMode = nextMode)
-                                                playerViewRef?.resizeMode = nextMode.exoMode
-                                            }
-                                        )
-                                        RotateFrameButton(
-                                            rotation = uiState.videoRotationDegrees,
-                                            onRotate = {
-                                                uiState = uiState.copy(videoRotationDegrees = (uiState.videoRotationDegrees + 90) % 360)
-                                            }
-                                        )
-                                        ScreenOrientationButton(
-                                            isLandscape = isLandscape,
-                                            onToggle = {
-                                                val act = context as? Activity
-                                                act?.requestedOrientation = if (isLandscape) {
-                                                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                                                } else {
-                                                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                                                }
-                                            }
-                                        )
-                                    }
-                                }
+                                // Left Side (End in RTL): Quality Badge ONLY (دقة الفيديو فقط)
+                                QualityBadgeChip(
+                                    qualityText = mediaItem.qualityTag.ifBlank { "4K HDR" }
+                                )
                             }
                         }
                     }
 
                     // -------------------------------------------------------------
-                    // CENTER CONTROLS: Inverted Seek Buttons around Neon Play/Pause
-                    // Forward 10s (+10) on LEFT, Rewind 10s (-10) on RIGHT
+                    // CENTER CONTROLS: Rewind 10s on LEFT, Play/Pause in Center, Forward 10s on RIGHT
                     // -------------------------------------------------------------
                     Row(
                         modifier = Modifier
@@ -1060,7 +894,7 @@ fun ExoVideoPlayer(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // FORWARD 10s ON LEFT (Inverted requirement)
+                        // REWIND 10s ON LEFT
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
@@ -1072,17 +906,17 @@ fun ExoVideoPlayer(
                                     if (uiState.isAntiCheatLocked) {
                                         triggerStrikeLockAlert("Seeking Anti-Cheat")
                                     } else {
-                                        val target = (exoPlayer.currentPosition + 10_000L).coerceAtMost(uiState.durationMs)
+                                        val target = (exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L)
                                         exoPlayer.seekTo(target)
                                         uiState = uiState.copy(currentPositionMs = target)
                                     }
                                 }
-                                .testTag("video_player_forward_10s_button"),
+                                .testTag("video_player_rewind_10s_button"),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Forward10,
-                                contentDescription = "Forward 10s (Left)",
+                                imageVector = Icons.Default.Replay10,
+                                contentDescription = "Rewind 10s (Left)",
                                 tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
                                 modifier = Modifier.size(30.dp)
                             )
@@ -1135,7 +969,7 @@ fun ExoVideoPlayer(
 
                         Spacer(modifier = Modifier.width(36.dp))
 
-                        // REWIND 10s ON RIGHT (Inverted requirement)
+                        // FORWARD 10s ON RIGHT
                         Box(
                             modifier = Modifier
                                 .size(56.dp)
@@ -1147,17 +981,17 @@ fun ExoVideoPlayer(
                                     if (uiState.isAntiCheatLocked) {
                                         triggerStrikeLockAlert("Seeking Anti-Cheat")
                                     } else {
-                                        val target = (exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L)
+                                        val target = (exoPlayer.currentPosition + 10_000L).coerceAtMost(uiState.durationMs)
                                         exoPlayer.seekTo(target)
                                         uiState = uiState.copy(currentPositionMs = target)
                                     }
                                 }
-                                .testTag("video_player_rewind_10s_button"),
+                                .testTag("video_player_forward_10s_button"),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Replay10,
-                                contentDescription = "Rewind 10s (Right)",
+                                imageVector = Icons.Default.Forward10,
+                                contentDescription = "Forward 10s (Right)",
                                 tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
                                 modifier = Modifier.size(30.dp)
                             )
@@ -1165,7 +999,8 @@ fun ExoVideoPlayer(
                     }
 
                     // -------------------------------------------------------------
-                    // BOTTOM BAR: Unified Frosted Surface with RTL MIRRORING
+                    // BOTTOM BAR: Unified Frosted Surface with LTR Progress Slider
+                    // Progress Slider starts from Left and ends at Right
                     // -------------------------------------------------------------
                     Surface(
                         modifier = Modifier
@@ -1175,8 +1010,8 @@ fun ExoVideoPlayer(
                         color = GlassContainerBg,
                         border = BorderStroke(1.dp, GlassBorderStroke)
                     ) {
-                        // Strict RTL Mirroring for the entire bottom seekbar & controls panel
-                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                        // Standard LTR Layout Direction: progress bar starts from Left and ends at Right
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                             Column(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                             ) {
@@ -1383,6 +1218,71 @@ fun ExoVideoPlayer(
                                 }
                             }
                         }
+                    }
+                }
+
+                // -------------------------------------------------------------
+                // LEFT VERTICAL TOOLBAR: Positioned directly below top container on the left side
+                // Order (strictly matching user specification):
+                // 1. Settings (الاعدادات)
+                // 2. Rotate Video (زر تدوير الفيديو)
+                // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
+                // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
+                // -------------------------------------------------------------
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .statusBarsPadding()
+                        .padding(start = 16.dp, top = 66.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = GlassContainerBg,
+                    border = BorderStroke(1.dp, GlassBorderStroke)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // 1. Settings (الاعدادات)
+                        SettingsGearButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                showSettingsSheet = true
+                            }
+                        )
+
+                        // 2. Rotate Video (زر تدوير الفيديو)
+                        RotateFrameButton(
+                            rotation = uiState.videoRotationDegrees,
+                            onRotate = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                uiState = uiState.copy(videoRotationDegrees = (uiState.videoRotationDegrees + 90) % 360)
+                            }
+                        )
+
+                        // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
+                        AspectRatioButton(
+                            resizeMode = uiState.resizeMode,
+                            onToggle = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                val nextMode = when (uiState.resizeMode) {
+                                    VideoResizeMode.FIT -> VideoResizeMode.CROP
+                                    VideoResizeMode.CROP -> VideoResizeMode.STRETCH
+                                    VideoResizeMode.STRETCH -> VideoResizeMode.FIT
+                                }
+                                uiState = uiState.copy(resizeMode = nextMode)
+                                playerViewRef?.resizeMode = nextMode.exoMode
+                            }
+                        )
+
+                        // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
+                        AmbientGlowToggleChip(
+                            isEnabled = uiState.isAmbientGlowEnabled,
+                            onToggle = {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
+                            }
+                        )
                     }
                 }
             }
@@ -1752,14 +1652,14 @@ fun ExoVideoPlayer(
 // -----------------------------------------------------------------------------
 
 @Composable
-private fun QualityBadgeChip() {
+private fun QualityBadgeChip(qualityText: String = "4K HDR") {
     Surface(
         shape = RoundedCornerShape(8.dp),
         color = Color(0x2200FFCC),
         border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.8f))
     ) {
         Text(
-            text = "4K HDR",
+            text = qualityText,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall.copy(
                 color = NeonCyan,
