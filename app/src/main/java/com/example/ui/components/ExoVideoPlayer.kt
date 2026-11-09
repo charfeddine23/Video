@@ -26,7 +26,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -43,6 +47,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -293,6 +298,10 @@ fun ExoVideoPlayer(
     var seekPreviewText by remember { mutableStateOf("") }
     var doubleTapFeedback by remember { mutableStateOf<String?>(null) }
     var isDraggingSeekbar by remember { mutableStateOf(false) }
+    var isDraggingGesture by remember { mutableStateOf(false) }
+    var dragGestureMode by remember { mutableStateOf<String?>(null) }
+    var dragAccumulatedX by remember { mutableFloatStateOf(0f) }
+    var dragAccumulatedY by remember { mutableFloatStateOf(0f) }
     var scrubbedPositionMs by remember { mutableLongStateOf(0L) }
 
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
@@ -581,28 +590,57 @@ fun ExoVideoPlayer(
                     }
                 )
             }
-            // Vertical Drag (Brightness on Left, Volume on Right) & Horizontal Drag (Seek)
+            // Vertical Drag (Brightness on Left, Volume on Right) & Explicit Horizontal Drag (Seek)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = {
+                        isDraggingGesture = true
+                        dragGestureMode = null
+                        dragAccumulatedX = 0f
+                        dragAccumulatedY = 0f
                         uiState = uiState.copy(areControlsVisible = true)
                     },
                     onDragEnd = {
+                        isDraggingGesture = false
+                        dragGestureMode = null
+                        gestureOverlayType = null
+                    },
+                    onDragCancel = {
+                        isDraggingGesture = false
+                        dragGestureMode = null
                         gestureOverlayType = null
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        val isRightSide = change.position.x > (size.width / 2f)
+                        dragAccumulatedX += dragAmount.x
+                        dragAccumulatedY += dragAmount.y
 
-                        if (abs(dragAmount.y) > abs(dragAmount.x)) {
-                            // Vertical gestures: Volume & Brightness
-                            val delta = -dragAmount.y / 400f
-                            if (isRightSide) {
+                        // Only lock into a mode once an explicit threshold is exceeded
+                        if (dragGestureMode == null) {
+                            val absX = kotlin.math.abs(dragAccumulatedX)
+                            val absY = kotlin.math.abs(dragAccumulatedY)
+                            val threshold = 16f
+
+                            if (absX > threshold && absX > absY * 1.75f) {
+                                // Explicit horizontal drag only -> Seeking
+                                dragGestureMode = "SEEK"
+                            } else if (absY > threshold && absY > absX * 1.4f) {
+                                // Explicit vertical drag -> Volume or Brightness
+                                val isRightSide = change.position.x > (size.width / 2f)
+                                dragGestureMode = if (isRightSide) "VOL" else "BRIGHT"
+                            }
+                        }
+
+                        when (dragGestureMode) {
+                            "VOL" -> {
+                                val delta = -dragAmount.y / 450f
                                 val newVol = (uiState.volume + delta).coerceIn(0f, 1f)
                                 uiState = uiState.copy(volume = newVol)
                                 exoPlayer.volume = newVol
                                 gestureOverlayType = "VOLUME"
-                            } else {
+                            }
+                            "BRIGHT" -> {
+                                val delta = -dragAmount.y / 450f
                                 val newBrightness = (uiState.brightness + delta).coerceIn(0.05f, 1f)
                                 uiState = uiState.copy(brightness = newBrightness)
                                 (context as? Activity)?.let { act ->
@@ -612,17 +650,17 @@ fun ExoVideoPlayer(
                                 }
                                 gestureOverlayType = "BRIGHTNESS"
                             }
-                        } else {
-                            // Horizontal gesture: Smooth Seeking
-                            if (uiState.isAntiCheatLocked) {
-                                triggerStrikeLockAlert("Seeking Anti-Cheat")
-                            } else {
-                                val seekDeltaMs = (dragAmount.x * 250).toLong()
-                                val targetPos = (exoPlayer.currentPosition + seekDeltaMs).coerceIn(0L, uiState.durationMs)
-                                exoPlayer.seekTo(targetPos)
-                                uiState = uiState.copy(currentPositionMs = targetPos)
-                                gestureOverlayType = "SEEK"
-                                seekPreviewText = "${if (seekDeltaMs >= 0) "+" else ""}${seekDeltaMs / 1000}s (${formatDuration(targetPos)})"
+                            "SEEK" -> {
+                                if (uiState.isAntiCheatLocked) {
+                                    triggerStrikeLockAlert("Seeking Anti-Cheat")
+                                } else {
+                                    val seekDeltaMs = (dragAmount.x * 120).toLong()
+                                    val targetPos = (exoPlayer.currentPosition + seekDeltaMs).coerceIn(0L, uiState.durationMs)
+                                    exoPlayer.seekTo(targetPos)
+                                    uiState = uiState.copy(currentPositionMs = targetPos)
+                                    gestureOverlayType = "SEEK"
+                                    seekPreviewText = "${if (seekDeltaMs >= 0) "+" else ""}${seekDeltaMs / 1000}s (${formatDuration(targetPos)})"
+                                }
                             }
                         }
                     }
@@ -777,55 +815,173 @@ fun ExoVideoPlayer(
             }
         }
 
-        // Center HUD Overlay (Volume, Brightness, Seek)
-        if (gestureOverlayType != null) {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = Color(0xE60E1422),
-                border = BorderStroke(1.2.dp, NeonCyan.copy(alpha = 0.7f)),
-                shadowElevation = 16.dp,
+        // -------------------------------------------------------------------------
+        // GESTURE OVERLAYS: Sleek Vertical Bars on Sides for Volume & Brightness
+        // No central box for volume/brightness; only a minimal capsule for seek.
+        // -------------------------------------------------------------------------
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            // Brightness Vertical Bar (Left edge)
+            AnimatedVisibility(
+                visible = gestureOverlayType == "BRIGHTNESS",
+                enter = fadeIn(tween(160)) + slideInHorizontally { -it },
+                exit = fadeOut(tween(220)) + slideOutHorizontally { -it },
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 24.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color(0xD90E1422),
+                    border = BorderStroke(1.2.dp, Color(0x66FFD700)),
+                    shadowElevation = 16.dp,
+                    modifier = Modifier
+                        .width(42.dp)
+                        .height(200.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(vertical = 12.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BrightnessHigh,
+                            contentDescription = "Brightness",
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        // Vertical level indicator track
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .width(10.dp)
+                                .padding(vertical = 8.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(Color(0x33FFFFFF)),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(uiState.brightness.coerceIn(0.05f, 1f))
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(Color(0xFFFFD700), Color(0xFFFF9100))
+                                        )
+                                    )
+                            )
+                        }
+
+                        Text(
+                            text = "${(uiState.brightness * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Volume Vertical Bar (Right edge)
+            AnimatedVisibility(
+                visible = gestureOverlayType == "VOLUME",
+                enter = fadeIn(tween(160)) + slideInHorizontally { it },
+                exit = fadeOut(tween(220)) + slideOutHorizontally { it },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 24.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color(0xD90E1422),
+                    border = BorderStroke(1.2.dp, NeonCyan.copy(alpha = 0.7f)),
+                    shadowElevation = 16.dp,
+                    modifier = Modifier
+                        .width(42.dp)
+                        .height(200.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(vertical = 12.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = "Volume",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        // Vertical level indicator track
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .width(10.dp)
+                                .padding(vertical = 8.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(Color(0x33FFFFFF)),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(uiState.volume.coerceIn(0f, 1f))
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(NeonCyan, Color(0xFF0088FF))
+                                        )
+                                    )
+                            )
+                        }
+
+                        Text(
+                            text = "${(uiState.volume * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Seek Capsule (Center of screen only for horizontal seek)
+            AnimatedVisibility(
+                visible = gestureOverlayType == "SEEK",
+                enter = fadeIn(tween(150)) + scaleIn(initialScale = 0.9f),
+                exit = fadeOut(tween(200)) + scaleOut(targetScale = 0.9f),
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(24.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    shape = RoundedCornerShape(22.dp),
+                    color = Color(0xE60E1422),
+                    border = BorderStroke(1.2.dp, NeonCyan.copy(alpha = 0.7f)),
+                    shadowElevation = 16.dp
                 ) {
-                    when (gestureOverlayType) {
-                        "VOLUME" -> {
-                            Icon(Icons.Default.VolumeUp, null, tint = NeonCyan, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Volume: ${(uiState.volume * 100).toInt()}%",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.FastForward, null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = seekPreviewText,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
-                        }
-                        "BRIGHTNESS" -> {
-                            Icon(Icons.Default.BrightnessHigh, null, tint = Color(0xFFFFD700), modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Brightness: ${(uiState.brightness * 100).toInt()}%",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            )
-                        }
-                        else -> {
-                            Icon(Icons.Default.FastForward, null, tint = NeonCyan, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = seekPreviewText,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            )
-                        }
+                        )
                     }
                 }
             }
@@ -898,15 +1054,13 @@ fun ExoVideoPlayer(
                                         },
                                         modifier = Modifier
                                             .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0x33FFFFFF))
                                             .testTag("video_player_back_button")
                                     ) {
                                         Icon(
                                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                             contentDescription = "Back",
                                             tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
+                                            modifier = Modifier.size(22.dp)
                                         )
                                     }
 
@@ -945,128 +1099,132 @@ fun ExoVideoPlayer(
                     }
 
                     // -------------------------------------------------------------
-                    // CENTER CONTROLS: Rewind 10s on LEFT, Play/Pause in Center, Forward 10s on RIGHT
+                    // CENTER CONTROLS: Forward 10s on LEFT, Play/Pause in Center, Rewind 10s on RIGHT
+                    // Hidden during any dragging gesture (Seek/Volume/Brightness/Seekbar)
                     // -------------------------------------------------------------
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // REWIND 10s ON LEFT
-                        Box(
+                    val isAnyDragActive = isDraggingGesture || isDraggingSeekbar || gestureOverlayType != null
+                    if (!isAnyDragActive) {
+                        Row(
                             modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(Color(0x770E1422))
-                                .border(BorderStroke(1.dp, Color(0x33FFFFFF)), CircleShape)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    if (uiState.isAntiCheatLocked) {
-                                        triggerStrikeLockAlert("Seeking Anti-Cheat")
-                                    } else {
-                                        val target = (exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L)
-                                        exoPlayer.seekTo(target)
-                                        uiState = uiState.copy(currentPositionMs = target)
-                                    }
-                                }
-                                .testTag("video_player_rewind_10s_button"),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Replay10,
-                                contentDescription = "Rewind 10s (Left)",
-                                tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
-                                modifier = Modifier.size(30.dp)
-                            )
-                        }
+                            // FORWARD 10s ON LEFT
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x770E1422))
+                                    .border(BorderStroke(1.dp, Color(0x33FFFFFF)), CircleShape)
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (uiState.isAntiCheatLocked) {
+                                            triggerStrikeLockAlert("Seeking Anti-Cheat")
+                                        } else {
+                                            val target = (exoPlayer.currentPosition + 10_000L).coerceAtMost(uiState.durationMs)
+                                            exoPlayer.seekTo(target)
+                                            uiState = uiState.copy(currentPositionMs = target)
+                                        }
+                                    }
+                                    .testTag("video_player_forward_10s_button"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Forward10,
+                                    contentDescription = "Forward 10s (Left)",
+                                    tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
 
-                        Spacer(modifier = Modifier.width(36.dp))
+                            Spacer(modifier = Modifier.width(36.dp))
 
-                        // Large Circular Glowing Neon Play/Pause Button
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .drawBehind {
-                                    drawCircle(
-                                        brush = Brush.radialGradient(
-                                            colors = listOf(
-                                                animatedAmbientPrimary.copy(alpha = neonGlowAlpha * 0.7f),
-                                                animatedAmbientSecondary.copy(alpha = 0.35f),
-                                                Color.Transparent
-                                            ),
-                                            radius = size.width * 0.95f
+                            // Large Circular Glowing Neon Play/Pause Button
+                            Box(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .drawBehind {
+                                        drawCircle(
+                                            brush = Brush.radialGradient(
+                                                colors = listOf(
+                                                    animatedAmbientPrimary.copy(alpha = neonGlowAlpha * 0.7f),
+                                                    animatedAmbientSecondary.copy(alpha = 0.35f),
+                                                    Color.Transparent
+                                                ),
+                                                radius = size.width * 0.95f
+                                            )
+                                        )
+                                    }
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(animatedAmbientPrimary, animatedAmbientSecondary)
                                         )
                                     )
-                                }
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(animatedAmbientPrimary, animatedAmbientSecondary)
-                                    )
-                                )
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (exoPlayer.isPlaying) {
-                                        exoPlayer.pause()
-                                        uiState = uiState.copy(isPlaying = false)
-                                        val pos = exoPlayer.currentPosition
-                                        val dur = exoPlayer.duration.coerceAtLeast(0L)
-                                        if (pos > 500L && dur > 0L) {
-                                            prefsRepo.saveVideoProgress(
-                                                id = mediaItem.id,
-                                                uri = mediaItem.uriString,
-                                                title = mediaItem.title,
-                                                durationMs = dur,
-                                                positionMs = pos,
-                                                thumbnailRes = mediaItem.posterRes
-                                            )
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (exoPlayer.isPlaying) {
+                                            exoPlayer.pause()
+                                            uiState = uiState.copy(isPlaying = false)
+                                            val pos = exoPlayer.currentPosition
+                                            val dur = exoPlayer.duration.coerceAtLeast(0L)
+                                            if (pos > 500L && dur > 0L) {
+                                                prefsRepo.saveVideoProgress(
+                                                    id = mediaItem.id,
+                                                    uri = mediaItem.uriString,
+                                                    title = mediaItem.title,
+                                                    durationMs = dur,
+                                                    positionMs = pos,
+                                                    thumbnailRes = mediaItem.posterRes
+                                                )
+                                            }
+                                        } else {
+                                            exoPlayer.play()
+                                            uiState = uiState.copy(isPlaying = true)
                                         }
-                                    } else {
-                                        exoPlayer.play()
-                                        uiState = uiState.copy(isPlaying = true)
                                     }
-                                }
-                                .testTag("video_player_center_play_pause_button"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                                tint = Charcoal950,
-                                modifier = Modifier.size(44.dp)
-                            )
-                        }
+                                    .testTag("video_player_center_play_pause_button"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                                    tint = Charcoal950,
+                                    modifier = Modifier.size(44.dp)
+                                )
+                            }
 
-                        Spacer(modifier = Modifier.width(36.dp))
+                            Spacer(modifier = Modifier.width(36.dp))
 
-                        // FORWARD 10s ON RIGHT
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(Color(0x770E1422))
-                                .border(BorderStroke(1.dp, Color(0x33FFFFFF)), CircleShape)
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    if (uiState.isAntiCheatLocked) {
-                                        triggerStrikeLockAlert("Seeking Anti-Cheat")
-                                    } else {
-                                        val target = (exoPlayer.currentPosition + 10_000L).coerceAtMost(uiState.durationMs)
-                                        exoPlayer.seekTo(target)
-                                        uiState = uiState.copy(currentPositionMs = target)
+                            // REWIND 10s ON RIGHT
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0x770E1422))
+                                    .border(BorderStroke(1.dp, Color(0x33FFFFFF)), CircleShape)
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (uiState.isAntiCheatLocked) {
+                                            triggerStrikeLockAlert("Seeking Anti-Cheat")
+                                        } else {
+                                            val target = (exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L)
+                                            exoPlayer.seekTo(target)
+                                            uiState = uiState.copy(currentPositionMs = target)
+                                        }
                                     }
-                                }
-                                .testTag("video_player_forward_10s_button"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Forward10,
-                                contentDescription = "Forward 10s (Right)",
-                                tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
-                                modifier = Modifier.size(30.dp)
-                            )
+                                    .testTag("video_player_rewind_10s_button"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Replay10,
+                                    contentDescription = "Rewind 10s (Right)",
+                                    tint = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else Color.White,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
                         }
                     }
 
@@ -1302,67 +1460,71 @@ fun ExoVideoPlayer(
                 }
 
                 // -------------------------------------------------------------
-                // LEFT VERTICAL TOOLBAR: Positioned directly below top container on the left side
+                // LEFT VERTICAL TOOLBAR: Positioned directly below top container on the physical LEFT side
                 // Order (strictly matching user specification):
                 // 1. Settings (الاعدادات)
                 // 2. Rotate Video (زر تدوير الفيديو)
                 // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
                 // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
                 // -------------------------------------------------------------
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .statusBarsPadding()
-                        .padding(start = 16.dp, top = 66.dp),
-                    shape = RoundedCornerShape(20.dp),
-                    color = GlassContainerBg,
-                    border = BorderStroke(1.dp, GlassBorderStroke)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // 1. Settings (الاعدادات)
-                        SettingsGearButton(
-                            onClick = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                showSettingsSheet = true
-                            }
-                        )
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .statusBarsPadding()
+                                .padding(start = 16.dp, top = 76.dp),
+                            shape = RoundedCornerShape(22.dp),
+                            color = GlassContainerBg,
+                            border = BorderStroke(1.dp, GlassBorderStroke)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                // 1. Settings (الاعدادات)
+                                SettingsGearButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        showSettingsSheet = true
+                                    }
+                                )
 
-                        // 2. Rotate Video (زر تدوير الفيديو)
-                        RotateFrameButton(
-                            rotation = uiState.videoRotationDegrees,
-                            onRotate = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                uiState = uiState.copy(videoRotationDegrees = (uiState.videoRotationDegrees + 90) % 360)
-                            }
-                        )
+                                // 2. Rotate Video (زر تدوير الفيديو)
+                                RotateFrameButton(
+                                    rotation = uiState.videoRotationDegrees,
+                                    onRotate = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        uiState = uiState.copy(videoRotationDegrees = (uiState.videoRotationDegrees + 90) % 360)
+                                    }
+                                )
 
-                        // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
-                        AspectRatioButton(
-                            resizeMode = uiState.resizeMode,
-                            onToggle = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                val nextMode = when (uiState.resizeMode) {
-                                    VideoResizeMode.FIT -> VideoResizeMode.CROP
-                                    VideoResizeMode.CROP -> VideoResizeMode.STRETCH
-                                    VideoResizeMode.STRETCH -> VideoResizeMode.FIT
-                                }
-                                uiState = uiState.copy(resizeMode = nextMode)
-                                playerViewRef?.resizeMode = nextMode.exoMode
-                            }
-                        )
+                                // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
+                                AspectRatioButton(
+                                    resizeMode = uiState.resizeMode,
+                                    onToggle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        val nextMode = when (uiState.resizeMode) {
+                                            VideoResizeMode.FIT -> VideoResizeMode.CROP
+                                            VideoResizeMode.CROP -> VideoResizeMode.STRETCH
+                                            VideoResizeMode.STRETCH -> VideoResizeMode.FIT
+                                        }
+                                        uiState = uiState.copy(resizeMode = nextMode)
+                                        playerViewRef?.resizeMode = nextMode.exoMode
+                                    }
+                                )
 
-                        // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
-                        AmbientGlowToggleChip(
-                            isEnabled = uiState.isAmbientGlowEnabled,
-                            onToggle = {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
+                                // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
+                                AmbientGlowToggleChip(
+                                    isEnabled = uiState.isAmbientGlowEnabled,
+                                    onToggle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
+                                    }
+                                )
                             }
-                        )
+                        }
                     }
                 }
             }
@@ -1759,9 +1921,9 @@ private fun AmbientGlowToggleChip(
     IconButton(
         onClick = onToggle,
         modifier = Modifier
-            .size(36.dp)
+            .size(30.dp)
             .clip(CircleShape)
-            .background(if (isEnabled) Color(0x3300FFCC) else Color(0x22FFFFFF))
+            .background(if (isEnabled) Color(0x3300FFCC) else Color(0x18FFFFFF))
             .border(1.dp, if (isEnabled) NeonCyan else Color.Transparent, CircleShape)
             .testTag("video_player_ambient_glow_toggle")
     ) {
@@ -1769,7 +1931,7 @@ private fun AmbientGlowToggleChip(
             imageVector = Icons.Default.Lightbulb,
             contentDescription = "Toggle Ambient Glow",
             tint = if (isEnabled) NeonCyan else Color(0xFF94A3B8),
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
     }
 }
@@ -1782,9 +1944,9 @@ private fun AspectRatioButton(
     IconButton(
         onClick = onToggle,
         modifier = Modifier
-            .size(36.dp)
+            .size(30.dp)
             .clip(CircleShape)
-            .background(Color(0x22FFFFFF))
+            .background(Color(0x18FFFFFF))
             .testTag("video_player_aspect_ratio_button")
     ) {
         Icon(
@@ -1795,7 +1957,7 @@ private fun AspectRatioButton(
             },
             contentDescription = "Aspect Ratio: ${resizeMode.title}",
             tint = NeonCyan,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
     }
 }
@@ -1808,16 +1970,16 @@ private fun RotateFrameButton(
     IconButton(
         onClick = onRotate,
         modifier = Modifier
-            .size(36.dp)
+            .size(30.dp)
             .clip(CircleShape)
-            .background(Color(0x22FFFFFF))
+            .background(Color(0x18FFFFFF))
             .testTag("video_player_rotate_frame_button")
     ) {
         Icon(
             imageVector = Icons.Default.Rotate90DegreesCw,
             contentDescription = "Rotate Video: $rotation°",
             tint = NeonCyan,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
     }
 }
@@ -1830,16 +1992,16 @@ private fun ScreenOrientationButton(
     IconButton(
         onClick = onToggle,
         modifier = Modifier
-            .size(36.dp)
+            .size(30.dp)
             .clip(CircleShape)
-            .background(Color(0x22FFFFFF))
+            .background(Color(0x18FFFFFF))
             .testTag("video_player_screen_orientation_button")
     ) {
         Icon(
             imageVector = if (isLandscape) Icons.Default.StayCurrentPortrait else Icons.Default.StayCurrentLandscape,
             contentDescription = "Toggle Screen Orientation",
             tint = Color.White,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
     }
 }
@@ -1851,16 +2013,16 @@ private fun SettingsGearButton(
     IconButton(
         onClick = onClick,
         modifier = Modifier
-            .size(36.dp)
+            .size(30.dp)
             .clip(CircleShape)
-            .background(Color(0x22FFFFFF))
+            .background(Color(0x18FFFFFF))
             .testTag("video_player_settings_button")
     ) {
         Icon(
             imageVector = Icons.Default.Settings,
             contentDescription = "Settings",
             tint = Color.White,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(16.dp)
         )
     }
 }
