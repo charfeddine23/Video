@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -1065,6 +1066,11 @@ fun FileListItemCard(
     video: LocalDeviceVideo,
     onPlay: () -> Unit
 ) {
+    val context = LocalContext.current
+    val savedProgress = remember(video.id, video.uriString) {
+        StreakPreferencesRepository.getInstance(context).getVideoProgress(video.id, video.uriString)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1127,6 +1133,28 @@ fun FileListItemCard(
                             fontWeight = FontWeight.Bold
                         )
                     )
+                }
+
+                // Persistent Progress Bar for this video
+                if (savedProgress != null && savedProgress.progress > 0.02f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(Color(0x66000000))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(savedProgress.progress.coerceIn(0.02f, 1f))
+                                .fillMaxHeight()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(PulseCyan, Color(0xFF0088FF))
+                                    )
+                                )
+                        )
+                    }
                 }
             }
 
@@ -1198,6 +1226,11 @@ fun MagazineGridItemCard(
     video: LocalDeviceVideo,
     onPlay: () -> Unit
 ) {
+    val context = LocalContext.current
+    val savedProgress = remember(video.id, video.uriString) {
+        StreakPreferencesRepository.getInstance(context).getVideoProgress(video.id, video.uriString)
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1270,6 +1303,28 @@ fun MagazineGridItemCard(
                             fontWeight = FontWeight.Bold
                         )
                     )
+                }
+
+                // Persistent Progress Bar for this video
+                if (savedProgress != null && savedProgress.progress > 0.02f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.5.dp)
+                            .align(Alignment.BottomCenter)
+                            .background(Color(0x66000000))
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(savedProgress.progress.coerceIn(0.02f, 1f))
+                                .fillMaxHeight()
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(PulseCyan, Color(0xFF0088FF))
+                                    )
+                                )
+                        )
+                    }
                 }
             }
 

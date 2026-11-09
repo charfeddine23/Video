@@ -258,15 +258,101 @@ class StreakPreferencesRepository private constructor(context: Context) {
         )
     }
 
-    fun clearLastWatched() {
+    fun tickDailyWatchTime(seconds: Int = 1): StreakUiState {
+        val current = loadInitialState()
+        val updatedSeconds = (current.dailyWatchSeconds + seconds).coerceAtMost(current.dailyGoalSeconds)
+        val reachedGoal = updatedSeconds >= current.dailyGoalSeconds
+        val newlyCompleted = reachedGoal && !current.isGoalCompletedToday
+        val newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
+        val newShields = if (newlyCompleted && current.shieldsCount < current.maxShields) {
+            current.shieldsCount + 1
+        } else current.shieldsCount
+
+        val newState = current.copy(
+            dailyWatchSeconds = updatedSeconds,
+            isGoalCompletedToday = reachedGoal || current.isGoalCompletedToday,
+            streakDays = newStreak,
+            shieldsCount = newShields
+        )
+        saveStreakState(newState)
+        return newState
+    }
+
+    private fun videoStorageKey(id: String, uriString: String?): String {
+        val raw = if (!uriString.isNullOrBlank()) uriString else id
+        return "vp_" + raw.hashCode()
+    }
+
+    fun saveVideoProgress(
+        id: String,
+        uri: String?,
+        title: String,
+        durationMs: Long,
+        positionMs: Long,
+        thumbnailRes: Int = 0
+    ) {
+        if (durationMs <= 0L) return
+        val key = videoStorageKey(id, uri)
         prefs.edit()
-            .remove(KEY_LAST_WATCHED_ID)
-            .remove(KEY_LAST_WATCHED_TITLE)
-            .remove(KEY_LAST_WATCHED_URI)
-            .remove(KEY_LAST_WATCHED_DURATION_MS)
-            .remove(KEY_LAST_WATCHED_POSITION_MS)
-            .remove(KEY_LAST_WATCHED_THUMBNAIL_RES)
-            .remove(KEY_LAST_WATCHED_TIMESTAMP)
+            .putString("key_vid_id_$key", id)
+            .putString("key_vid_uri_$key", uri)
+            .putString("key_vid_title_$key", title)
+            .putLong("key_vid_dur_$key", durationMs)
+            .putLong("key_vid_pos_$key", positionMs)
+            .putInt("key_vid_thumb_$key", thumbnailRes)
+            .putLong("key_vid_time_$key", System.currentTimeMillis())
+            .apply()
+
+        // Also update last watched
+        saveLastWatched(id, title, uri, durationMs, positionMs, thumbnailRes)
+    }
+
+    fun getVideoProgress(id: String, uriString: String? = null): VideoProgressInfo? {
+        val key = videoStorageKey(id, uriString)
+        val savedPos = prefs.getLong("key_vid_pos_$key", -1L)
+        if (savedPos < 0L) {
+            val lw = getLastWatched()
+            if (lw != null && (lw.id == id || (uriString != null && lw.uriString == uriString))) {
+                return VideoProgressInfo(
+                    id = lw.id,
+                    uriString = lw.uriString,
+                    title = lw.title,
+                    durationMs = lw.durationMs,
+                    positionMs = lw.positionMs,
+                    thumbnailRes = lw.thumbnailRes,
+                    timestamp = lw.timestamp
+                )
+            }
+            return null
+        }
+
+        val savedDur = prefs.getLong("key_vid_dur_$key", 0L)
+        val title = prefs.getString("key_vid_title_$key", "") ?: ""
+        val uri = prefs.getString("key_vid_uri_$key", uriString)
+        val thumb = prefs.getInt("key_vid_thumb_$key", 0)
+        val time = prefs.getLong("key_vid_time_$key", 0L)
+
+        return VideoProgressInfo(
+            id = id,
+            uriString = uri,
+            title = title,
+            durationMs = savedDur,
+            positionMs = savedPos,
+            thumbnailRes = thumb,
+            timestamp = time
+        )
+    }
+
+    fun clearVideoProgress(id: String, uriString: String? = null) {
+        val key = videoStorageKey(id, uriString)
+        prefs.edit()
+            .remove("key_vid_id_$key")
+            .remove("key_vid_uri_$key")
+            .remove("key_vid_title_$key")
+            .remove("key_vid_dur_$key")
+            .remove("key_vid_pos_$key")
+            .remove("key_vid_thumb_$key")
+            .remove("key_vid_time_$key")
             .apply()
     }
 }
@@ -275,6 +361,25 @@ data class LastWatchedVideoInfo(
     val id: String,
     val title: String,
     val uriString: String?,
+    val durationMs: Long,
+    val positionMs: Long,
+    val thumbnailRes: Int = 0,
+    val timestamp: Long = 0L
+) {
+    val progress: Float
+        get() = if (durationMs > 0L) (positionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+
+    val progressPercent: Int
+        get() = (progress * 100).toInt().coerceIn(0, 100)
+
+    val remainingMs: Long
+        get() = (durationMs - positionMs).coerceAtLeast(0L)
+}
+
+data class VideoProgressInfo(
+    val id: String,
+    val uriString: String?,
+    val title: String,
     val durationMs: Long,
     val positionMs: Long,
     val thumbnailRes: Int = 0,

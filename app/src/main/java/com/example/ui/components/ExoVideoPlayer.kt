@@ -226,14 +226,10 @@ fun ExoVideoPlayer(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    BackHandler {
-        onClose()
-    }
-
+    val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(context) }
     val streakState = streakViewModel?.uiState?.collectAsState()?.value
     val streakDays = streakState?.streakDays ?: 0
     val isAntiCheatSeekingLocked = streakState != null && !streakState.isGoalCompletedToday
-    val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(context) }
 
     // Core Player State
     var uiState by remember {
@@ -245,6 +241,10 @@ fun ExoVideoPlayer(
                 isLandscapeOrientation = isLandscape
             )
         )
+    }
+
+    LaunchedEffect(isAntiCheatSeekingLocked) {
+        uiState = uiState.copy(isAntiCheatLocked = isAntiCheatSeekingLocked)
     }
 
     // Dynamic Video Dimensions & Aspect Ratio
@@ -325,7 +325,29 @@ fun ExoVideoPlayer(
         }
     }
 
-    // Media item attachment
+    val handleClose: () -> Unit = {
+        try {
+            val pos = exoPlayer.currentPosition
+            val dur = exoPlayer.duration.coerceAtLeast(0L)
+            if (pos > 500L && dur > 0L) {
+                prefsRepo.saveVideoProgress(
+                    id = mediaItem.id,
+                    uri = mediaItem.uriString,
+                    title = mediaItem.title,
+                    durationMs = dur,
+                    positionMs = pos,
+                    thumbnailRes = mediaItem.posterRes
+                )
+            }
+        } catch (_: Exception) {}
+        onClose()
+    }
+
+    BackHandler {
+        handleClose()
+    }
+
+    // Media item attachment & Automatic Resume from Saved Progress
     LaunchedEffect(mediaItem) {
         val uri = when {
             mediaItem.uriString != null -> Uri.parse(mediaItem.uriString)
@@ -337,6 +359,18 @@ fun ExoVideoPlayer(
             val exoItem = ExoMediaItem.fromUri(uri)
             exoPlayer.setMediaItem(exoItem)
             exoPlayer.prepare()
+
+            // Check if there is saved playback progress for this specific video
+            val savedProgress = prefsRepo.getVideoProgress(mediaItem.id, mediaItem.uriString)
+            val savedPos = savedProgress?.positionMs ?: 0L
+            val savedDur = savedProgress?.durationMs ?: 0L
+
+            // Resume playback if video was in progress (more than 1.5s and not within 3s of the end)
+            if (savedPos > 1500L && (savedDur <= 0L || savedPos < savedDur - 3000L)) {
+                exoPlayer.seekTo(savedPos)
+                uiState = uiState.copy(currentPositionMs = savedPos)
+            }
+
             exoPlayer.play()
         } catch (_: Exception) {}
     }
@@ -345,10 +379,21 @@ fun ExoVideoPlayer(
     DisposableEffect(exoPlayer) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(playbackState: Int) {
+                val dur = exoPlayer.duration.coerceAtLeast(0L)
                 uiState = uiState.copy(
                     isBuffering = playbackState == Player.STATE_BUFFERING,
-                    durationMs = exoPlayer.duration.coerceAtLeast(0L)
+                    durationMs = dur
                 )
+
+                // Secondary check for resume when player reaches STATE_READY
+                if (playbackState == Player.STATE_READY) {
+                    val savedProgress = prefsRepo.getVideoProgress(mediaItem.id, mediaItem.uriString)
+                    val savedPos = savedProgress?.positionMs ?: 0L
+                    if (savedPos > 1500L && exoPlayer.currentPosition < 1000L && (dur <= 0L || savedPos < dur - 3000L)) {
+                        exoPlayer.seekTo(savedPos)
+                        uiState = uiState.copy(currentPositionMs = savedPos)
+                    }
+                }
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -369,10 +414,10 @@ fun ExoVideoPlayer(
                 val pos = exoPlayer.currentPosition
                 val dur = exoPlayer.duration.coerceAtLeast(0L)
                 if (pos > 500L && dur > 0L) {
-                    prefsRepo.saveLastWatched(
+                    prefsRepo.saveVideoProgress(
                         id = mediaItem.id,
-                        title = mediaItem.title,
                         uri = mediaItem.uriString,
+                        title = mediaItem.title,
                         durationMs = dur,
                         positionMs = pos,
                         thumbnailRes = mediaItem.posterRes
@@ -385,8 +430,9 @@ fun ExoVideoPlayer(
         }
     }
 
-    // Real-time Progress & Ambient Color Extraction Loop
+    // Real-time Progress, 5-Minute Daily Goal Ticker & Ambient Color Loop
     LaunchedEffect(uiState.isPlaying, isDraggingSeekbar) {
+        var secondAccumulatorMs = 0L
         while (uiState.isPlaying && !isDraggingSeekbar) {
             delay(250)
             val pos = exoPlayer.currentPosition
@@ -396,12 +442,26 @@ fun ExoVideoPlayer(
                 durationMs = dur
             )
 
-            // Periodically persist playback progress for Continue Watching
-            if (pos > 1000L && dur > 0L && (pos % 2000L < 300L)) {
-                prefsRepo.saveLastWatched(
+            // 1. Core Fix: Tick genuine watch time towards the 5-minute daily watch goal!
+            // Strictly counts real playback (not seeking, not paused, not buffering)
+            if (!uiState.isBuffering && exoPlayer.isPlaying) {
+                secondAccumulatorMs += 250L
+                if (secondAccumulatorMs >= 1000L) {
+                    if (streakViewModel != null) {
+                        streakViewModel.tickGenuineWatchTime(seconds = 1, isSeeking = false)
+                    } else {
+                        prefsRepo.tickDailyWatchTime(seconds = 1)
+                    }
+                    secondAccumulatorMs -= 1000L
+                }
+            }
+
+            // 2. Periodically persist playback progress for this video and Continue Watching
+            if (pos > 500L && dur > 0L && (pos % 2000L < 300L)) {
+                prefsRepo.saveVideoProgress(
                     id = mediaItem.id,
-                    title = mediaItem.title,
                     uri = mediaItem.uriString,
+                    title = mediaItem.title,
                     durationMs = dur,
                     positionMs = pos,
                     thumbnailRes = mediaItem.posterRes
@@ -834,7 +894,7 @@ fun ExoVideoPlayer(
                                     IconButton(
                                         onClick = {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            onClose()
+                                            handleClose()
                                         },
                                         modifier = Modifier
                                             .size(36.dp)
@@ -951,6 +1011,18 @@ fun ExoVideoPlayer(
                                     if (exoPlayer.isPlaying) {
                                         exoPlayer.pause()
                                         uiState = uiState.copy(isPlaying = false)
+                                        val pos = exoPlayer.currentPosition
+                                        val dur = exoPlayer.duration.coerceAtLeast(0L)
+                                        if (pos > 500L && dur > 0L) {
+                                            prefsRepo.saveVideoProgress(
+                                                id = mediaItem.id,
+                                                uri = mediaItem.uriString,
+                                                title = mediaItem.title,
+                                                durationMs = dur,
+                                                positionMs = pos,
+                                                thumbnailRes = mediaItem.posterRes
+                                            )
+                                        }
                                     } else {
                                         exoPlayer.play()
                                         uiState = uiState.copy(isPlaying = true)
@@ -1035,6 +1107,14 @@ fun ExoVideoPlayer(
                                             exoPlayer.seekTo(scrubbedPositionMs)
                                             uiState = uiState.copy(currentPositionMs = scrubbedPositionMs)
                                             isDraggingSeekbar = false
+                                            prefsRepo.saveVideoProgress(
+                                                id = mediaItem.id,
+                                                uri = mediaItem.uriString,
+                                                title = mediaItem.title,
+                                                durationMs = uiState.durationMs,
+                                                positionMs = scrubbedPositionMs,
+                                                thumbnailRes = mediaItem.posterRes
+                                            )
                                         }
                                     },
                                     colors = SliderDefaults.colors(

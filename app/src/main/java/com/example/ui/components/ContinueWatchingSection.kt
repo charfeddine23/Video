@@ -40,6 +40,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -95,6 +96,11 @@ fun ContinueWatchingSection(
     var lastWatched by remember { mutableStateOf(prefsRepo.getLastWatched()) }
     val hideFileExtensions = remember { prefsRepo.getHideFileExtensions() }
     var isDismissed by remember { mutableStateOf(false) }
+
+    // Auto-refresh last watched playback state whenever screen displays or local videos change
+    LaunchedEffect(Unit, localVideos.size) {
+        lastWatched = prefsRepo.getLastWatched()
+    }
 
     // Pulsing live play aura animation
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_aura")
