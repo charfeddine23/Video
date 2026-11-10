@@ -18,12 +18,15 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -91,6 +94,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.StayCurrentLandscape
 import androidx.compose.material.icons.filled.StayCurrentPortrait
 import androidx.compose.material.icons.filled.Subtitles
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.VolumeUp
@@ -321,7 +325,18 @@ fun ExoVideoPlayer(
     var isSeekingForward by remember { mutableStateOf(true) }
     var showUnlockButton by remember { mutableStateOf(false) }
     var isLeftToolbarCollapsed by remember { mutableStateOf(false) }
+    // Interactive 1:1 finger tracking progress (0f = fully expanded, 1f = fully collapsed)
+    val toolbarCollapseProgress = remember { Animatable(0f) }
+    var showToolbarGestureHint by remember { mutableStateOf(false) }
     var showGoalCelebrationBanner by remember { mutableStateOf(false) }
+
+    // Auto-dismiss gesture hint after 3 seconds
+    LaunchedEffect(showToolbarGestureHint) {
+        if (showToolbarGestureHint) {
+            delay(3000)
+            showToolbarGestureHint = false
+        }
+    }
 
     // When the 5-minute goal is reached today, trigger smooth celebration and hide anti-cheat banner
     LaunchedEffect(streakState?.isGoalCompletedToday) {
@@ -1515,20 +1530,19 @@ fun ExoVideoPlayer(
 
                 // -------------------------------------------------------------
                 // LEFT VERTICAL TOOLBAR: Positioned directly below top container on the physical LEFT side
-                // Order (strictly matching user specification):
-                // 1. Settings (الاعدادات)
-                // 2. Rotate Video (زر تدوير الفيديو)
-                // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
-                // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
+                // Smooth 1:1 Gesture-Following Collapse / Expand with finger tracking
                 // -------------------------------------------------------------
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        val currentProgress = toolbarCollapseProgress.value
+                        val alphaFold = (1f - currentProgress).coerceIn(0f, 1f)
+
                         Surface(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .statusBarsPadding()
                                 .padding(start = 16.dp, top = 76.dp)
-                                .animateContentSize(animationSpec = tween(350, easing = FastOutSlowInEasing))
+                                .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy))
                                 .drawBehind {
                                     drawRoundRect(
                                         brush = Brush.verticalGradient(
@@ -1562,18 +1576,39 @@ fun ExoVideoPlayer(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 // 1. Settings (الاعدادات)
-                                // If collapsed: long-press 500ms + swipe down expands the toolbar!
+                                // Real-time finger tracking: Dragging downward extends toolbar 1:1 with finger
                                 Box(
                                     modifier = Modifier.pointerInput(isLeftToolbarCollapsed) {
-                                        detectDragGesturesAfterLongPress(
+                                        detectDragGestures(
                                             onDragStart = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            },
+                                            onDragEnd = {
+                                                scope.launch {
+                                                    // Snap to closest state with spring physics
+                                                    if (toolbarCollapseProgress.value < 0.5f) {
+                                                        toolbarCollapseProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                                                        isLeftToolbarCollapsed = false
+                                                    } else {
+                                                        toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+                                                        isLeftToolbarCollapsed = true
+                                                    }
+                                                }
+                                            },
+                                            onDragCancel = {
+                                                scope.launch {
+                                                    val target = if (isLeftToolbarCollapsed) 1f else 0f
+                                                    toolbarCollapseProgress.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
+                                                }
                                             },
                                             onDrag = { change, dragAmount ->
                                                 change.consume()
-                                                if (isLeftToolbarCollapsed && dragAmount.y > 15f) {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    isLeftToolbarCollapsed = false
+                                                // Dragging down decreases collapse progress (expands)
+                                                scope.launch {
+                                                    val delta = -dragAmount.y / 200f
+                                                    val newProgress = (toolbarCollapseProgress.value + delta).coerceIn(0f, 1f)
+                                                    toolbarCollapseProgress.snapTo(newProgress)
+                                                    isLeftToolbarCollapsed = newProgress > 0.5f
                                                 }
                                             }
                                         )
@@ -1587,15 +1622,17 @@ fun ExoVideoPlayer(
                                     )
                                 }
 
-                                // Secondary items (2, 3, 4, 5) fold smoothly when collapsed
-                                AnimatedVisibility(
-                                    visible = !isLeftToolbarCollapsed,
-                                    enter = expandVertically(tween(300)) + fadeIn(tween(250)),
-                                    exit = shrinkVertically(tween(300)) + fadeOut(tween(250))
-                                ) {
+                                // Secondary items (2, 3, 4, 5) fold smoothly following finger drag (1:1 motion)
+                                if (currentProgress < 0.98f) {
                                     Column(
-                                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
+                                        verticalArrangement = Arrangement.spacedBy((16 * alphaFold).dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier
+                                            .graphicsLayer {
+                                                alpha = alphaFold
+                                                scaleY = alphaFold
+                                                scaleX = (0.75f + (alphaFold * 0.25f)).coerceIn(0f, 1f)
+                                            }
                                     ) {
                                         // 2. Rotate Screen Orientation (زر تدوير الشاشة بدون تشويه)
                                         RotateFrameButton(
@@ -1637,18 +1674,38 @@ fun ExoVideoPlayer(
                                         )
 
                                         // 5. Screen Lock (زر قفل شاشة العرض)
-                                        // Long-press 500ms + swipe up folds the toolbar into just the Settings icon!
+                                        // Dragging up collapses toolbar 1:1 following finger
                                         Box(
                                             modifier = Modifier.pointerInput(isLeftToolbarCollapsed) {
-                                                detectDragGesturesAfterLongPress(
+                                                detectDragGestures(
                                                     onDragStart = {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    },
+                                                    onDragEnd = {
+                                                        scope.launch {
+                                                            if (toolbarCollapseProgress.value > 0.4f) {
+                                                                toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+                                                                isLeftToolbarCollapsed = true
+                                                            } else {
+                                                                toolbarCollapseProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                                                                isLeftToolbarCollapsed = false
+                                                            }
+                                                        }
+                                                    },
+                                                    onDragCancel = {
+                                                        scope.launch {
+                                                            val target = if (isLeftToolbarCollapsed) 1f else 0f
+                                                            toolbarCollapseProgress.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
+                                                        }
                                                     },
                                                     onDrag = { change, dragAmount ->
                                                         change.consume()
-                                                        if (!isLeftToolbarCollapsed && dragAmount.y < -15f) {
-                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                            isLeftToolbarCollapsed = true
+                                                        // Dragging up increases collapse progress (folds)
+                                                        scope.launch {
+                                                            val delta = -dragAmount.y / 200f
+                                                            val newProgress = (toolbarCollapseProgress.value + delta).coerceIn(0f, 1f)
+                                                            toolbarCollapseProgress.snapTo(newProgress)
+                                                            isLeftToolbarCollapsed = newProgress > 0.5f
                                                         }
                                                     }
                                                 )
@@ -1673,13 +1730,48 @@ fun ExoVideoPlayer(
                                 }
                             }
                         }
+
+                        // Helpful Floating Gesture Hint Chip (تلميح لمعرفة تقنية السحب والطي)
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .statusBarsPadding()
+                                .padding(start = 74.dp, top = 82.dp)
+                                .clickable {
+                                    showToolbarGestureHint = !showToolbarGestureHint
+                                },
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xCC0E1424),
+                            border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.TouchApp,
+                                    contentDescription = "Hint",
+                                    tint = NeonCyan,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isLeftToolbarCollapsed) "اسحب لأسفل لتمديد القائمة ↕" else "اسحب لأعلى لتقليص القائمة ↕",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
 
         // =========================================================================
-        // FLOATING SCREEN UNLOCK BUTTON (Positioned right above bottom seekbar in center)
+        // FLOATING SCREEN UNLOCK BUTTON (Elevated higher to completely avoid bottom seekbar/scrubber)
         // =========================================================================
         AnimatedVisibility(
             visible = uiState.isScreenLocked && showUnlockButton,
@@ -1688,7 +1780,7 @@ fun ExoVideoPlayer(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = 96.dp)
+                .padding(bottom = 145.dp) // Elevated safely away from gesture scrubbing zone
         ) {
             Surface(
                 shape = RoundedCornerShape(26.dp),
