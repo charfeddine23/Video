@@ -73,6 +73,7 @@ import androidx.compose.material.icons.filled.Forward10
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.PlayArrow
@@ -214,7 +215,8 @@ data class VideoPlayerUiState(
     val videoRotationDegrees: Int = 0,
     val isLandscapeOrientation: Boolean = false,
     val selectedAudioTrack: String = "Stereo 2.0 (AAC)",
-    val selectedSubtitle: String = "Off"
+    val selectedSubtitle: String = "Off",
+    val isScreenLocked: Boolean = false
 )
 
 @kotlin.OptIn(UnstableApi::class, ExperimentalMaterial3Api::class)
@@ -303,6 +305,8 @@ fun ExoVideoPlayer(
     var dragAccumulatedX by remember { mutableFloatStateOf(0f) }
     var dragAccumulatedY by remember { mutableFloatStateOf(0f) }
     var scrubbedPositionMs by remember { mutableLongStateOf(0L) }
+    var isSeekingForward by remember { mutableStateOf(true) }
+    var showUnlockButton by remember { mutableStateOf(false) }
 
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
 
@@ -536,6 +540,14 @@ fun ExoVideoPlayer(
         }
     }
 
+    // Auto-dismiss floating unlock button after 3.5 seconds
+    LaunchedEffect(showUnlockButton) {
+        if (showUnlockButton) {
+            delay(3500)
+            showUnlockButton = false
+        }
+    }
+
     // Glowing Neon Pulse
     val infiniteTransition = rememberInfiniteTransition(label = "player_neon_pulse")
     val neonGlowAlpha by infiniteTransition.animateFloat(
@@ -564,9 +576,13 @@ fun ExoVideoPlayer(
             .background(Color.Black)
             .testTag("high_end_exo_video_player")
             // Double Tap (10s seek) & Single Tap (toggle controls)
-            .pointerInput(Unit) {
+            .pointerInput(uiState.isScreenLocked) {
                 detectTapGestures(
                     onDoubleTap = { offset ->
+                        if (uiState.isScreenLocked) {
+                            showUnlockButton = true
+                            return@detectTapGestures
+                        }
                         val isRightSide = offset.x > (size.width / 2f)
                         if (uiState.isAntiCheatLocked) {
                             triggerStrikeLockAlert("Seeking Anti-Cheat")
@@ -586,14 +602,22 @@ fun ExoVideoPlayer(
                         }
                     },
                     onTap = {
-                        uiState = uiState.copy(areControlsVisible = !uiState.areControlsVisible)
+                        if (uiState.isScreenLocked) {
+                            showUnlockButton = true
+                        } else {
+                            uiState = uiState.copy(areControlsVisible = !uiState.areControlsVisible)
+                        }
                     }
                 )
             }
             // Vertical Drag (Brightness on Left, Volume on Right) & Explicit Horizontal Drag (Seek)
-            .pointerInput(Unit) {
+            .pointerInput(uiState.isScreenLocked) {
                 detectDragGestures(
                     onDragStart = {
+                        if (uiState.isScreenLocked) {
+                            showUnlockButton = true
+                            return@detectDragGestures
+                        }
                         isDraggingGesture = true
                         dragGestureMode = null
                         dragAccumulatedX = 0f
@@ -614,6 +638,10 @@ fun ExoVideoPlayer(
                     },
                     onDrag = { change, dragAmount ->
                         change.consume()
+                        if (uiState.isScreenLocked) {
+                            showUnlockButton = true
+                            return@detectDragGestures
+                        }
                         dragAccumulatedX += dragAmount.x
                         dragAccumulatedY += dragAmount.y
 
@@ -656,12 +684,13 @@ fun ExoVideoPlayer(
                                 if (uiState.isAntiCheatLocked) {
                                     triggerStrikeLockAlert("Seeking Anti-Cheat")
                                 } else {
-                                    val seekDeltaMs = (dragAmount.x * 120).toLong()
-                                    val targetPos = (exoPlayer.currentPosition + seekDeltaMs).coerceIn(0L, uiState.durationMs)
+                                    isSeekingForward = dragAmount.x >= 0f
+                                    val deltaMs = (dragAmount.x * 120).toLong()
+                                    val targetPos = (exoPlayer.currentPosition + deltaMs).coerceIn(0L, uiState.durationMs)
                                     exoPlayer.seekTo(targetPos)
                                     uiState = uiState.copy(currentPositionMs = targetPos)
                                     gestureOverlayType = "SEEK"
-                                    seekPreviewText = "${if (seekDeltaMs >= 0) "+" else ""}${seekDeltaMs / 1000}s (${formatDuration(targetPos)})"
+                                    seekPreviewText = "${if (deltaMs >= 0) "+" else ""}${deltaMs / 1000}s (${formatDuration(targetPos)})"
                                 }
                             }
                         }
@@ -754,28 +783,22 @@ fun ExoVideoPlayer(
                         playerViewRef = this
                     }
                 },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        rotationZ = uiState.videoRotationDegrees.toFloat()
-                    }
+                modifier = Modifier.fillMaxSize()
             )
         }
 
-        // Buffering Indicator
-        if (uiState.isBuffering) {
+        // Buffering Indicator - hidden during drag gestures and no dark circle background
+        if (uiState.isBuffering && !isDraggingGesture && gestureOverlayType != "SEEK") {
             Box(
                 modifier = Modifier
-                    .size(70.dp)
-                    .clip(CircleShape)
-                    .background(Color(0x99000000))
+                    .size(50.dp)
                     .align(Alignment.Center),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
                     color = NeonCyan,
                     strokeWidth = 3.dp,
-                    modifier = Modifier.size(38.dp)
+                    modifier = Modifier.size(36.dp)
                 )
             }
         }
@@ -975,7 +998,12 @@ fun ExoVideoPlayer(
                         modifier = Modifier.padding(horizontal = 22.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.FastForward, null, tint = NeonCyan, modifier = Modifier.size(24.dp))
+                        Icon(
+                            imageVector = if (isSeekingForward) Icons.Default.FastForward else Icons.Default.FastRewind,
+                            contentDescription = if (isSeekingForward) "Forward" else "Rewind",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(24.dp)
+                        )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = seekPreviewText,
@@ -993,7 +1021,7 @@ fun ExoVideoPlayer(
         // CLEAN NON-OVERLAPPING ARCHITECTURE (Single Column with Arrangement.SpaceBetween)
         // =========================================================================
         AnimatedVisibility(
-            visible = uiState.areControlsVisible,
+            visible = uiState.areControlsVisible && !uiState.isScreenLocked,
             enter = fadeIn(animationSpec = tween(280, easing = FastOutSlowInEasing)),
             exit = fadeOut(animationSpec = tween(350, easing = FastOutSlowInEasing)),
             modifier = Modifier.fillMaxSize()
@@ -1498,12 +1526,18 @@ fun ExoVideoPlayer(
                                     }
                                 )
 
-                                // 2. Rotate Video (زر تدوير الفيديو)
+                                // 2. Rotate Screen Orientation (زر تدوير الشاشة بدون تشويه)
                                 RotateFrameButton(
-                                    rotation = uiState.videoRotationDegrees,
+                                    isLandscape = isLandscape,
                                     onRotate = {
                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        uiState = uiState.copy(videoRotationDegrees = (uiState.videoRotationDegrees + 90) % 360)
+                                        val act = context as? Activity
+                                        val targetOrientation = if (isLandscape) {
+                                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                        } else {
+                                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                        }
+                                        act?.requestedOrientation = targetOrientation
                                     }
                                 )
 
@@ -1530,9 +1564,73 @@ fun ExoVideoPlayer(
                                         uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
                                     }
                                 )
+
+                                // 5. Screen Lock (زر قفل شاشة العرض)
+                                ScreenLockButton(
+                                    isLocked = uiState.isScreenLocked,
+                                    onToggle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        val newLock = !uiState.isScreenLocked
+                                        uiState = uiState.copy(
+                                            isScreenLocked = newLock,
+                                            areControlsVisible = false
+                                        )
+                                        if (newLock) {
+                                            showUnlockButton = true
+                                        }
+                                    }
+                                )
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // =========================================================================
+        // FLOATING SCREEN UNLOCK BUTTON (Shown when screen is locked on tap)
+        // =========================================================================
+        AnimatedVisibility(
+            visible = uiState.isScreenLocked && showUnlockButton,
+            enter = fadeIn(tween(180)) + scaleIn(),
+            exit = fadeOut(tween(250)) + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .statusBarsPadding()
+                .padding(start = 24.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Color(0xE60E1422),
+                border = BorderStroke(1.5.dp, Color(0xFFFFB74D)),
+                shadowElevation = 18.dp,
+                modifier = Modifier
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        uiState = uiState.copy(isScreenLocked = false, areControlsVisible = true)
+                        showUnlockButton = false
+                    }
+                    .testTag("video_player_floating_unlock_button")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = "Unlock",
+                        tint = Color(0xFFFFB74D),
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "انقر لفك قفل الشاشة",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    )
                 }
             }
         }
@@ -1966,7 +2064,7 @@ private fun AspectRatioButton(
 
 @Composable
 private fun RotateFrameButton(
-    rotation: Int,
+    isLandscape: Boolean,
     onRotate: () -> Unit
 ) {
     IconButton(
@@ -1976,9 +2074,29 @@ private fun RotateFrameButton(
             .testTag("video_player_rotate_frame_button")
     ) {
         Icon(
-            imageVector = Icons.Default.Rotate90DegreesCw,
-            contentDescription = "Rotate Video: $rotation°",
+            imageVector = Icons.Default.ScreenRotation,
+            contentDescription = if (isLandscape) "Switch to Portrait" else "Switch to Landscape",
             tint = NeonCyan,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun ScreenLockButton(
+    isLocked: Boolean,
+    onToggle: () -> Unit
+) {
+    IconButton(
+        onClick = onToggle,
+        modifier = Modifier
+            .size(32.dp)
+            .testTag("video_player_screen_lock_button")
+    ) {
+        Icon(
+            imageVector = if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+            contentDescription = if (isLocked) "Unlock Screen" else "Lock Screen",
+            tint = if (isLocked) Color(0xFFFFB74D) else Color.White,
             modifier = Modifier.size(20.dp)
         )
     }
