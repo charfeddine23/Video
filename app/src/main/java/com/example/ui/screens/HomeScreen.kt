@@ -312,7 +312,7 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = if (isArabic) "هدف الـ 5 دقائق اليومي" else "Daily 5-Min Goal",
+                                    text = if (isArabic) "شاهد 5 دقائق يوميا لتغذية الشعلة" else "Daily 5-Min Goal",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White

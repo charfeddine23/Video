@@ -1530,19 +1530,22 @@ fun ExoVideoPlayer(
 
                 // -------------------------------------------------------------
                 // LEFT VERTICAL TOOLBAR: Positioned directly below top container on the physical LEFT side
-                // Smooth 1:1 Gesture-Following Collapse / Expand with finger tracking
+                // Container height animates smoothly with hand gesture, while icons remain anchored in place
                 // -------------------------------------------------------------
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        // 0f = fully open (height ~240dp), 1f = fully collapsed (height 56dp, only Settings gear)
                         val currentProgress = toolbarCollapseProgress.value
-                        val alphaFold = (1f - currentProgress).coerceIn(0f, 1f)
+                        val containerHeight = (248.dp - (192.dp * currentProgress))
 
                         Surface(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .statusBarsPadding()
                                 .padding(start = 16.dp, top = 76.dp)
-                                .animateContentSize(animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy))
+                                .width(52.dp)
+                                .height(containerHeight)
+                                .clip(RoundedCornerShape(22.dp))
                                 .drawBehind {
                                     drawRoundRect(
                                         brush = Brush.verticalGradient(
@@ -1554,6 +1557,42 @@ fun ExoVideoPlayer(
                                         ),
                                         cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
                                         size = size
+                                    )
+                                }
+                                .pointerInput(isLeftToolbarCollapsed) {
+                                    detectDragGestures(
+                                        onDragStart = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        },
+                                        onDragEnd = {
+                                            scope.launch {
+                                                // Snap container open or closed with spring physics
+                                                if (toolbarCollapseProgress.value < 0.5f) {
+                                                    toolbarCollapseProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                                                    isLeftToolbarCollapsed = false
+                                                } else {
+                                                    toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+                                                    isLeftToolbarCollapsed = true
+                                                }
+                                            }
+                                        },
+                                        onDragCancel = {
+                                            scope.launch {
+                                                val target = if (isLeftToolbarCollapsed) 1f else 0f
+                                                toolbarCollapseProgress.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
+                                            }
+                                        },
+                                        onDrag = { change, dragAmount ->
+                                            change.consume()
+                                            scope.launch {
+                                                // Dragging down expands container (decreases progress)
+                                                // Dragging up collapses container (increases progress)
+                                                val delta = -dragAmount.y / 192f
+                                                val newProgress = (toolbarCollapseProgress.value + delta).coerceIn(0f, 1f)
+                                                toolbarCollapseProgress.snapTo(newProgress)
+                                                isLeftToolbarCollapsed = newProgress > 0.5f
+                                            }
+                                        }
                                     )
                                 },
                             shape = RoundedCornerShape(22.dp),
@@ -1570,164 +1609,76 @@ fun ExoVideoPlayer(
                             ),
                             shadowElevation = 14.dp
                         ) {
+                            // Fixed Column inside the clipped container - Icons stay in place!
                             Column(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                                modifier = Modifier
+                                    .width(52.dp)
+                                    .padding(horizontal = 8.dp, vertical = 12.dp),
                                 verticalArrangement = Arrangement.spacedBy(16.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 // 1. Settings (الاعدادات)
-                                // Real-time finger tracking: Dragging downward extends toolbar 1:1 with finger
-                                Box(
-                                    modifier = Modifier.pointerInput(isLeftToolbarCollapsed) {
-                                        detectDragGestures(
-                                            onDragStart = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            },
-                                            onDragEnd = {
-                                                scope.launch {
-                                                    // Snap to closest state with spring physics
-                                                    if (toolbarCollapseProgress.value < 0.5f) {
-                                                        toolbarCollapseProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-                                                        isLeftToolbarCollapsed = false
-                                                    } else {
-                                                        toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
-                                                        isLeftToolbarCollapsed = true
-                                                    }
-                                                }
-                                            },
-                                            onDragCancel = {
-                                                scope.launch {
-                                                    val target = if (isLeftToolbarCollapsed) 1f else 0f
-                                                    toolbarCollapseProgress.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
-                                                }
-                                            },
-                                            onDrag = { change, dragAmount ->
-                                                change.consume()
-                                                // Dragging down decreases collapse progress (expands)
-                                                scope.launch {
-                                                    val delta = -dragAmount.y / 200f
-                                                    val newProgress = (toolbarCollapseProgress.value + delta).coerceIn(0f, 1f)
-                                                    toolbarCollapseProgress.snapTo(newProgress)
-                                                    isLeftToolbarCollapsed = newProgress > 0.5f
-                                                }
-                                            }
-                                        )
+                                SettingsGearButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        showSettingsSheet = true
                                     }
-                                ) {
-                                    SettingsGearButton(
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            showSettingsSheet = true
+                                )
+
+                                // 2. Rotate Screen Orientation (زر تدوير الشاشة بدون تشويه)
+                                RotateFrameButton(
+                                    isLandscape = isLandscape,
+                                    onRotate = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        val act = context as? Activity
+                                        val targetOrientation = if (isLandscape) {
+                                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                        } else {
+                                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
                                         }
-                                    )
-                                }
+                                        act?.requestedOrientation = targetOrientation
+                                    }
+                                )
 
-                                // Secondary items (2, 3, 4, 5) fold smoothly following finger drag (1:1 motion)
-                                if (currentProgress < 0.98f) {
-                                    Column(
-                                        verticalArrangement = Arrangement.spacedBy((16 * alphaFold).dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier
-                                            .graphicsLayer {
-                                                alpha = alphaFold
-                                                scaleY = alphaFold
-                                                scaleX = (0.75f + (alphaFold * 0.25f)).coerceIn(0f, 1f)
-                                            }
-                                    ) {
-                                        // 2. Rotate Screen Orientation (زر تدوير الشاشة بدون تشويه)
-                                        RotateFrameButton(
-                                            isLandscape = isLandscape,
-                                            onRotate = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                val act = context as? Activity
-                                                val targetOrientation = if (isLandscape) {
-                                                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                                                } else {
-                                                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                                                }
-                                                act?.requestedOrientation = targetOrientation
-                                            }
+                                // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
+                                AspectRatioButton(
+                                    resizeMode = uiState.resizeMode,
+                                    onToggle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        val nextMode = when (uiState.resizeMode) {
+                                            VideoResizeMode.FIT -> VideoResizeMode.CROP
+                                            VideoResizeMode.CROP -> VideoResizeMode.STRETCH
+                                            VideoResizeMode.STRETCH -> VideoResizeMode.FIT
+                                        }
+                                        uiState = uiState.copy(resizeMode = nextMode)
+                                        playerViewRef?.resizeMode = nextMode.exoMode
+                                    }
+                                )
+
+                                // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
+                                AmbientGlowToggleChip(
+                                    isEnabled = uiState.isAmbientGlowEnabled,
+                                    onToggle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
+                                    }
+                                )
+
+                                // 5. Screen Lock (زر قفل شاشة العرض)
+                                ScreenLockButton(
+                                    isLocked = uiState.isScreenLocked,
+                                    onToggle = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        val newLock = !uiState.isScreenLocked
+                                        uiState = uiState.copy(
+                                            isScreenLocked = newLock,
+                                            areControlsVisible = false
                                         )
-
-                                        // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
-                                        AspectRatioButton(
-                                            resizeMode = uiState.resizeMode,
-                                            onToggle = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                val nextMode = when (uiState.resizeMode) {
-                                                    VideoResizeMode.FIT -> VideoResizeMode.CROP
-                                                    VideoResizeMode.CROP -> VideoResizeMode.STRETCH
-                                                    VideoResizeMode.STRETCH -> VideoResizeMode.FIT
-                                                }
-                                                uiState = uiState.copy(resizeMode = nextMode)
-                                                playerViewRef?.resizeMode = nextMode.exoMode
-                                            }
-                                        )
-
-                                        // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
-                                        AmbientGlowToggleChip(
-                                            isEnabled = uiState.isAmbientGlowEnabled,
-                                            onToggle = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
-                                            }
-                                        )
-
-                                        // 5. Screen Lock (زر قفل شاشة العرض)
-                                        // Dragging up collapses toolbar 1:1 following finger
-                                        Box(
-                                            modifier = Modifier.pointerInput(isLeftToolbarCollapsed) {
-                                                detectDragGestures(
-                                                    onDragStart = {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    },
-                                                    onDragEnd = {
-                                                        scope.launch {
-                                                            if (toolbarCollapseProgress.value > 0.4f) {
-                                                                toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
-                                                                isLeftToolbarCollapsed = true
-                                                            } else {
-                                                                toolbarCollapseProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
-                                                                isLeftToolbarCollapsed = false
-                                                            }
-                                                        }
-                                                    },
-                                                    onDragCancel = {
-                                                        scope.launch {
-                                                            val target = if (isLeftToolbarCollapsed) 1f else 0f
-                                                            toolbarCollapseProgress.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
-                                                        }
-                                                    },
-                                                    onDrag = { change, dragAmount ->
-                                                        change.consume()
-                                                        // Dragging up increases collapse progress (folds)
-                                                        scope.launch {
-                                                            val delta = -dragAmount.y / 200f
-                                                            val newProgress = (toolbarCollapseProgress.value + delta).coerceIn(0f, 1f)
-                                                            toolbarCollapseProgress.snapTo(newProgress)
-                                                            isLeftToolbarCollapsed = newProgress > 0.5f
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        ) {
-                                            ScreenLockButton(
-                                                isLocked = uiState.isScreenLocked,
-                                                onToggle = {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    val newLock = !uiState.isScreenLocked
-                                                    uiState = uiState.copy(
-                                                        isScreenLocked = newLock,
-                                                        areControlsVisible = false
-                                                    )
-                                                    if (newLock) {
-                                                        showUnlockButton = true
-                                                    }
-                                                }
-                                            )
+                                        if (newLock) {
+                                            showUnlockButton = true
                                         }
                                     }
-                                }
+                                )
                             }
                         }
 
@@ -1756,7 +1707,7 @@ fun ExoVideoPlayer(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = if (isLeftToolbarCollapsed) "اسحب لأسفل لتمديد القائمة ↕" else "اسحب لأعلى لتقليص القائمة ↕",
+                                    text = if (isLeftToolbarCollapsed) "اسحب لأسفل لتمديد الوعاء ↕" else "اسحب لأعلى لطي الوعاء ↕",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = Color.White,
                                         fontSize = 10.sp,
