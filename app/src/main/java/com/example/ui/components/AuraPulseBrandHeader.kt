@@ -391,8 +391,8 @@ fun AuraPulseBrandHeader(
                         if (isArabic) "توقفت الهالة المتوهجة وتساقطت الثلوج • ابدأ المشاهدة لإذابة الجليد"
                         else "Living aura paused • Watch 5 min to thaw and ignite your streak"
                     } else {
-                        if (isArabic) "مشغل الوسائط الفاخر بتقنية الزجاج السائل M5"
-                        else "Liquid Glass M5 Offline Media Player"
+                        if (isArabic) "مشغل وسائط الفاخر مدعوم بالذكاء الإصطناعي"
+                        else "AI-Powered Luxury Media Player"
                     },
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = if (isFrozen) Color(0xFF80DEEA) else Color(0xFF94A3B8),

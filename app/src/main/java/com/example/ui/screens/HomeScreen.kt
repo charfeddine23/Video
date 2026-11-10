@@ -183,15 +183,23 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.width(14.dp))
 
                             Column {
+                                val streakDaysCount = uiState.streakDays
+                                val formattedStreakDays = when {
+                                    streakDaysCount == 0 -> "0 يوم"
+                                    streakDaysCount == 1 -> "يوم واحد"
+                                    streakDaysCount == 2 -> "يومان"
+                                    streakDaysCount in 3..10 -> "$streakDaysCount أيام"
+                                    else -> "$streakDaysCount يوماً"
+                                }
                                 Text(
-                                    text = if (isArabic) "${uiState.streakDays} يوماً متواصلاً" else "${uiState.streakDays} Days Streak",
+                                    text = if (isArabic) formattedStreakDays else "$streakDaysCount Days Streak",
                                     style = MaterialTheme.typography.titleLarge.copy(
                                         fontWeight = FontWeight.ExtraBold,
                                         color = Color.White
                                     )
                                 )
                                 Text(
-                                    text = if (isArabic) "سلسلة المشاهدة النشطة" else "Current Active Streak",
+                                    text = if (isArabic) "سلسلة الحماسة" else "Current Active Streak",
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = Color(0xFF94A3B8),
                                         fontSize = 11.5.sp

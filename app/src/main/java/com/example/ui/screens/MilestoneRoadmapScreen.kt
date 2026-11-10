@@ -409,29 +409,77 @@ fun MilestoneRoadmapScreen(
                     }
                 }
 
-                // Section 2: Milestone Timeline Unlocks
+                // Section 2: Winding Snake Prize Road (طريق الجائزة)
                 item(key = "milestones_timeline_header") {
-                    Spacer(modifier = Modifier.height(18.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 10.dp)
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0x3310B981),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x5510B981).copy(alpha = ambientGlow)),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = null,
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isArabic) "الإنجازات والمحطات المفتوحة بالسلسلة" else "Milestone Achievements & Unlocks",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                                fontSize = 15.sp
-                            )
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.radialGradient(
+                                                listOf(Color(0xFFFFD700), Color(0xFFFF9800), Color.Transparent)
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.EmojiEvents,
+                                        contentDescription = null,
+                                        tint = Charcoal950,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = if (isArabic) "طريق الجائزة" else "The Prize Road",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = Color.White,
+                                            fontSize = 16.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = if (isArabic) "مسار المستويات المتموج • ارتقِ وافتح جوائزك" else "Winding serpentine path • Unlock prestige rewards",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = Color(0xFF94A3B8),
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0x3300F2FE),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6600F2FE))
+                            ) {
+                                Text(
+                                    text = if (isArabic) "المستوى $streakDays" else "LVL $streakDays",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFF00F2FE),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.5.sp
+                                    )
+                                )
+                            }
+                        }
                     }
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
 
                 itemsIndexed(milestones, key = { _, item -> "milestone_${item.day}" }) { index, milestone ->
@@ -442,12 +490,14 @@ fun MilestoneRoadmapScreen(
                     }
                     val isLast = index == milestones.lastIndex
 
-                    TimelineItemRow(
+                    WindingSnakeMilestoneRow(
+                        index = index,
                         milestone = milestone,
                         status = status,
                         isLast = isLast,
                         currentStreak = streakDays,
-                        isArabic = isArabic
+                        isArabic = isArabic,
+                        pulseFactor = ambientGlow
                     )
                 }
             }
@@ -456,17 +506,40 @@ fun MilestoneRoadmapScreen(
 }
 
 @Composable
-private fun TimelineItemRow(
+private fun WindingSnakeMilestoneRow(
+    index: Int,
     milestone: MilestoneItem,
     status: MilestoneStatus,
     isLast: Boolean,
     currentStreak: Int,
-    isArabic: Boolean
+    isArabic: Boolean,
+    pulseFactor: Float
 ) {
-    val nodeColor = when (status) {
-        MilestoneStatus.UNLOCKED -> Color(0xFF10B981) // Green
-        MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE) // Bright Cyan
-        MilestoneStatus.LOCKED -> Color(0xFF475569) // Muted Slate
+    // Serpentine winding pattern: Left -> Center -> Right -> Center -> Left...
+    val positionMod = index % 4
+    val cardAlignment = when (positionMod) {
+        0 -> Alignment.CenterStart
+        1 -> Alignment.Center
+        2 -> Alignment.CenterEnd
+        else -> Alignment.Center
+    }
+
+    // Dynamic escalating luxury theme based on milestone day tier
+    val tierGradient = when {
+        milestone.day >= 60 -> listOf(Color(0xFFE0E7FF), Color(0xFF818CF8), Color(0xFFC084FC), Color(0xFF38BDF8)) // Mythic Celestial Diamond
+        milestone.day >= 40 -> listOf(Color(0xFFFFD700), Color(0xFFFFA000), Color(0xFFFF5722)) // Sovereign Imperial Gold
+        milestone.day >= 20 -> listOf(Color(0xFF7C3AED), Color(0xFFEC4899), Color(0xFF06B6D4)) // Royal Cosmic Purple & Cyan
+        milestone.day >= 10 -> listOf(Color(0xFF00F2FE), Color(0xFF4FACFE), Color(0xFF10B981)) // Radiant Cyber Glow
+        else -> listOf(Color(0xFF10B981), Color(0xFF059669)) // Emerald Bronze
+    }
+
+    val primaryTierColor = tierGradient.first()
+    val crownBadge = when {
+        milestone.day >= 60 -> "💎 MYTHIC"
+        milestone.day >= 40 -> "👑 ROYAL"
+        milestone.day >= 20 -> "⚡ ELITE"
+        milestone.day >= 10 -> "🔥 PRIME"
+        else -> "🌱 LEVEL"
     }
 
     val iconVector = when (milestone.iconType) {
@@ -481,209 +554,241 @@ private fun TimelineItemRow(
         else -> Icons.Default.Security
     }
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(IntrinsicSize.Min)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Left Column: Connected Timeline Node and Line
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.width(42.dp)
-        ) {
+        // Serpentine Connector Line from previous node with curving snake vibe
+        if (index > 0) {
+            val connectorBrush = if (status == MilestoneStatus.UNLOCKED) {
+                Brush.verticalGradient(
+                    listOf(
+                        tierGradient.last().copy(alpha = 0.8f),
+                        primaryTierColor.copy(alpha = 0.8f)
+                    )
+                )
+            } else if (status == MilestoneStatus.CURRENT_TARGET) {
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF10B981).copy(alpha = 0.6f),
+                        Color(0xFF00F2FE).copy(alpha = pulseFactor)
+                    )
+                )
+            } else {
+                Brush.verticalGradient(listOf(Color(0xFF1E293B), Color(0xFF334155)))
+            }
+
+            // Curved connector line mimicking a snake trail
             Box(
                 modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when (status) {
-                            MilestoneStatus.UNLOCKED -> Color(0x3310B981)
-                            MilestoneStatus.CURRENT_TARGET -> Color(0x3300F2FE)
-                            MilestoneStatus.LOCKED -> Color(0x221E293B)
-                        }
-                    )
-                    .border(
-                        width = if (status == MilestoneStatus.CURRENT_TARGET) 2.dp else 1.5.dp,
-                        color = nodeColor,
-                        shape = CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (status == MilestoneStatus.UNLOCKED) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Unlocked",
-                        tint = Color(0xFF10B981),
-                        modifier = Modifier.size(18.dp)
-                    )
-                } else if (status == MilestoneStatus.CURRENT_TARGET) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF00F2FE))
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = "Locked",
-                        tint = Color(0xFF64748B),
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
-
-            if (!isLast) {
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .fillMaxHeight()
-                        .padding(vertical = 4.dp)
-                        .background(
-                            if (status == MilestoneStatus.UNLOCKED) Color(0xFF10B981).copy(alpha = 0.5f)
-                            else Color(0xFF334155)
-                        )
-                )
-            }
+                    .width(if (status != MilestoneStatus.LOCKED) 4.dp else 2.5.dp)
+                    .height(28.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(connectorBrush)
+            )
         }
 
-        Spacer(modifier = Modifier.width(10.dp))
-
-        // Right Column: Checkpoint Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .border(
-                    width = 1.dp,
-                    color = when (status) {
-                        MilestoneStatus.UNLOCKED -> Color(0x4010B981)
-                        MilestoneStatus.CURRENT_TARGET -> Color(0x8000F2FE)
-                        MilestoneStatus.LOCKED -> Color(0x1AFFFFFF)
-                    },
-                    shape = RoundedCornerShape(16.dp)
-                ),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = when (status) {
-                    MilestoneStatus.UNLOCKED -> Color(0x2A121826)
-                    MilestoneStatus.CURRENT_TARGET -> Color(0x40162030)
-                    MilestoneStatus.LOCKED -> Color(0x180F172A)
-                }
-            )
+        // The Milestone Node on the winding track
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = cardAlignment
         ) {
-            Column(
+            Card(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp)
+                    .fillMaxWidth(0.92f)
+                    .border(
+                        width = when (status) {
+                            MilestoneStatus.UNLOCKED -> 1.8.dp
+                            MilestoneStatus.CURRENT_TARGET -> (2.2.dp * pulseFactor).coerceAtLeast(1.8.dp)
+                            MilestoneStatus.LOCKED -> 1.dp
+                        },
+                        brush = when (status) {
+                            MilestoneStatus.UNLOCKED -> Brush.linearGradient(tierGradient)
+                            MilestoneStatus.CURRENT_TARGET -> Brush.linearGradient(
+                                listOf(Color(0xFF00F2FE), Color(0xFFFFD700), Color(0xFF00FFCC))
+                            )
+                            MilestoneStatus.LOCKED -> Brush.linearGradient(
+                                listOf(Color(0x33FFFFFF), Color(0x11FFFFFF))
+                            )
+                        },
+                        shape = RoundedCornerShape(22.dp)
+                    ),
+                shape = RoundedCornerShape(22.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = when (status) {
+                        MilestoneStatus.UNLOCKED -> Color(0xD9101626)
+                        MilestoneStatus.CURRENT_TARGET -> Color(0xF2131F33)
+                        MilestoneStatus.LOCKED -> Color(0xCC0D121D)
+                    }
+                )
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    when (status) {
-                                        MilestoneStatus.UNLOCKED -> Color(0x2610B981)
-                                        MilestoneStatus.CURRENT_TARGET -> Color(0x2600F2FE)
-                                        MilestoneStatus.LOCKED -> Color(0x1A475569)
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = iconVector,
-                                contentDescription = null,
-                                tint = when (status) {
-                                    MilestoneStatus.UNLOCKED -> Color(0xFF10B981)
-                                    MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE)
-                                    MilestoneStatus.LOCKED -> Color(0xFF64748B)
-                                },
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(10.dp))
-
-                        Text(
-                            text = if (isArabic) "اليوم ${milestone.day}" else "Day ${milestone.day}",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = when (status) {
-                                    MilestoneStatus.UNLOCKED -> Color(0xFFFF9800)
-                                    MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE)
-                                    MilestoneStatus.LOCKED -> Color(0xFF94A3B8)
-                                }
-                            )
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = when (status) {
-                            MilestoneStatus.UNLOCKED -> Color(0x3310B981)
-                            MilestoneStatus.CURRENT_TARGET -> Color(0x3300F2FE)
-                            MilestoneStatus.LOCKED -> Color(0x22334155)
-                        }
+                    // Header Row: Day number, Winding Position Chip & Unlock Status
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = when (status) {
-                                MilestoneStatus.UNLOCKED -> if (isArabic) "مفتوحة ومفعلة ✓" else "UNLOCKED ✓"
-                                MilestoneStatus.CURRENT_TARGET -> if (isArabic) "الهدف القادم 🔥" else "CURRENT TARGET 🔥"
-                                MilestoneStatus.LOCKED -> if (isArabic) "مقفلة 🔒" else "LOCKED 🔒"
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Glowing Node Avatar
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        when (status) {
+                                            MilestoneStatus.UNLOCKED -> Brush.radialGradient(tierGradient)
+                                            MilestoneStatus.CURRENT_TARGET -> Brush.radialGradient(
+                                                listOf(Color(0xFF00F2FE), Color(0xFF0088FF))
+                                            )
+                                            MilestoneStatus.LOCKED -> Brush.radialGradient(
+                                                listOf(Color(0x22334155), Color(0x111E293B))
+                                            )
+                                        }
+                                    )
+                                    .border(
+                                        width = 1.2.dp,
+                                        color = if (status != MilestoneStatus.LOCKED) Color.White.copy(alpha = 0.6f) else Color(0x33FFFFFF),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (status == MilestoneStatus.LOCKED) Icons.Default.Lock else iconVector,
+                                    contentDescription = null,
+                                    tint = when (status) {
+                                        MilestoneStatus.UNLOCKED -> if (milestone.day >= 40) Charcoal950 else Color.White
+                                        MilestoneStatus.CURRENT_TARGET -> Charcoal950
+                                        MilestoneStatus.LOCKED -> Color(0xFF64748B)
+                                    },
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (isArabic) "المحطة ${milestone.day}" else "Day ${milestone.day}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = when (status) {
+                                                MilestoneStatus.UNLOCKED -> primaryTierColor
+                                                MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE)
+                                                MilestoneStatus.LOCKED -> Color(0xFF94A3B8)
+                                            },
+                                            fontSize = 16.sp
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    // Tier Badge
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = primaryTierColor.copy(alpha = 0.2f),
+                                        border = androidx.compose.foundation.BorderStroke(0.8.dp, primaryTierColor.copy(alpha = 0.5f))
+                                    ) {
+                                        Text(
+                                            text = crownBadge,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = primaryTierColor,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = if (isArabic) milestone.titleArabic else milestone.title,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (status == MilestoneStatus.LOCKED) Color(0xFF94A3B8) else Color.White,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Status Tag
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = when (status) {
+                                MilestoneStatus.UNLOCKED -> Color(0x3310B981)
+                                MilestoneStatus.CURRENT_TARGET -> Color(0x3300F2FE)
+                                MilestoneStatus.LOCKED -> Color(0x22334155)
                             },
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.sp,
-                                color = when (status) {
-                                    MilestoneStatus.UNLOCKED -> Color(0xFF34D399)
-                                    MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE)
-                                    MilestoneStatus.LOCKED -> Color(0xFF64748B)
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                when (status) {
+                                    MilestoneStatus.UNLOCKED -> Color(0xFF10B981).copy(alpha = 0.6f)
+                                    MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE).copy(alpha = pulseFactor)
+                                    MilestoneStatus.LOCKED -> Color(0x3364748B)
                                 }
                             )
-                        )
+                        ) {
+                            Text(
+                                text = when (status) {
+                                    MilestoneStatus.UNLOCKED -> if (isArabic) "مفتوحة ✓" else "UNLOCKED ✓"
+                                    MilestoneStatus.CURRENT_TARGET -> if (isArabic) "هدفك الحالي 🔥" else "CURRENT 🔥"
+                                    MilestoneStatus.LOCKED -> if (isArabic) "مقفلة 🔒" else "LOCKED 🔒"
+                                },
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    color = when (status) {
+                                        MilestoneStatus.UNLOCKED -> Color(0xFF34D399)
+                                        MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE)
+                                        MilestoneStatus.LOCKED -> Color(0xFF64748B)
+                                    }
+                                )
+                            )
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                Text(
-                    text = if (isArabic) milestone.titleArabic else milestone.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = if (status == MilestoneStatus.LOCKED) Color(0xFF94A3B8) else Color.White,
-                        fontSize = 15.sp
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = if (isArabic) milestone.descriptionArabic else milestone.description,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = if (status == MilestoneStatus.LOCKED) Color(0xFF64748B) else Color(0xFFCBD5E1),
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp
-                    )
-                )
-
-                if (status == MilestoneStatus.CURRENT_TARGET) {
-                    val daysLeft = (milestone.day - currentStreak).coerceAtLeast(1)
-                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (isArabic) "يتبقى $daysLeft أيام من المشاهدة المستمرة لفتح هذه الميزة" else "Only $daysLeft days of genuine watching left to unlock!",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFF00F2FE),
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.sp
+                        text = if (isArabic) milestone.descriptionArabic else milestone.description,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = if (status == MilestoneStatus.LOCKED) Color(0xFF64748B) else Color(0xFFCBD5E1),
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp
                         )
                     )
+
+                    // Target Countdown
+                    if (status == MilestoneStatus.CURRENT_TARGET) {
+                        val daysLeft = (milestone.day - currentStreak).coerceAtLeast(1)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0x2600F2FE),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x5500F2FE))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (isArabic) "⚡ يتبقى $daysLeft أيام فقط في السلسلة لفتح هذه الجائزة!" else "⚡ Only $daysLeft days in streak to unlock this reward!",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFF00F2FE),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
