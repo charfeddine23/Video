@@ -17,6 +17,7 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -24,10 +25,12 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -39,6 +42,7 @@ import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -65,6 +69,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.BrightnessHigh
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
@@ -238,14 +243,22 @@ fun ExoVideoPlayer(
     val streakDays = streakState?.streakDays ?: 0
     val isAntiCheatSeekingLocked = streakState != null && !streakState.isGoalCompletedToday
 
+    val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
+    val maxStreamVolume = remember(audioManager) {
+        audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC)?.coerceAtLeast(1) ?: 15
+    }
+
     // Core Player State
     var uiState by remember {
+        val currentSysVol = audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: (maxStreamVolume / 2)
+        val initialRatio = (currentSysVol.toFloat() / maxStreamVolume.toFloat()).coerceIn(0f, 1f)
         mutableStateOf(
             VideoPlayerUiState(
                 isAntiCheatLocked = isAntiCheatSeekingLocked,
                 isAmbientGlowEnabled = true,
                 hideFileExtensions = prefsRepo.getHideFileExtensions(),
-                isLandscapeOrientation = isLandscape
+                isLandscapeOrientation = isLandscape,
+                volume = initialRatio
             )
         )
     }
@@ -307,6 +320,18 @@ fun ExoVideoPlayer(
     var scrubbedPositionMs by remember { mutableLongStateOf(0L) }
     var isSeekingForward by remember { mutableStateOf(true) }
     var showUnlockButton by remember { mutableStateOf(false) }
+    var isLeftToolbarCollapsed by remember { mutableStateOf(false) }
+    var showGoalCelebrationBanner by remember { mutableStateOf(false) }
+
+    // When the 5-minute goal is reached today, trigger smooth celebration and hide anti-cheat banner
+    LaunchedEffect(streakState?.isGoalCompletedToday) {
+        if (streakState?.isGoalCompletedToday == true && uiState.isAntiCheatLocked) {
+            showGoalCelebrationBanner = true
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            delay(3500)
+            showGoalCelebrationBanner = false
+        }
+    }
 
     var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
 
@@ -667,6 +692,13 @@ fun ExoVideoPlayer(
                                 val newVol = (uiState.volume + delta).coerceIn(0f, 1f)
                                 uiState = uiState.copy(volume = newVol)
                                 exoPlayer.volume = newVol
+                                // Control device system volume
+                                audioManager?.let { am ->
+                                    val targetIndex = (newVol * maxStreamVolume).toInt().coerceIn(0, maxStreamVolume)
+                                    try {
+                                        am.setStreamVolume(AudioManager.STREAM_MUSIC, targetIndex, 0)
+                                    } catch (_: Exception) {}
+                                }
                                 gestureOverlayType = "VOLUME"
                             }
                             "BRIGHT" -> {
@@ -1107,14 +1139,6 @@ fun ExoVideoPlayer(
                                             maxLines = 1,
                                             modifier = Modifier.basicMarquee()
                                         )
-                                        Text(
-                                            text = if (uiState.isAmbientGlowEnabled) "Ambient Glow Active • 120fps" else "Liquid Glass M5 Player • 120fps",
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                color = if (uiState.isAmbientGlowEnabled) animatedAmbientPrimary else NeonCyan,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Medium
-                                            )
-                                        )
                                     }
                                 }
 
@@ -1168,7 +1192,7 @@ fun ExoVideoPlayer(
 
                             Spacer(modifier = Modifier.width(36.dp))
 
-                            // Large Glowing Neon Play/Pause Button - No white circular frame
+                            // Clean Play/Pause Button - No glow effect, no shadow/circle
                             IconButton(
                                 onClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1199,20 +1223,8 @@ fun ExoVideoPlayer(
                                 Icon(
                                     imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                                    tint = animatedAmbientPrimary,
-                                    modifier = Modifier
-                                        .size(56.dp)
-                                        .drawBehind {
-                                            drawCircle(
-                                                brush = Brush.radialGradient(
-                                                    colors = listOf(
-                                                        animatedAmbientPrimary.copy(alpha = 0.5f),
-                                                        Color.Transparent
-                                                    ),
-                                                    radius = size.width * 0.72f
-                                                )
-                                            )
-                                        }
+                                    tint = Color.White,
+                                    modifier = Modifier.size(56.dp)
                                 )
                             }
 
@@ -1320,30 +1332,60 @@ fun ExoVideoPlayer(
                                         )
                                     )
 
-                                    if (uiState.isAntiCheatLocked) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.clickable {
-                                                triggerStrikeLockAlert("Seeking Anti-Cheat")
-                                            }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Lock,
-                                                contentDescription = null,
-                                                tint = Color(0xFFFFB74D),
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text(
-                                                text = "Anti-Cheat Active (Seek Locked)",
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    color = Color(0xFFFFB74D),
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Medium
+                                    // Dynamic Animated Anti-Cheat Status & Goal Celebration
+                                    AnimatedVisibility(
+                                        visible = uiState.isAntiCheatLocked || showGoalCelebrationBanner,
+                                        enter = fadeIn(tween(300)) + scaleIn(),
+                                        exit = fadeOut(tween(600)) + scaleOut(targetScale = 0.7f)
+                                    ) {
+                                        if (showGoalCelebrationBanner) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.padding(horizontal = 4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.CheckCircle,
+                                                    contentDescription = "Goal Achieved",
+                                                    tint = NeonCyan,
+                                                    modifier = Modifier.size(13.dp)
                                                 )
-                                            )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "تم تحقيق الهدف اليومي! فك قفل التمرير",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = NeonCyan,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                )
+                                            }
+                                        } else if (uiState.isAntiCheatLocked) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.clickable {
+                                                    triggerStrikeLockAlert("Seeking Anti-Cheat")
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Lock,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFFFFB74D),
+                                                    modifier = Modifier.size(12.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "Anti-Cheat Active (Seek Locked)",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = Color(0xFFFFB74D),
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                )
+                                            }
                                         }
-                                    } else {
+                                    }
+
+                                    if (!uiState.isAntiCheatLocked && !showGoalCelebrationBanner) {
                                         Text(
                                             text = "Swipe L: Brightness • R: Volume",
                                             style = MaterialTheme.typography.labelSmall.copy(
@@ -1486,6 +1528,7 @@ fun ExoVideoPlayer(
                                 .align(Alignment.TopStart)
                                 .statusBarsPadding()
                                 .padding(start = 16.dp, top = 76.dp)
+                                .animateContentSize(animationSpec = tween(350, easing = FastOutSlowInEasing))
                                 .drawBehind {
                                     drawRoundRect(
                                         brush = Brush.verticalGradient(
@@ -1519,67 +1562,115 @@ fun ExoVideoPlayer(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 // 1. Settings (الاعدادات)
-                                SettingsGearButton(
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        showSettingsSheet = true
-                                    }
-                                )
-
-                                // 2. Rotate Screen Orientation (زر تدوير الشاشة بدون تشويه)
-                                RotateFrameButton(
-                                    isLandscape = isLandscape,
-                                    onRotate = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        val act = context as? Activity
-                                        val targetOrientation = if (isLandscape) {
-                                            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                                        } else {
-                                            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                                        }
-                                        act?.requestedOrientation = targetOrientation
-                                    }
-                                )
-
-                                // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
-                                AspectRatioButton(
-                                    resizeMode = uiState.resizeMode,
-                                    onToggle = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        val nextMode = when (uiState.resizeMode) {
-                                            VideoResizeMode.FIT -> VideoResizeMode.CROP
-                                            VideoResizeMode.CROP -> VideoResizeMode.STRETCH
-                                            VideoResizeMode.STRETCH -> VideoResizeMode.FIT
-                                        }
-                                        uiState = uiState.copy(resizeMode = nextMode)
-                                        playerViewRef?.resizeMode = nextMode.exoMode
-                                    }
-                                )
-
-                                // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
-                                AmbientGlowToggleChip(
-                                    isEnabled = uiState.isAmbientGlowEnabled,
-                                    onToggle = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
-                                    }
-                                )
-
-                                // 5. Screen Lock (زر قفل شاشة العرض)
-                                ScreenLockButton(
-                                    isLocked = uiState.isScreenLocked,
-                                    onToggle = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        val newLock = !uiState.isScreenLocked
-                                        uiState = uiState.copy(
-                                            isScreenLocked = newLock,
-                                            areControlsVisible = false
+                                // If collapsed: long-press 500ms + swipe down expands the toolbar!
+                                Box(
+                                    modifier = Modifier.pointerInput(isLeftToolbarCollapsed) {
+                                        detectDragGesturesAfterLongPress(
+                                            onDragStart = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                if (isLeftToolbarCollapsed && dragAmount.y > 15f) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    isLeftToolbarCollapsed = false
+                                                }
+                                            }
                                         )
-                                        if (newLock) {
-                                            showUnlockButton = true
+                                    }
+                                ) {
+                                    SettingsGearButton(
+                                        onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            showSettingsSheet = true
+                                        }
+                                    )
+                                }
+
+                                // Secondary items (2, 3, 4, 5) fold smoothly when collapsed
+                                AnimatedVisibility(
+                                    visible = !isLeftToolbarCollapsed,
+                                    enter = expandVertically(tween(300)) + fadeIn(tween(250)),
+                                    exit = shrinkVertically(tween(300)) + fadeOut(tween(250))
+                                ) {
+                                    Column(
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        // 2. Rotate Screen Orientation (زر تدوير الشاشة بدون تشويه)
+                                        RotateFrameButton(
+                                            isLandscape = isLandscape,
+                                            onRotate = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                val act = context as? Activity
+                                                val targetOrientation = if (isLandscape) {
+                                                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                                } else {
+                                                    ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                                }
+                                                act?.requestedOrientation = targetOrientation
+                                            }
+                                        )
+
+                                        // 3. Aspect Ratio / Format (زر تنسيق الفيديو)
+                                        AspectRatioButton(
+                                            resizeMode = uiState.resizeMode,
+                                            onToggle = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                val nextMode = when (uiState.resizeMode) {
+                                                    VideoResizeMode.FIT -> VideoResizeMode.CROP
+                                                    VideoResizeMode.CROP -> VideoResizeMode.STRETCH
+                                                    VideoResizeMode.STRETCH -> VideoResizeMode.FIT
+                                                }
+                                                uiState = uiState.copy(resizeMode = nextMode)
+                                                playerViewRef?.resizeMode = nextMode.exoMode
+                                            }
+                                        )
+
+                                        // 4. Ambient Interactive Glow (زر الاضائة التفاعلية)
+                                        AmbientGlowToggleChip(
+                                            isEnabled = uiState.isAmbientGlowEnabled,
+                                            onToggle = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                uiState = uiState.copy(isAmbientGlowEnabled = !uiState.isAmbientGlowEnabled)
+                                            }
+                                        )
+
+                                        // 5. Screen Lock (زر قفل شاشة العرض)
+                                        // Long-press 500ms + swipe up folds the toolbar into just the Settings icon!
+                                        Box(
+                                            modifier = Modifier.pointerInput(isLeftToolbarCollapsed) {
+                                                detectDragGesturesAfterLongPress(
+                                                    onDragStart = {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        if (!isLeftToolbarCollapsed && dragAmount.y < -15f) {
+                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                            isLeftToolbarCollapsed = true
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                        ) {
+                                            ScreenLockButton(
+                                                isLocked = uiState.isScreenLocked,
+                                                onToggle = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    val newLock = !uiState.isScreenLocked
+                                                    uiState = uiState.copy(
+                                                        isScreenLocked = newLock,
+                                                        areControlsVisible = false
+                                                    )
+                                                    if (newLock) {
+                                                        showUnlockButton = true
+                                                    }
+                                                }
+                                            )
                                         }
                                     }
-                                )
+                                }
                             }
                         }
                     }
@@ -1588,22 +1679,27 @@ fun ExoVideoPlayer(
         }
 
         // =========================================================================
-        // FLOATING SCREEN UNLOCK BUTTON (Shown when screen is locked on tap)
+        // FLOATING SCREEN UNLOCK BUTTON (Positioned right above bottom seekbar in center)
         // =========================================================================
         AnimatedVisibility(
             visible = uiState.isScreenLocked && showUnlockButton,
-            enter = fadeIn(tween(180)) + scaleIn(),
-            exit = fadeOut(tween(250)) + scaleOut(),
+            enter = fadeIn(tween(220)) + scaleIn(initialScale = 0.85f),
+            exit = fadeOut(tween(260)) + scaleOut(targetScale = 0.85f),
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .statusBarsPadding()
-                .padding(start = 24.dp)
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 96.dp)
         ) {
             Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color(0xE60E1422),
-                border = BorderStroke(1.5.dp, Color(0xFFFFB74D)),
-                shadowElevation = 18.dp,
+                shape = RoundedCornerShape(26.dp),
+                color = Color(0xF20E1424),
+                border = BorderStroke(
+                    1.6.dp,
+                    Brush.horizontalGradient(
+                        listOf(Color(0xFFFFB74D), NeonCyan, Color(0xFFFFB74D))
+                    )
+                ),
+                shadowElevation = 22.dp,
                 modifier = Modifier
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -1613,14 +1709,14 @@ fun ExoVideoPlayer(
                     .testTag("video_player_floating_unlock_button")
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp),
+                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Lock,
                         contentDescription = "Unlock",
                         tint = Color(0xFFFFB74D),
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
@@ -1628,7 +1724,7 @@ fun ExoVideoPlayer(
                         style = MaterialTheme.typography.labelMedium.copy(
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
+                            fontSize = 13.sp
                         )
                     )
                 }
