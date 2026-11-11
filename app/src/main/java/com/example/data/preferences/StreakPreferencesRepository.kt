@@ -48,6 +48,8 @@ class StreakPreferencesRepository private constructor(context: Context) {
         // Shield Farming (60-Min Rule) & Analytics
         private const val KEY_TOTAL_ACTIVE_WATCH_SECONDS = "key_total_active_watch_seconds"
         private const val KEY_SHIELD_FARM_SECONDS = "key_shield_farm_seconds"
+        private const val KEY_SHIELDS_EARNED_TODAY_DATE = "key_shields_earned_today_date"
+        private const val KEY_SHIELDS_EARNED_TODAY_COUNT = "key_shields_earned_today_count"
         private const val KEY_TOTAL_TRACKS_LISTENED = "key_total_tracks_listened"
 
         // Hidden Vault
@@ -82,7 +84,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
 
     /**
      * Loads the persistent Streak, Shield, and Watch state from disk.
-     * Default for new or upgraded sessions: 0 days streak, 3 shields, 0s watch time.
+     * Default for new sessions: 0 days streak, 0 shields (earned after 1h of usage), 0s watch time.
      */
     fun loadInitialState(): StreakUiState {
         val today = getTodayDateString()
@@ -91,7 +93,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
 
         if (isFirstRun || currentVersion < CURRENT_PREFS_VERSION) {
             val defaultStreak = 0
-            val defaultShields = 3
+            val defaultShields = 0
             val defaultWatchSeconds = 0
 
             prefs.edit()
@@ -104,6 +106,8 @@ class StreakPreferencesRepository private constructor(context: Context) {
                 .putInt(KEY_DAILY_GOAL_SECONDS, 300)
                 .putBoolean(KEY_IS_GOAL_COMPLETED_TODAY, false)
                 .putString(KEY_LAST_ACTIVE_DATE, today)
+                .putString(KEY_SHIELDS_EARNED_TODAY_DATE, today)
+                .putInt(KEY_SHIELDS_EARNED_TODAY_COUNT, 0)
                 .commit()
 
             return StreakUiState(
@@ -127,13 +131,15 @@ class StreakPreferencesRepository private constructor(context: Context) {
 
         // Day transition check
         if (lastDate != null && lastDate != today) {
-            // New day started: reset daily watch progress for the new day
+            // New day started: reset daily watch progress and daily shield farming quota
             watchSeconds = 0
             isGoalCompleted = false
             prefs.edit()
                 .putInt(KEY_DAILY_WATCH_SECONDS, 0)
                 .putBoolean(KEY_IS_GOAL_COMPLETED_TODAY, false)
                 .putString(KEY_LAST_ACTIVE_DATE, today)
+                .putString(KEY_SHIELDS_EARNED_TODAY_DATE, today)
+                .putInt(KEY_SHIELDS_EARNED_TODAY_COUNT, 0)
                 .apply()
         }
 
@@ -279,34 +285,80 @@ class StreakPreferencesRepository private constructor(context: Context) {
         val updatedSeconds = (current.dailyWatchSeconds + seconds).coerceAtMost(current.dailyGoalSeconds)
         val reachedGoal = updatedSeconds >= current.dailyGoalSeconds
         val newlyCompleted = reachedGoal && !current.isGoalCompletedToday
-        var newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
-        var newShields = if (newlyCompleted && current.shieldsCount < current.maxShields) {
-            current.shieldsCount + 1
-        } else current.shieldsCount
+        val newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
 
-        // 60-Minute Shield Farming Rule: +1 shield per 60 accumulated active watch minutes (max 30)
-        val currentTotalActive = prefs.getLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, 0L) + seconds
-        var farmSeconds = prefs.getInt(KEY_SHIELD_FARM_SECONDS, 0) + seconds
-        if (farmSeconds >= 3600) {
-            val awardedShields = farmSeconds / 3600
-            farmSeconds %= 3600
-            if (newShields < current.maxShields) {
-                newShields = (newShields + awardedShields).coerceAtMost(current.maxShields)
-            }
-        }
-        prefs.edit()
-            .putLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, currentTotalActive)
-            .putInt(KEY_SHIELD_FARM_SECONDS, farmSeconds)
-            .apply()
-
+        // CRITICAL: Reaching 5-minute daily watch goal feeds the streak flame ONLY, NOT awarding free shields!
         val newState = current.copy(
             dailyWatchSeconds = updatedSeconds,
             isGoalCompletedToday = reachedGoal || current.isGoalCompletedToday,
-            streakDays = newStreak,
-            shieldsCount = newShields
+            streakDays = newStreak
         )
         saveStreakState(newState)
         return newState
+    }
+
+    fun getShieldsEarnedToday(): Int {
+        val today = getTodayDateString()
+        val savedDate = prefs.getString(KEY_SHIELDS_EARNED_TODAY_DATE, "") ?: ""
+        return if (savedDate == today) {
+            prefs.getInt(KEY_SHIELDS_EARNED_TODAY_COUNT, 0)
+        } else {
+            0
+        }
+    }
+
+    /**
+     * Ticks active foreground app usage time.
+     * Strict Rules:
+     * - Background usage does NOT count.
+     * - 1 shield awarded per 1 full hour (3600s) of active app usage.
+     * - Maximum 3 shields awarded per day.
+     * - Maximum inventory capacity: 30 shields.
+     */
+    fun tickActiveForegroundUsage(seconds: Int = 1): Pair<StreakUiState, Boolean> {
+        val current = loadInitialState()
+        val today = getTodayDateString()
+        val savedDate = prefs.getString(KEY_SHIELDS_EARNED_TODAY_DATE, "") ?: ""
+        var todayEarned = if (savedDate == today) {
+            prefs.getInt(KEY_SHIELDS_EARNED_TODAY_COUNT, 0)
+        } else {
+            0
+        }
+
+        val totalActiveSecs = prefs.getLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, 0L) + seconds
+        var farmSeconds = prefs.getInt(KEY_SHIELD_FARM_SECONDS, 0)
+        var newShields = current.shieldsCount
+        var earnedShieldNow = false
+
+        if (todayEarned < 3 && current.shieldsCount < current.maxShields) {
+            farmSeconds += seconds
+            if (farmSeconds >= 3600) {
+                val possibleShields = farmSeconds / 3600
+                farmSeconds %= 3600
+                val allowable = (3 - todayEarned).coerceAtMost(possibleShields)
+                if (allowable > 0) {
+                    todayEarned += allowable
+                    newShields = (newShields + allowable).coerceAtMost(current.maxShields)
+                    earnedShieldNow = true
+                }
+            }
+        } else if (todayEarned >= 3) {
+            farmSeconds = 3600
+        }
+
+        prefs.edit()
+            .putString(KEY_SHIELDS_EARNED_TODAY_DATE, today)
+            .putInt(KEY_SHIELDS_EARNED_TODAY_COUNT, todayEarned)
+            .putInt(KEY_SHIELD_FARM_SECONDS, farmSeconds)
+            .putLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, totalActiveSecs)
+            .apply()
+
+        if (newShields != current.shieldsCount) {
+            val updatedState = current.copy(shieldsCount = newShields)
+            saveStreakState(updatedState)
+            return Pair(updatedState, true)
+        }
+        return Pair(current, false)
     }
 
     fun getShieldFarmAccumulatedSeconds(): Int {

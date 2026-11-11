@@ -144,27 +144,6 @@ fun WatchScreen(
     var isFoldersMagazineLayout by remember { mutableStateOf(false) }
     var lastFolderTapTime by remember { mutableStateOf(0L) }
 
-    // Dynamic luxurious ambient glow animation for Folders tab hint
-    val infiniteTransition = rememberInfiniteTransition(label = "folder_glow")
-    val folderGlowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.35f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "folder_glow_alpha"
-    )
-    val folderGlowSpread by infiniteTransition.animateFloat(
-        initialValue = 0.90f,
-        targetValue = 1.08f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "folder_glow_spread"
-    )
-
     var searchQuery by remember { mutableStateOf("") }
     var activeFolderId by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
@@ -500,29 +479,8 @@ fun WatchScreen(
                     val isSelected = selectedViewMode == mode && activeFolderId == null
                     val isFoldersMode = mode == WatchViewMode.FOLDERS
 
-                    // Dynamic luxurious ambient glowing effect under Folders tab as double-tap hint
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .then(
-                                if (isFoldersMode) {
-                                    Modifier.drawBehind {
-                                        // Dynamic high precision neon cyan & pulse violet glow under the button
-                                        drawCircle(
-                                            brush = Brush.radialGradient(
-                                                colors = listOf(
-                                                    PulseCyan.copy(alpha = folderGlowAlpha * 0.75f),
-                                                    PulseViolet.copy(alpha = folderGlowAlpha * 0.45f),
-                                                    Color(0xFF00FFCC).copy(alpha = folderGlowAlpha * 0.25f),
-                                                    Color.Transparent
-                                                ),
-                                                radius = size.maxDimension * folderGlowSpread * 0.78f
-                                            ),
-                                            center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.95f)
-                                        )
-                                    }
-                                } else Modifier
-                            )
+                        modifier = Modifier.weight(1f)
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
@@ -591,27 +549,6 @@ fun WatchScreen(
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             fontSize = 10.sp
                                         )
-                                    )
-                                }
-
-                                // Hint light indicator bar under Folders tab
-                                if (isFoldersMode) {
-                                    Spacer(modifier = Modifier.height(3.dp))
-                                    Box(
-                                        modifier = Modifier
-                                            .width(28.dp)
-                                            .height(2.5.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.horizontalGradient(
-                                                    listOf(
-                                                        Color.Transparent,
-                                                        PulseCyan.copy(alpha = folderGlowAlpha),
-                                                        PulseViolet.copy(alpha = folderGlowAlpha),
-                                                        Color.Transparent
-                                                    )
-                                                )
-                                            )
                                     )
                                 }
                             }

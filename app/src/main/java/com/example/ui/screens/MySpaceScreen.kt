@@ -400,7 +400,9 @@ fun MySpaceScreen(
             item(key = "shield_farming_tracker_card") {
                 val farmSecs = streakViewModel.getShieldFarmAccumulatedSeconds()
                 val farmMins = (farmSecs / 60).coerceIn(0, 60)
-                val farmProgress = (farmSecs.toFloat() / 3600f).coerceIn(0f, 1f)
+                val dailyShieldsToday = streakViewModel.getShieldsEarnedToday()
+                val isDailyCapReached = dailyShieldsToday >= 3
+                val farmProgress = if (isDailyCapReached) 1f else (farmSecs.toFloat() / 3600f).coerceIn(0f, 1f)
 
                 Card(
                     modifier = Modifier
@@ -438,14 +440,17 @@ fun MySpaceScreen(
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = if (isArabic) "زراعة الدروع (قاعدة الـ 60 دقيقة)" else "Shield Farming (60-Min Rule)",
+                                        text = if (isArabic) "زراعة الدروع (ساعة لكل درع)" else "Shield Farming (1h Per Shield)",
                                         style = MaterialTheme.typography.titleSmall.copy(
                                             color = Color.White,
                                             fontWeight = FontWeight.Bold
                                         )
                                     )
                                     Text(
-                                        text = if (isArabic) "درع واحد لكل 60 دقيقة مشاهدة نشطة (الحد 30)" else "1 Shield awarded per 60 active media mins",
+                                        text = if (isArabic)
+                                            "درع واحد لكل 1 ساعة استخدام للتطبيق (حد 3 يومياً • بدون خلفية)"
+                                        else
+                                            "1 Shield per 1h app usage (3 max/day • foreground only)",
                                         style = MaterialTheme.typography.bodySmall.copy(
                                             color = Color(0xFF94A3B8),
                                             fontSize = 11.sp
@@ -454,9 +459,13 @@ fun MySpaceScreen(
                                 }
                             }
                             Text(
-                                text = "$farmMins / 60 min",
+                                text = if (isDailyCapReached) {
+                                    if (isArabic) "3/3 اليوم ✓" else "3/3 Max"
+                                } else {
+                                    "$farmMins / 60 دقيقة"
+                                },
                                 style = MaterialTheme.typography.labelMedium.copy(
-                                    color = PulseCyan,
+                                    color = if (isDailyCapReached) Color(0xFF10B981) else PulseCyan,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                             )
@@ -470,9 +479,31 @@ fun MySpaceScreen(
                                 .fillMaxWidth()
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp)),
-                            color = PulseCyan,
+                            color = if (isDailyCapReached) Color(0xFF10B981) else PulseCyan,
                             trackColor = Color(0x22FFFFFF)
                         )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = if (isArabic) "المكتسب اليوم: $dailyShieldsToday من 3 دروع" else "Earned today: $dailyShieldsToday of 3 shields",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 10.sp
+                                )
+                            )
+                            Text(
+                                text = if (isArabic) "الاستخدام في الخلفية لا يُحتسب" else "Foreground usage only",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFF64748B),
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
                     }
                 }
 

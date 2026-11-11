@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -241,7 +242,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // Daily 5-Minute Watch Progress Card (Circular Progress Bar)
+            // Daily 5-Minute Watch Progress Card (Compact & Harmonious Design)
             item(key = "daily_watch_progress_card") {
                 Card(
                     modifier = Modifier
@@ -250,121 +251,118 @@ fun HomeScreen(
                         .border(
                             width = 1.dp,
                             brush = Brush.horizontalGradient(
-                                listOf(Color(0x5500F2FE), Color(0x3310B981))
+                                listOf(
+                                    Color(0x3300F2FE),
+                                    Color(0x40FF9800),
+                                    Color(0x2210B981)
+                                )
                             ),
-                            shape = RoundedCornerShape(24.dp)
+                            shape = RoundedCornerShape(18.dp)
                         ),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
-                        // Circular Progress Indicator
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.size(76.dp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            CircularProgressIndicator(
-                                progress = { 1f },
-                                modifier = Modifier.fillMaxSize(),
-                                color = Color(0x1FFFFFFF),
-                                strokeWidth = 7.dp,
-                                strokeCap = StrokeCap.Round
-                            )
-                            CircularProgressIndicator(
-                                progress = { uiState.dailyProgress },
-                                modifier = Modifier.fillMaxSize(),
-                                color = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF9800),
-                                strokeWidth = 7.dp,
-                                strokeCap = StrokeCap.Round
-                            )
-                            if (uiState.isGoalCompletedToday) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Goal Completed",
-                                    tint = Color(0xFF10B981),
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            } else {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "${(uiState.dailyProgress * 100).toInt()}%",
-                                        style = MaterialTheme.typography.labelLarge.copy(
-                                            color = Color.White,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 14.sp
-                                        )
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(18.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.weight(1f)
                             ) {
-                                Text(
-                                    text = if (isArabic) "شاهد 5 دقائق يوميا لتغذية الشعلة" else "Daily 5-Min Goal",
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                )
-
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = if (uiState.isGoalCompletedToday) Color(0x3310B981) else Color(0x2E00F2FE)
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.size(34.dp)
                                 ) {
+                                    CircularProgressIndicator(
+                                        progress = { 1f },
+                                        modifier = Modifier.fillMaxSize(),
+                                        color = Color(0x1AFFFFFF),
+                                        strokeWidth = 3.dp,
+                                        strokeCap = StrokeCap.Round
+                                    )
+                                    CircularProgressIndicator(
+                                        progress = { uiState.dailyProgress },
+                                        modifier = Modifier.fillMaxSize(),
+                                        color = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF9800),
+                                        strokeWidth = 3.dp,
+                                        strokeCap = StrokeCap.Round
+                                    )
+                                    Icon(
+                                        imageVector = if (uiState.isGoalCompletedToday) Icons.Default.CheckCircle else Icons.Default.LocalFireDepartment,
+                                        contentDescription = null,
+                                        tint = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF9800),
+                                        modifier = Modifier.size(17.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                Column {
                                     Text(
-                                        text = if (uiState.isGoalCompletedToday)
-                                            (if (isArabic) "مكتمل ✓" else "DONE ✓")
-                                        else
-                                            (if (isArabic) "قيد التشغيل" else "ACTIVE"),
-                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = if (uiState.isGoalCompletedToday) Color(0xFF34D399) else PulseCyan,
+                                        text = if (isArabic) "شاهد 5 دقائق يوميا لتغذية الشعلة" else "Watch 5 mins daily to feed flame",
+                                        style = MaterialTheme.typography.titleSmall.copy(
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 9.5.sp
+                                            color = Color.White,
+                                            fontSize = 12.5.sp
+                                        )
+                                    )
+                                    val curMin = uiState.dailyWatchSeconds / 60
+                                    val curSec = uiState.dailyWatchSeconds % 60
+                                    Text(
+                                        text = String.format("%02d:%02d / 05:00", curMin, curSec),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = PulseCyan,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
                                         )
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            val curMin = uiState.dailyWatchSeconds / 60
-                            val curSec = uiState.dailyWatchSeconds % 60
-                            Text(
-                                text = String.format("%02d:%02d / 05:00", curMin, curSec),
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    color = PulseCyan,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
+                            // Compact status badge
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (uiState.isGoalCompletedToday) Color(0x2E10B981) else Color(0x2600F2FE),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (uiState.isGoalCompletedToday) Color(0x5510B981) else Color(0x3300F2FE)
                                 )
-                            )
-
-                            Spacer(modifier = Modifier.height(2.dp))
-
-                            Text(
-                                text = if (isArabic)
-                                    "تشغيل محلي فعلي (التخطي لا يُحتسب لضمان المشاهدة)"
-                                else
-                                    "Actual playback required (seeking disabled during tracking)",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF94A3B8),
-                                    fontSize = 10.5.sp,
-                                    lineHeight = 14.sp
+                            ) {
+                                Text(
+                                    text = if (uiState.isGoalCompletedToday) {
+                                        if (isArabic) "مكتمل ✓" else "DONE ✓"
+                                    } else {
+                                        "${(uiState.dailyProgress * 100).toInt()}%"
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (uiState.isGoalCompletedToday) Color(0xFF34D399) else PulseCyan,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 10.sp
+                                    )
                                 )
-                            )
+                            }
                         }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Thin subtle progress line
+                        LinearProgressIndicator(
+                            progress = { uiState.dailyProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF9800),
+                            trackColor = Color(0x1AFFFFFF)
+                        )
                     }
                 }
 

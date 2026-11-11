@@ -169,21 +169,35 @@ class StreakViewModel(
             val reachedGoal = updatedSeconds >= current.dailyGoalSeconds
             val newlyCompleted = reachedGoal && !current.isGoalCompletedToday
             val newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
-            val newShields = if (newlyCompleted && current.shieldsCount < current.maxShields) {
-                current.shieldsCount + 1
-            } else current.shieldsCount
 
             val newState = current.copy(
                 dailyWatchSeconds = updatedSeconds,
                 isGoalCompletedToday = reachedGoal || current.isGoalCompletedToday,
                 streakDays = newStreak,
-                shieldsCount = newShields,
                 feedbackMessage = if (newlyCompleted) {
-                    "🎉 أتممت هدف الـ 5 دقائق اليومي! السترايك: ${newStreak} يوماً، وكسبت درعاً جديداً 🛡️ (${newShields}/${current.maxShields})"
+                    "🔥 أتممت هدف الـ 5 دقائق لتغذية الشعلة! السترايك: ${newStreak} يوماً"
                 } else current.feedbackMessage
             )
             repository.saveStreakState(newState)
             newState
+        }
+    }
+
+    /**
+     * Ticks active foreground app usage time.
+     * Core Rule: Background usage does NOT count.
+     * 1 shield awarded per 1 full hour of active app usage (max 3 shields/day, max 30 total).
+     */
+    fun tickActiveForegroundUsage(seconds: Int = 1) {
+        val (updatedState, earnedShield) = repository.tickActiveForegroundUsage(seconds)
+        if (earnedShield) {
+            val todayEarned = repository.getShieldsEarnedToday()
+            _uiState.update { current ->
+                current.copy(
+                    shieldsCount = updatedState.shieldsCount,
+                    feedbackMessage = "🛡️ كسبت درع حماية جديد بعد ساعة كاملة من استخدام التطبيق! ($todayEarned/3 اليوم)"
+                )
+            }
         }
     }
 
@@ -255,6 +269,7 @@ class StreakViewModel(
 
     // Shield Farming & Analytics
     fun getShieldFarmAccumulatedSeconds(): Int = repository.getShieldFarmAccumulatedSeconds()
+    fun getShieldsEarnedToday(): Int = repository.getShieldsEarnedToday()
     fun getTotalWatchHours(): Float = repository.getTotalWatchHours()
     fun getTotalTracksListened(): Int = repository.getTotalTracksListened()
     fun incrementTrackListened() = repository.incrementTrackListened()
