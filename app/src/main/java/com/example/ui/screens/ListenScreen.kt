@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -71,6 +72,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -200,10 +203,40 @@ fun ListenScreen(
     var snackbarMessage by remember { mutableStateOf<String?>(null) }
     var castDeviceName by remember { mutableStateOf(if (isArabic) "هذا الهاتف" else "This phone") }
 
+    // Smart Sleep Timer State (15m, 30m, 1h, end of track)
+    var showSleepTimerSheet by remember { mutableStateOf(false) }
+    var sleepTimerMinutes by remember { mutableIntStateOf(0) }
+    var sleepTimerRemainingSeconds by remember { mutableIntStateOf(0) }
+
+    // Advanced Equalizer & Spatial Audio State
+    var showEqualizerSheet by remember { mutableStateOf(false) }
+    var selectedEqualizerPreset by remember { mutableStateOf("Bass Boost") }
+    val eqBands = remember { mutableStateListOf(6f, 3f, 0f, 2f, 5f) }
+    var isSpatialAudioEnabled by remember { mutableStateOf(true) }
+    var bassBoostPercent by remember { mutableIntStateOf(75) }
+
     // REAL Media3 ExoPlayer Instance for Audio Playback
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             repeatMode = Player.REPEAT_MODE_ALL
+        }
+    }
+
+    // Smooth Fade-out Sleep Timer Ticker
+    LaunchedEffect(sleepTimerRemainingSeconds, isPlaying) {
+        if (isPlaying && sleepTimerRemainingSeconds > 0) {
+            delay(1000)
+            val next = sleepTimerRemainingSeconds - 1
+            sleepTimerRemainingSeconds = next
+            if (next in 1..5) {
+                exoPlayer.volume = (next.toFloat() / 5f).coerceIn(0f, 1f)
+            } else if (next == 0) {
+                exoPlayer.pause()
+                isPlaying = false
+                exoPlayer.volume = 1f
+                sleepTimerMinutes = 0
+                snackbarMessage = if (isArabic) "انتهى مؤقت النوم وتم إيقاف التشغيل 🌙" else "Sleep timer finished. Playback stopped 🌙"
+            }
         }
     }
 
@@ -220,6 +253,11 @@ fun ListenScreen(
                     if (dur > 0) {
                         currentDurationMs = dur.toFloat()
                     }
+                } else if (state == Player.STATE_ENDED && sleepTimerMinutes == -1) {
+                    exoPlayer.pause()
+                    isPlaying = false
+                    sleepTimerMinutes = 0
+                    snackbarMessage = if (isArabic) "اكتمل المقطع وتوقف التشغيل حسب مؤقت النوم 🌙" else "Track ended. Sleep timer stopped playback 🌙"
                 }
             }
         }
@@ -454,42 +492,124 @@ fun ListenScreen(
                         )
                     }
 
-                    // Open Real Audio Files from phone button
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0x3300FFCC),
-                        border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                if (!LocalMediaScanner.hasStorageOrAudioPermission(context)) {
-                                    permissionLauncher.launch(LocalMediaScanner.getAudioPermissions())
-                                } else {
-                                    audioFilePicker.launch(arrayOf("audio/*"))
-                                }
-                            }
-                            .testTag("listen_open_files_button")
+                    // Top Bar Action Buttons: Equalizer, Sleep Timer, Open Files
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        // Equalizer & Spatial Audio Button
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0x3300FFCC),
+                            border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    showEqualizerSheet = true
+                                }
+                                .testTag("listen_equalizer_button")
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.FolderOpen,
-                                contentDescription = "Open Audio",
-                                tint = PulseCyan,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isArabic) "فتح ملفات" else "Open Files",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = "Equalizer",
+                                    tint = PulseCyan,
+                                    modifier = Modifier.size(14.dp)
                                 )
-                            )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = if (isArabic) "معادل الصوت" else "EQ",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Smart Sleep Timer Button
+                        val isTimerActive = sleepTimerRemainingSeconds > 0 || sleepTimerMinutes == -1
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isTimerActive) Color(0x33FFB74D) else Color(0x22FFFFFF),
+                            border = BorderStroke(1.dp, if (isTimerActive) Color(0xFFFFB74D) else Color(0x33FFFFFF)),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    showSleepTimerSheet = true
+                                }
+                                .testTag("listen_sleep_timer_button")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = "Sleep Timer",
+                                    tint = if (isTimerActive) Color(0xFFFFB74D) else PulseCyan,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                val timerLabel = when {
+                                    sleepTimerMinutes == -1 -> if (isArabic) "نهاية" else "End"
+                                    sleepTimerRemainingSeconds > 0 -> "${sleepTimerRemainingSeconds / 60}m"
+                                    else -> if (isArabic) "مؤقت" else "Timer"
+                                }
+                                Text(
+                                    text = timerLabel,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isTimerActive) Color(0xFFFFB74D) else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Open Real Audio Files from phone button
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0x3300FFCC),
+                            border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (!LocalMediaScanner.hasStorageOrAudioPermission(context)) {
+                                        permissionLauncher.launch(LocalMediaScanner.getAudioPermissions())
+                                    } else {
+                                        audioFilePicker.launch(arrayOf("audio/*"))
+                                    }
+                                }
+                                .testTag("listen_open_files_button")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FolderOpen,
+                                    contentDescription = "Open Audio",
+                                    tint = PulseCyan,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isArabic) "فتح ملفات" else "Open Files",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -1335,6 +1455,320 @@ fun ListenScreen(
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
+                }
+            }
+        }
+
+        // =========================================================================
+        // SMART SLEEP TIMER BOTTOM SHEET
+        // =========================================================================
+        if (showSleepTimerSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSleepTimerSheet = false },
+                containerColor = Color(0xF20B0F19),
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (isArabic) "مؤقت النوم الذكي" else "Smart Sleep Timer",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Timer,
+                            contentDescription = null,
+                            tint = Color(0xFFFFB74D),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = if (isArabic) "يتلاشى الصوت تدريجياً ليتوقف التشغيل بسلاسة أثناء النوم" else "Audio gently fades out and stops playback automatically",
+                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 12.sp)
+                    )
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    val timerOptions = listOf(
+                        Pair(15, if (isArabic) "15 دقيقة" else "15 minutes"),
+                        Pair(30, if (isArabic) "30 دقيقة" else "30 minutes"),
+                        Pair(60, if (isArabic) "60 دقيقة (ساعة واحدة)" else "60 minutes (1 hour)"),
+                        Pair(-1, if (isArabic) "نهاية المقطع الحالي" else "End of current track"),
+                        Pair(0, if (isArabic) "إلغاء المؤقت (إيقاف)" else "Turn off timer")
+                    )
+
+                    timerOptions.forEach { (minutes, label) ->
+                        val isSelected = (minutes == sleepTimerMinutes && (minutes != 0 || sleepTimerRemainingSeconds == 0))
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) Color(0x33FFB74D) else Color(0x1AFFFFFF),
+                            border = BorderStroke(1.dp, if (isSelected) Color(0xFFFFB74D) else Color(0x22FFFFFF)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    sleepTimerMinutes = minutes
+                                    sleepTimerRemainingSeconds = if (minutes > 0) minutes * 60 else 0
+                                    showSleepTimerSheet = false
+                                    snackbarMessage = if (minutes > 0) {
+                                        if (isArabic) "تم ضبط مؤقت النوم على $label 🌙" else "Sleep timer set for $label 🌙"
+                                    } else if (minutes == -1) {
+                                        if (isArabic) "سيتوقف التشغيل تلقائياً بنهاية هذا المقطع 🌙" else "Playback will stop at track end 🌙"
+                                    } else {
+                                        if (isArabic) "تم إلغاء مؤقت النوم" else "Sleep timer disabled"
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = if (isSelected) Color(0xFFFFB74D) else Color.White,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFB74D),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+        }
+
+        // =========================================================================
+        // ADVANCED EQUALIZER & SPATIAL AUDIO BOTTOM SHEET
+        // =========================================================================
+        if (showEqualizerSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showEqualizerSheet = false },
+                containerColor = Color(0xF20B0F19),
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 14.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (isArabic) "معادل الصوت والصوت المحيطي" else "Equalizer & Spatial Audio",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = null,
+                            tint = PulseCyan,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Preset Profiles Selector
+                    Text(
+                        text = if (isArabic) "الملفات الصوتية الجاهزة" else "AUDIO PROFILES",
+                        style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val presets = listOf("Bass Boost", "Vocal", "Flat", "Electronic")
+                        presets.forEach { preset ->
+                            val isSelected = selectedEqualizerPreset == preset
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) Color(0x3300FFCC) else Color(0x1AFFFFFF),
+                                border = BorderStroke(1.dp, if (isSelected) PulseCyan else Color(0x22FFFFFF)),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        selectedEqualizerPreset = preset
+                                        when (preset) {
+                                            "Bass Boost" -> {
+                                                eqBands[0] = 8f; eqBands[1] = 5f; eqBands[2] = 0f; eqBands[3] = 2f; eqBands[4] = 4f
+                                                bassBoostPercent = 85
+                                            }
+                                            "Vocal" -> {
+                                                eqBands[0] = -2f; eqBands[1] = 2f; eqBands[2] = 7f; eqBands[3] = 4f; eqBands[4] = 1f
+                                                bassBoostPercent = 30
+                                            }
+                                            "Flat" -> {
+                                                eqBands[0] = 0f; eqBands[1] = 0f; eqBands[2] = 0f; eqBands[3] = 0f; eqBands[4] = 0f
+                                                bassBoostPercent = 50
+                                            }
+                                            "Electronic" -> {
+                                                eqBands[0] = 6f; eqBands[1] = 4f; eqBands[2] = -1f; eqBands[3] = 3f; eqBands[4] = 7f
+                                                bassBoostPercent = 80
+                                            }
+                                        }
+                                    }
+                            ) {
+                                Text(
+                                    text = preset,
+                                    modifier = Modifier.padding(vertical = 7.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isSelected) PulseCyan else Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // 5-Band Frequency Sliders
+                    val bandFrequencies = listOf("60 Hz", "230 Hz", "910 Hz", "3.6 kHz", "14 kHz")
+                    Text(
+                        text = if (isArabic) "نطاقات التردد (5 Bands)" else "FREQUENCY BANDS (5 BANDS)",
+                        style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    bandFrequencies.forEachIndexed { index, freq ->
+                        val value = eqBands.getOrElse(index) { 0f }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = freq,
+                                modifier = Modifier.width(62.dp),
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color.White,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 11.5.sp
+                                )
+                            )
+                            Slider(
+                                value = value,
+                                valueRange = -12f..12f,
+                                onValueChange = { newVal ->
+                                    selectedEqualizerPreset = "Custom"
+                                    eqBands[index] = newVal
+                                },
+                                colors = SliderDefaults.colors(
+                                    thumbColor = PulseCyan,
+                                    activeTrackColor = PulseCyan,
+                                    inactiveTrackColor = Color(0x33FFFFFF)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = "${if (value >= 0) "+" else ""}${value.toInt()}dB",
+                                modifier = Modifier.width(44.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = if (value != 0f) PulseCyan else Color(0xFF94A3B8),
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.End,
+                                    fontSize = 10.5.sp
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Spatial 3D Audio Switch
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (isArabic) "الصوت المحيطي المكاني (Spatial 3D Audio)" else "Spatial 3D Audio & Surround",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                            )
+                            Text(
+                                text = if (isArabic) "محاكاة مسرح صوتي سينمائي 360° غامر" else "Virtual 360° immersive binaural acoustic room",
+                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                            )
+                        }
+                        Switch(
+                            checked = isSpatialAudioEnabled,
+                            onCheckedChange = { isSpatialAudioEnabled = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = PulseCyan
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Bass Boost Slider
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (isArabic) "مضخم البيس (Bass Boost)" else "Bass Boost Strength",
+                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "$bassBoostPercent%",
+                            style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                        )
+                    }
+                    Slider(
+                        value = bassBoostPercent.toFloat(),
+                        valueRange = 0f..100f,
+                        onValueChange = { bassBoostPercent = it.toInt() },
+                        colors = SliderDefaults.colors(
+                            thumbColor = PulseCyan,
+                            activeTrackColor = PulseCyan,
+                            inactiveTrackColor = Color(0x33FFFFFF)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

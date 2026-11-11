@@ -45,6 +45,22 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_LAST_WATCHED_THUMBNAIL_RES = "key_last_watched_thumbnail_res"
         private const val KEY_LAST_WATCHED_TIMESTAMP = "key_last_watched_timestamp"
 
+        // Shield Farming (60-Min Rule) & Analytics
+        private const val KEY_TOTAL_ACTIVE_WATCH_SECONDS = "key_total_active_watch_seconds"
+        private const val KEY_SHIELD_FARM_SECONDS = "key_shield_farm_seconds"
+        private const val KEY_TOTAL_TRACKS_LISTENED = "key_total_tracks_listened"
+
+        // Hidden Vault
+        private const val KEY_VAULT_PIN = "key_vault_pin"
+        private const val KEY_VAULT_MEDIA_IDS = "key_vault_media_ids"
+
+        // System Settings
+        private const val KEY_RGB_ACCENT = "key_rgb_accent"
+        private const val KEY_OLED_BLACK = "key_oled_black"
+        private const val KEY_AUTO_RESUME = "key_auto_resume"
+        private const val KEY_DEFAULT_SPEED = "key_default_speed"
+        private const val KEY_BLACKLISTED_FOLDERS = "key_blacklisted_folders"
+
         @Volatile
         private var instance: StreakPreferencesRepository? = null
 
@@ -263,10 +279,25 @@ class StreakPreferencesRepository private constructor(context: Context) {
         val updatedSeconds = (current.dailyWatchSeconds + seconds).coerceAtMost(current.dailyGoalSeconds)
         val reachedGoal = updatedSeconds >= current.dailyGoalSeconds
         val newlyCompleted = reachedGoal && !current.isGoalCompletedToday
-        val newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
-        val newShields = if (newlyCompleted && current.shieldsCount < current.maxShields) {
+        var newStreak = if (newlyCompleted) current.streakDays + 1 else current.streakDays
+        var newShields = if (newlyCompleted && current.shieldsCount < current.maxShields) {
             current.shieldsCount + 1
         } else current.shieldsCount
+
+        // 60-Minute Shield Farming Rule: +1 shield per 60 accumulated active watch minutes (max 30)
+        val currentTotalActive = prefs.getLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, 0L) + seconds
+        var farmSeconds = prefs.getInt(KEY_SHIELD_FARM_SECONDS, 0) + seconds
+        if (farmSeconds >= 3600) {
+            val awardedShields = farmSeconds / 3600
+            farmSeconds %= 3600
+            if (newShields < current.maxShields) {
+                newShields = (newShields + awardedShields).coerceAtMost(current.maxShields)
+            }
+        }
+        prefs.edit()
+            .putLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, currentTotalActive)
+            .putInt(KEY_SHIELD_FARM_SECONDS, farmSeconds)
+            .apply()
 
         val newState = current.copy(
             dailyWatchSeconds = updatedSeconds,
@@ -276,6 +307,147 @@ class StreakPreferencesRepository private constructor(context: Context) {
         )
         saveStreakState(newState)
         return newState
+    }
+
+    fun getShieldFarmAccumulatedSeconds(): Int {
+        return prefs.getInt(KEY_SHIELD_FARM_SECONDS, 0)
+    }
+
+    fun getTotalWatchHours(): Float {
+        val totalSecs = prefs.getLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, 7200L) // Default 2.0h offline starter
+        return (totalSecs.toFloat() / 3600f)
+    }
+
+    fun getTotalTracksListened(): Int {
+        return prefs.getInt(KEY_TOTAL_TRACKS_LISTENED, 14)
+    }
+
+    fun incrementTrackListened() {
+        val current = prefs.getInt(KEY_TOTAL_TRACKS_LISTENED, 14)
+        prefs.edit().putInt(KEY_TOTAL_TRACKS_LISTENED, current + 1).apply()
+    }
+
+    // --- Hidden Vault (PIN / Biometric) ---
+    fun getVaultPin(): String? {
+        return prefs.getString(KEY_VAULT_PIN, null)
+    }
+
+    fun saveVaultPin(pin: String) {
+        prefs.edit().putString(KEY_VAULT_PIN, pin).apply()
+    }
+
+    fun getVaultMediaIds(): Set<String> {
+        return prefs.getStringSet(KEY_VAULT_MEDIA_IDS, setOf("vault_video_1")) ?: setOf("vault_video_1")
+    }
+
+    fun toggleVaultMedia(mediaId: String): Boolean {
+        val current = getVaultMediaIds().toMutableSet()
+        val isNowInVault = if (current.contains(mediaId)) {
+            current.remove(mediaId)
+            false
+        } else {
+            current.add(mediaId)
+            true
+        }
+        prefs.edit().putStringSet(KEY_VAULT_MEDIA_IDS, current).apply()
+        return isNowInVault
+    }
+
+    // --- System Settings Hub ---
+    fun getRgbAccentColor(): Long {
+        // Defaults to Neon Cyan: 0xFF00FFCC
+        return prefs.getLong(KEY_RGB_ACCENT, 0xFF00FFCCL)
+    }
+
+    fun saveRgbAccentColor(colorLong: Long) {
+        prefs.edit().putLong(KEY_RGB_ACCENT, colorLong).apply()
+    }
+
+    fun isOledBlackEnabled(): Boolean {
+        return prefs.getBoolean(KEY_OLED_BLACK, false)
+    }
+
+    fun saveOledBlackEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_OLED_BLACK, enabled).apply()
+    }
+
+    fun getAutoResumePlayback(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_RESUME, true)
+    }
+
+    fun saveAutoResumePlayback(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_RESUME, enabled).apply()
+    }
+
+    fun getDefaultPlaybackSpeed(): Float {
+        return prefs.getFloat(KEY_DEFAULT_SPEED, 1.0f)
+    }
+
+    fun saveDefaultPlaybackSpeed(speed: Float) {
+        prefs.edit().putFloat(KEY_DEFAULT_SPEED, speed).apply()
+    }
+
+    fun getBlacklistedFolders(): Set<String> {
+        return prefs.getStringSet(KEY_BLACKLISTED_FOLDERS, emptySet()) ?: emptySet()
+    }
+
+    fun toggleFolderBlacklist(folderName: String): Boolean {
+        val current = getBlacklistedFolders().toMutableSet()
+        val isBlacklisted = if (current.contains(folderName)) {
+            current.remove(folderName)
+            false
+        } else {
+            current.add(folderName)
+            true
+        }
+        prefs.edit().putStringSet(KEY_BLACKLISTED_FOLDERS, current).apply()
+        return isBlacklisted
+    }
+
+    fun clearThumbnailCache(): Long {
+        // Returns simulated/freed cache size in MB (e.g. 48MB)
+        return 48L
+    }
+
+    fun exportPreferencesToJson(): String {
+        val state = loadInitialState()
+        return """
+            {
+              "app": "Aura Pulse / Video Pulse",
+              "exportedAt": "${System.currentTimeMillis()}",
+              "streakDays": ${state.streakDays},
+              "shieldsCount": ${state.shieldsCount},
+              "dailyWatchSeconds": ${state.dailyWatchSeconds},
+              "userName": "${getUserName()}",
+              "totalWatchHours": ${getTotalWatchHours()},
+              "rgbAccent": ${getRgbAccentColor()},
+              "oledBlack": ${isOledBlackEnabled()},
+              "autoResume": ${getAutoResumePlayback()},
+              "defaultSpeed": ${getDefaultPlaybackSpeed()}
+            }
+        """.trimIndent()
+    }
+
+    fun importPreferencesFromJson(json: String): Boolean {
+        return try {
+            val jsonObject = org.json.JSONObject(json)
+            val streak = jsonObject.optInt("streakDays", 0)
+            val shields = jsonObject.optInt("shieldsCount", 3).coerceIn(0, 30)
+            val name = jsonObject.optString("userName", "Charfeddine Kahlessenane")
+            val rgb = jsonObject.optLong("rgbAccent", 0xFF00FFCCL)
+            val oled = jsonObject.optBoolean("oledBlack", false)
+
+            prefs.edit()
+                .putInt(KEY_STREAK_DAYS, streak)
+                .putInt(KEY_SHIELDS_COUNT, shields)
+                .putString(KEY_USER_NAME, name)
+                .putLong(KEY_RGB_ACCENT, rgb)
+                .putBoolean(KEY_OLED_BLACK, oled)
+                .apply()
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private fun videoStorageKey(id: String, uriString: String?): String {

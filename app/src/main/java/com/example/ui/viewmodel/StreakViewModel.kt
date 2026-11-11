@@ -252,4 +252,29 @@ class StreakViewModel(
     fun clearFeedback() {
         _uiState.update { it.copy(feedbackMessage = null) }
     }
+
+    // Shield Farming & Analytics
+    fun getShieldFarmAccumulatedSeconds(): Int = repository.getShieldFarmAccumulatedSeconds()
+    fun getTotalWatchHours(): Float = repository.getTotalWatchHours()
+    fun getTotalTracksListened(): Int = repository.getTotalTracksListened()
+    fun incrementTrackListened() = repository.incrementTrackListened()
+
+    // Hidden Vault
+    fun getVaultPin(): String? = repository.getVaultPin()
+    fun saveVaultPin(pin: String) = repository.saveVaultPin(pin)
+    fun getVaultMediaIds(): Set<String> = repository.getVaultMediaIds()
+    fun toggleVaultMedia(id: String): Boolean = repository.toggleVaultMedia(id)
+
+    // System Settings Hub
+    fun getRgbAccentColor(): Long = repository.getRgbAccentColor()
+    fun saveRgbAccentColor(color: Long) = repository.saveRgbAccentColor(color)
+    fun isOledBlackEnabled(): Boolean = repository.isOledBlackEnabled()
+    fun saveOledBlackEnabled(enabled: Boolean) = repository.saveOledBlackEnabled(enabled)
+    fun getAutoResume(): Boolean = repository.getAutoResumePlayback()
+    fun saveAutoResume(enabled: Boolean) = repository.saveAutoResumePlayback(enabled)
+    fun getDefaultSpeed(): Float = repository.getDefaultPlaybackSpeed()
+    fun saveDefaultSpeed(speed: Float) = repository.saveDefaultPlaybackSpeed(speed)
+    fun clearThumbnailCache(): Long = repository.clearThumbnailCache()
+    fun exportPreferencesToJson(): String = repository.exportPreferencesToJson()
+    fun importPreferencesFromJson(json: String): Boolean = repository.importPreferencesFromJson(json)
 }

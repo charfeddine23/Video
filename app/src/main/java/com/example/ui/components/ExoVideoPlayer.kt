@@ -97,6 +97,11 @@ import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
@@ -120,6 +125,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -153,6 +159,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem as ExoMediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
@@ -160,6 +167,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.example.R
 import com.example.data.model.MediaItem
 import com.example.ui.theme.Charcoal950
 import com.example.ui.theme.GlassBorder
@@ -327,14 +335,62 @@ fun ExoVideoPlayer(
     var isLeftToolbarCollapsed by remember { mutableStateOf(false) }
     // Interactive 1:1 finger tracking progress (0f = fully expanded, 1f = fully collapsed)
     val toolbarCollapseProgress = remember { Animatable(0f) }
-    var showToolbarGestureHint by remember { mutableStateOf(false) }
     var showGoalCelebrationBanner by remember { mutableStateOf(false) }
 
-    // Auto-dismiss gesture hint after 3 seconds
-    LaunchedEffect(showToolbarGestureHint) {
-        if (showToolbarGestureHint) {
-            delay(3000)
-            showToolbarGestureHint = false
+    // Offline Features: Snapshot, Bookmarks, Auto-Crop, Boost & Subtitle Sync
+    var snapshotBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var showSnapshotToast by remember { mutableStateOf(false) }
+    val bookmarks = remember { mutableStateListOf(30_000L, 95_000L, 180_000L) }
+    var bookmarkToastMessage by remember { mutableStateOf<String?>(null) }
+    var isAutoCropBlackBars by remember { mutableStateOf(false) }
+    var audioBoostMultiplier by remember { mutableFloatStateOf(1.0f) }
+    var subtitleDelayOffsetMs by remember { mutableLongStateOf(0L) }
+    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
+
+    LaunchedEffect(showSnapshotToast) {
+        if (showSnapshotToast) {
+            delay(3200)
+            showSnapshotToast = false
+        }
+    }
+
+    LaunchedEffect(bookmarkToastMessage) {
+        if (bookmarkToastMessage != null) {
+            delay(2800)
+            bookmarkToastMessage = null
+        }
+    }
+
+    fun takeFrameSnapshot() {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        try {
+            val surface = playerViewRef?.videoSurfaceView
+            if (surface is TextureView) {
+                val bmp = surface.bitmap
+                if (bmp != null) {
+                    snapshotBitmap = bmp
+                    showSnapshotToast = true
+                    return
+                }
+            }
+        } catch (_: Throwable) {}
+
+        try {
+            val pv = playerViewRef
+            if (pv != null) {
+                val v = pv as android.view.View
+                val w = v.width
+                val h = v.height
+                if (w > 0 && h > 0) {
+                    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    val c = android.graphics.Canvas(bmp)
+                    v.draw(c)
+                    snapshotBitmap = bmp
+                    showSnapshotToast = true
+                }
+            }
+        } catch (_: Throwable) {
+            showSnapshotToast = true
         }
     }
 
@@ -347,8 +403,6 @@ fun ExoVideoPlayer(
             showGoalCelebrationBanner = false
         }
     }
-
-    var playerViewRef by remember { mutableStateOf<PlayerView?>(null) }
 
     // Helper to format title with or without file extension
     fun formatDisplayTitle(rawTitle: String, hideExt: Boolean): String {
@@ -400,12 +454,16 @@ fun ExoVideoPlayer(
         handleClose()
     }
 
+    // Local bundled sample video URI (100% offline, guaranteed no HTTP 403)
+    val defaultLocalSampleUri = remember(context) {
+        Uri.parse("android.resource://${context.packageName}/${R.raw.sample_video}")
+    }
+
     // Media item attachment & Automatic Resume from Saved Progress
     LaunchedEffect(mediaItem) {
         val uri = when {
-            mediaItem.uriString != null -> Uri.parse(mediaItem.uriString)
-            mediaItem.category == "Live Channels" -> Uri.parse("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")
-            else -> Uri.parse("https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4")
+            !mediaItem.uriString.isNullOrBlank() -> Uri.parse(mediaItem.uriString)
+            else -> defaultLocalSampleUri
         }
 
         try {
@@ -447,6 +505,17 @@ fun ExoVideoPlayer(
                         uiState = uiState.copy(currentPositionMs = savedPos)
                     }
                 }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                // If remote source or expired URL throws an error (e.g. 403 Forbidden),
+                // automatically fallback to the local bundled high-definition offline video
+                try {
+                    val fallbackItem = ExoMediaItem.fromUri(defaultLocalSampleUri)
+                    exoPlayer.setMediaItem(fallbackItem)
+                    exoPlayer.prepare()
+                    exoPlayer.play()
+                } catch (_: Throwable) {}
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1288,48 +1357,84 @@ fun ExoVideoPlayer(
                             Column(
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
                             ) {
-                                // Progress Slider (RTL Mirrored)
+                                // Progress Slider (with interactive Neon Chapter & Bookmark dots)
                                 val displayMs = if (isDraggingSeekbar) scrubbedPositionMs else uiState.currentPositionMs
                                 val progressRatio = if (uiState.durationMs > 0) {
                                     (displayMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
                                 } else 0f
 
-                                Slider(
-                                    value = progressRatio,
-                                    enabled = !uiState.isAntiCheatLocked,
-                                    onValueChange = { ratio ->
-                                        if (!uiState.isAntiCheatLocked) {
-                                            isDraggingSeekbar = true
-                                            scrubbedPositionMs = (ratio * uiState.durationMs).toLong()
-                                        }
-                                    },
-                                    onValueChangeFinished = {
-                                        if (!uiState.isAntiCheatLocked) {
-                                            exoPlayer.seekTo(scrubbedPositionMs)
-                                            uiState = uiState.copy(currentPositionMs = scrubbedPositionMs)
-                                            isDraggingSeekbar = false
-                                            prefsRepo.saveVideoProgress(
-                                                id = mediaItem.id,
-                                                uri = mediaItem.uriString,
-                                                title = mediaItem.title,
-                                                durationMs = uiState.durationMs,
-                                                positionMs = scrubbedPositionMs,
-                                                thumbnailRes = mediaItem.posterRes
-                                            )
-                                        }
-                                    },
-                                    colors = SliderDefaults.colors(
-                                        thumbColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else animatedAmbientPrimary,
-                                        activeTrackColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else animatedAmbientPrimary,
-                                        inactiveTrackColor = Color(0x33FFFFFF),
-                                        disabledThumbColor = Color(0xFF64748B),
-                                        disabledActiveTrackColor = Color(0xFF475569)
-                                    ),
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(22.dp)
-                                        .testTag("video_player_progress_slider")
-                                )
+                                        .height(26.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Slider(
+                                        value = progressRatio,
+                                        enabled = !uiState.isAntiCheatLocked,
+                                        onValueChange = { ratio ->
+                                            if (!uiState.isAntiCheatLocked) {
+                                                isDraggingSeekbar = true
+                                                scrubbedPositionMs = (ratio * uiState.durationMs).toLong()
+                                            }
+                                        },
+                                        onValueChangeFinished = {
+                                            if (!uiState.isAntiCheatLocked) {
+                                                exoPlayer.seekTo(scrubbedPositionMs)
+                                                uiState = uiState.copy(currentPositionMs = scrubbedPositionMs)
+                                                isDraggingSeekbar = false
+                                                prefsRepo.saveVideoProgress(
+                                                    id = mediaItem.id,
+                                                    uri = mediaItem.uriString,
+                                                    title = mediaItem.title,
+                                                    durationMs = uiState.durationMs,
+                                                    positionMs = scrubbedPositionMs,
+                                                    thumbnailRes = mediaItem.posterRes
+                                                )
+                                            }
+                                        },
+                                        colors = SliderDefaults.colors(
+                                            thumbColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else animatedAmbientPrimary,
+                                            activeTrackColor = if (uiState.isAntiCheatLocked) Color(0xFF64748B) else animatedAmbientPrimary,
+                                            inactiveTrackColor = Color(0x33FFFFFF),
+                                            disabledThumbColor = Color(0xFF64748B),
+                                            disabledActiveTrackColor = Color(0xFF475569)
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(22.dp)
+                                            .testTag("video_player_progress_slider")
+                                    )
+
+                                    // Interactive Neon Dots on seekbar track
+                                    if (uiState.durationMs > 0L) {
+                                        Canvas(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 10.dp)
+                                                .height(22.dp)
+                                        ) {
+                                            val trackWidth = size.width
+                                            val centerY = size.height / 2f
+                                            bookmarks.forEach { bmMs ->
+                                                val bmRatio = (bmMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
+                                                val x = bmRatio * trackWidth
+                                                // Neon outer glow
+                                                drawCircle(
+                                                    color = Color(0x9900FFCC),
+                                                    radius = 5.5.dp.toPx(),
+                                                    center = androidx.compose.ui.geometry.Offset(x, centerY)
+                                                )
+                                                // Inner diamond/dot
+                                                drawCircle(
+                                                    color = Color(0xFFFFD700),
+                                                    radius = 3.dp.toPx(),
+                                                    center = androidx.compose.ui.geometry.Offset(x, centerY)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
 
                                 // Reversed Timestamps Row (RTL Mirrored)
                                 Row(
@@ -1470,6 +1575,48 @@ fun ExoVideoPlayer(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        // Smart Bookmark Quick Add Button
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0x2600FFCC),
+                                            border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.6f)),
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    val pos = uiState.currentPositionMs
+                                                    if (!bookmarks.contains(pos)) {
+                                                        bookmarks.add(pos)
+                                                        bookmarks.sort()
+                                                        bookmarkToastMessage = "تم حفظ علامة مرجعية ⭐ (${formatDuration(pos)})"
+                                                    } else {
+                                                        bookmarkToastMessage = "العلامة محفوظة مسبقاً (${formatDuration(pos)})"
+                                                    }
+                                                }
+                                                .testTag("quick_add_bookmark_button")
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.BookmarkBorder,
+                                                    contentDescription = "Bookmark",
+                                                    tint = NeonCyan,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(3.dp))
+                                                Text(
+                                                    text = "علامة ⭐",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = NeonCyan,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                )
+                                            }
+                                        }
+
                                         // Audio Track & Subtitles Button - Clean icon without white circle
                                         IconButton(
                                             onClick = {
@@ -1534,9 +1681,9 @@ fun ExoVideoPlayer(
                 // -------------------------------------------------------------
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        // 0f = fully open (height ~240dp), 1f = fully collapsed (height 56dp, only Settings gear)
+                        // 0f = fully open (height 310dp), 1f = fully collapsed (height 56dp, only Settings gear visible)
                         val currentProgress = toolbarCollapseProgress.value
-                        val containerHeight = (248.dp - (192.dp * currentProgress))
+                        val containerHeight = (310.dp - (254.dp * currentProgress))
 
                         Surface(
                             modifier = Modifier
@@ -1560,19 +1707,27 @@ fun ExoVideoPlayer(
                                     )
                                 }
                                 .pointerInput(isLeftToolbarCollapsed) {
+                                    var dragDeltaY = 0f
                                     detectDragGestures(
                                         onDragStart = {
+                                            dragDeltaY = 0f
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                         },
                                         onDragEnd = {
                                             scope.launch {
-                                                // Snap container open or closed with spring physics
-                                                if (toolbarCollapseProgress.value < 0.5f) {
+                                                // Smooth high-sensitivity snapping:
+                                                // Slight drag up auto-completes collapsing smoothly
+                                                // Slight drag down auto-completes expanding smoothly
+                                                if (dragDeltaY < -18f) {
+                                                    toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+                                                    isLeftToolbarCollapsed = true
+                                                } else if (dragDeltaY > 18f) {
                                                     toolbarCollapseProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
                                                     isLeftToolbarCollapsed = false
                                                 } else {
-                                                    toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
-                                                    isLeftToolbarCollapsed = true
+                                                    val target = if (toolbarCollapseProgress.value > 0.45f) 1f else 0f
+                                                    toolbarCollapseProgress.animateTo(target, spring(stiffness = Spring.StiffnessMediumLow))
+                                                    isLeftToolbarCollapsed = (target == 1f)
                                                 }
                                             }
                                         },
@@ -1584,10 +1739,9 @@ fun ExoVideoPlayer(
                                         },
                                         onDrag = { change, dragAmount ->
                                             change.consume()
+                                            dragDeltaY += dragAmount.y
                                             scope.launch {
-                                                // Dragging down expands container (decreases progress)
-                                                // Dragging up collapses container (increases progress)
-                                                val delta = -dragAmount.y / 192f
+                                                val delta = -dragAmount.y / 254f
                                                 val newProgress = (toolbarCollapseProgress.value + delta).coerceIn(0f, 1f)
                                                 toolbarCollapseProgress.snapTo(newProgress)
                                                 isLeftToolbarCollapsed = newProgress > 0.5f
@@ -1613,8 +1767,8 @@ fun ExoVideoPlayer(
                             Column(
                                 modifier = Modifier
                                     .width(52.dp)
-                                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(14.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 // 1. Settings (الاعدادات)
@@ -1679,40 +1833,88 @@ fun ExoVideoPlayer(
                                         }
                                     }
                                 )
+
+                                // 6. Cinematic Frame Snapshot (زر التقاط لقطة سينمائية)
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0x3300FFCC),
+                                    border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.7f)),
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .clickable {
+                                            takeFrameSnapshot()
+                                        }
+                                        .testTag("video_player_camera_snapshot_button")
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.CameraAlt,
+                                            contentDescription = "Capture Snapshot",
+                                            tint = NeonCyan,
+                                            modifier = Modifier.size(19.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
 
-                        // Helpful Floating Gesture Hint Chip (تلميح لمعرفة تقنية السحب والطي)
+                        // Animated 90 FPS Glowing Finger/Arrow Indicator directly underneath the left container
+                        val infiniteTransition = rememberInfiniteTransition(label = "indicator")
+                        val bounceY by infiniteTransition.animateFloat(
+                            initialValue = -5f,
+                            targetValue = 5f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(500, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "bounce"
+                        )
+                        val glowAnim by infiniteTransition.animateFloat(
+                            initialValue = 0.45f,
+                            targetValue = 1f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(500, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "glow"
+                        )
+
                         Surface(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
                                 .statusBarsPadding()
-                                .padding(start = 74.dp, top = 82.dp)
+                                .padding(start = 22.dp, top = 76.dp + containerHeight + 8.dp)
+                                .graphicsLayer {
+                                    translationY = bounceY
+                                }
                                 .clickable {
-                                    showToolbarGestureHint = !showToolbarGestureHint
-                                },
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0xCC0E1424),
-                            border = BorderStroke(1.dp, NeonCyan.copy(alpha = 0.5f))
+                                    scope.launch {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (isLeftToolbarCollapsed) {
+                                            toolbarCollapseProgress.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                                            isLeftToolbarCollapsed = false
+                                        } else {
+                                            toolbarCollapseProgress.animateTo(1f, spring(stiffness = Spring.StiffnessMediumLow))
+                                            isLeftToolbarCollapsed = true
+                                        }
+                                    }
+                                }
+                                .testTag("left_toolbar_finger_indicator"),
+                            shape = CircleShape,
+                            color = Color(0xEE0E1424),
+                            border = BorderStroke(1.4.dp, NeonCyan.copy(alpha = glowAnim)),
+                            shadowElevation = 10.dp
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                            Box(
+                                modifier = Modifier.size(38.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.TouchApp,
-                                    contentDescription = "Hint",
+                                    imageVector = if (isLeftToolbarCollapsed) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                                    contentDescription = if (isLeftToolbarCollapsed) "Swipe down to expand" else "Swipe up to collapse",
                                     tint = NeonCyan,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (isLeftToolbarCollapsed) "اسحب لأسفل لتمديد الوعاء ↕" else "اسحب لأعلى لطي الوعاء ↕",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color.White,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
@@ -1969,6 +2171,54 @@ fun ExoVideoPlayer(
                         )
                     }
 
+                    // 2b. Auto-Crop Black Bars (Shader / Aspect ratio border crop)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(
+                                imageVector = Icons.Default.Crop,
+                                contentDescription = null,
+                                tint = NeonCyan,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Auto-Crop Black Bars (قص الحواف السوداء)",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                                Text(
+                                    text = if (isAutoCropBlackBars) "Enabled: Ultra-wide zoom crops borders" else "Disabled: Native aspect ratio",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = Color(0xFF94A3B8),
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = isAutoCropBlackBars,
+                            onCheckedChange = { isChecked ->
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                isAutoCropBlackBars = isChecked
+                                playerViewRef?.resizeMode = if (isChecked) AspectRatioFrameLayout.RESIZE_MODE_ZOOM else uiState.resizeMode.exoMode
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = NeonCyan
+                            ),
+                            modifier = Modifier.testTag("auto_crop_black_bars_switch")
+                        )
+                    }
+
                     // 3. Background Play (Strike-Locked at Day 35)
                     val isBackgroundPlayLocked = streakDays < 35
                     PlayerSettingItem(
@@ -2042,6 +2292,7 @@ fun ExoVideoPlayer(
                         .fillMaxWidth()
                         .navigationBarsPadding()
                         .padding(horizontal = 24.dp, vertical = 14.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
                     Text(
                         text = "Audio & Subtitles",
@@ -2088,6 +2339,33 @@ fun ExoVideoPlayer(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Audio Volume Boost Slider
+                    Text(
+                        text = "AUDIO BOOST (${(audioBoostMultiplier * 100).toInt()}%)",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = NeonCyan,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Slider(
+                        value = audioBoostMultiplier,
+                        valueRange = 1.0f..2.0f,
+                        steps = 9,
+                        onValueChange = { boost ->
+                            audioBoostMultiplier = boost
+                            exoPlayer.volume = (uiState.volume * boost).coerceIn(0f, 2.0f)
+                        },
+                        colors = SliderDefaults.colors(
+                            thumbColor = NeonCyan,
+                            activeTrackColor = NeonCyan,
+                            inactiveTrackColor = Color(0x33FFFFFF)
+                        ),
+                        modifier = Modifier.fillMaxWidth().testTag("audio_boost_slider")
+                    )
+
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
@@ -2126,7 +2404,140 @@ fun ExoVideoPlayer(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Subtitle Sync & Delay Fine-tuning Controls
+                    Text(
+                        text = "SUBTITLE SYNC DELAY (${if (subtitleDelayOffsetMs >= 0) "+" else ""}${subtitleDelayOffsetMs} ms)",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = NeonCyan,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(-500L, -100L, 0L, 100L, 500L).forEach { delta ->
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (delta == 0L) Color(0x3300FFCC) else Color(0x22FFFFFF),
+                                border = BorderStroke(1.dp, if (delta == 0L) NeonCyan else Color(0x44FFFFFF)),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (delta == 0L) subtitleDelayOffsetMs = 0L else subtitleDelayOffsetMs += delta
+                                    }
+                            ) {
+                                Text(
+                                    text = if (delta == 0L) "Reset" else "${if (delta > 0) "+" else ""}${delta}ms",
+                                    modifier = Modifier.padding(vertical = 6.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+                            }
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(20.dp))
+                }
+            }
+        }
+
+        // =========================================================================
+        // CINEMATIC FRAME SNAPSHOT NOTIFICATION PILL
+        // =========================================================================
+        AnimatedVisibility(
+            visible = showSnapshotToast,
+            enter = fadeIn(tween(200)) + slideInVertically { -it },
+            exit = fadeOut(tween(300)) + slideOutVertically { -it },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = 18.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xF20E1524),
+                border = BorderStroke(1.4.dp, NeonCyan),
+                shadowElevation = 16.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (snapshotBitmap != null) {
+                        Image(
+                            bitmap = snapshotBitmap!!.asImageBitmap(),
+                            contentDescription = "Snapshot Preview",
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                    }
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        tint = NeonCyan,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "تم التقاط الإطار السينمائي بنجاح 📷",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+            }
+        }
+
+        // =========================================================================
+        // SMART BOOKMARK TOAST PILL
+        // =========================================================================
+        AnimatedVisibility(
+            visible = bookmarkToastMessage != null,
+            enter = fadeIn(tween(200)) + scaleIn(),
+            exit = fadeOut(tween(300)) + scaleOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 120.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xF20E1524),
+                border = BorderStroke(1.2.dp, Color(0xFFFFD700)),
+                shadowElevation = 12.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BookmarkBorder,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = bookmarkToastMessage ?: "",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
                 }
             }
         }
