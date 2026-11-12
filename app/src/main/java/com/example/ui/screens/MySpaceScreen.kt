@@ -51,6 +51,16 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Diamond
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.filled.Map
+import com.example.data.model.VaultTier
+import com.example.data.model.VaultLevelMilestone
+import com.example.data.model.VaultProgressionRegistry
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -105,6 +115,7 @@ fun MySpaceScreen(
 ) {
     val haptic = LocalHapticFeedback.current
     val uiState by streakViewModel.uiState.collectAsState()
+    val streakDays = uiState.streakDays
     val userName by streakViewModel.userName.collectAsState()
     val userAvatarPreset by streakViewModel.userAvatarPreset.collectAsState()
     val isArabic = currentLanguage == AppLanguage.ARABIC
@@ -134,7 +145,11 @@ fun MySpaceScreen(
     var defaultPlaybackSpeed by remember { mutableStateOf(streakViewModel.getDefaultSpeed()) }
     var systemFeedbackMessage by remember { mutableStateOf<String?>(null) }
 
-    val streakDays = uiState.streakDays
+    // 365-Level Progression System & Feature Vault States
+    var selectedVaultTier by remember { mutableStateOf(VaultTier.FOUNDATION) }
+    var claimedLevels by remember { mutableStateOf(streakViewModel.getClaimedVaultLevels()) }
+    val currentProgressionLevel = streakDays.coerceAtLeast(1).coerceAtMost(365)
+
     val userTierBadge = streakViewModel.getUserTierBadge(streakDays, isArabic)
 
     Box(
@@ -263,11 +278,39 @@ fun MySpaceScreen(
                                     Text(
                                         text = userTierBadge,
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = if (streakDays > 180) Color(0xFFFFD700) else PulseCyan,
+                                            color = if (streakDays >= 365) Color(0xFFFFD700) else if (streakDays >= 100) PulseCyan else Color(0xFF67E8F9),
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.SemiBold
                                         )
                                     )
+
+                                    if (streakDays >= 365) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = Color(0x33FFD700),
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFD700))
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.EmojiEvents,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFFFFD700),
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = "Yearly Aura Legend 👑",
+                                                    color = Color(0xFFFFD700),
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
 
@@ -715,529 +758,745 @@ fun MySpaceScreen(
             }
 
             // 2. Milestone Feature Vault (Control Panel) Header
+            // 2. 365-Level Progression System & Feature Vault Header
             item(key = "feature_vault_header") {
                 Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                    Text(
-                        text = if (isArabic) "لوحة تحكم ميزات الإنجازات (Feature Vault)" else "Milestone Feature Vault",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    )
-                    Text(
-                        text = if (isArabic) "الميزات المقفولة والمفعلة حسب أيام السلسلة" else "Progressive controls tied to your watch streak",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF64748B),
-                            fontSize = 11.sp
-                        )
-                    )
-                }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = if (isArabic) "خزانة الميزات ومسار الـ 365 مستوى" else "365-Level Feature Vault",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            )
+                            Text(
+                                text = if (isArabic) "مستويات متصاعدة ومكافآت دروع من المستوى 1 حتى 365" else "Progression milestones & shield drops from Lvl 1 to 365",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF64748B),
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
 
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Feature 1: Manual Dark/Light Mode toggle (Day 5)
-            item(key = "vault_day_5") {
-                val isUnlocked = streakDays >= 5
-                VaultFeatureCard(
-                    dayRequired = 5,
-                    isUnlocked = isUnlocked,
-                    icon = Icons.Default.DarkMode,
-                    title = if (isArabic) "الوضع الليلي والنهاري (Theme Mode)" else "Manual Dark / Light Mode Toggle",
-                    subtitle = if (isArabic) "تبديل المظهر فوراً بين الوضع الليلي والنهاري وحسب النظام" else "Switch appearances instantly anytime",
-                    isArabic = isArabic
-                ) {
-                    if (isUnlocked) {
-                        Row(
+                        // Open Roadmap Button
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0x2600F2FE),
+                            border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onOpenRoadmap()
+                                }
+                                .testTag("open_roadmap_screen_button")
                         ) {
-                            ThemeChip(
-                                icon = Icons.Default.DarkMode,
-                                label = if (isArabic) "ليلي" else "Dark",
-                                isSelected = currentThemeMode == ThemeMode.DARK,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onThemeModeChange(ThemeMode.DARK)
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            ThemeChip(
-                                icon = Icons.Default.LightMode,
-                                label = if (isArabic) "نهاري" else "Light",
-                                isSelected = currentThemeMode == ThemeMode.LIGHT,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onThemeModeChange(ThemeMode.LIGHT)
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            ThemeChip(
-                                icon = Icons.Default.BrightnessAuto,
-                                label = if (isArabic) "نظام" else "System",
-                                isSelected = currentThemeMode == ThemeMode.SYSTEM,
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    onThemeModeChange(ThemeMode.SYSTEM)
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Map,
+                                    contentDescription = null,
+                                    tint = PulseCyan,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isArabic) "طريق الجائزة 🗺️" else "Roadmap 🗺️",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = PulseCyan,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Feature 2: Hidden Vault & Secret Folders (Day 10)
-            item(key = "vault_day_10") {
-                val isUnlocked = streakDays >= 10
-                VaultFeatureCard(
-                    dayRequired = 10,
-                    isUnlocked = isUnlocked,
-                    icon = if (isVaultUnlocked) Icons.Default.LockOpen else Icons.Default.Lock,
-                    title = if (isArabic) "خزنة الوسائط السرية والمجلدات المخفية" else "Hidden Vault & Secret Folders",
-                    subtitle = if (isArabic) "حماية الفيديوهات الخاصة برمز PIN أو البصمة البيومترية" else "PIN/Biometric protected private offline media vault",
-                    isArabic = isArabic
+            // 365-Level Progress Summary Card
+            item(key = "vault_progress_summary_card") {
+                val progressRatio = (currentProgressionLevel.toFloat() / 365f).coerceIn(0f, 1f)
+                val unclaimedCount = (1..currentProgressionLevel).count { !claimedLevels.contains(it) }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(listOf(Color(0x4400F2FE), Color(0x44FFB74D), Color(0x44FFD700))),
+                            RoundedCornerShape(20.dp)
+                        ),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xD9101626))
                 ) {
-                    if (isUnlocked) {
-                        Column(modifier = Modifier.padding(top = 10.dp)) {
-                            if (!isVaultUnlocked) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0x3300F2FE)),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Column {
+                                    Icon(
+                                        imageVector = if (streakDays >= 365) Icons.Default.EmojiEvents else Icons.Default.WorkspacePremium,
+                                        contentDescription = null,
+                                        tint = if (streakDays >= 365) Color(0xFFFFD700) else PulseCyan,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = if (isArabic) "مستوى التقدم الحالي: المستوى $currentProgressionLevel" else "Progression: Level $currentProgressionLevel of 365",
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                    Text(
+                                        text = if (streakDays >= 365)
+                                            (if (isArabic) "🏆 تم تحقيق أسطورة الـ 365 يوماً بالكامل!" else "🏆 365-Day Mastery Achieved!")
+                                        else
+                                            (if (isArabic) "باقي ${365 - currentProgressionLevel} مستوى للوصول إلى وسام الأسطورة الذهبي" else "${365 - currentProgressionLevel} levels to Yearly Aura Legend"),
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = if (streakDays >= 365) Color(0xFFFFD700) else Color(0xFF94A3B8),
+                                            fontSize = 10.5.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            if (unclaimedCount > 0) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0x33FFB74D),
+                                    border = BorderStroke(1.dp, Color(0xFFFFB74D))
+                                ) {
+                                    Text(
+                                        text = if (isArabic) "$unclaimedCount مكافآت جاهزة 🎁" else "$unclaimedCount Ready 🎁",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color(0xFFFFD700),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        LinearProgressIndicator(
+                            progress = { progressRatio },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = if (streakDays >= 365) Color(0xFFFFD700) else PulseCyan,
+                            trackColor = Color(0x22FFFFFF)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            // 4 Tier Navigation Tabs
+            item(key = "vault_tier_tabs") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    VaultTier.values().forEach { tier ->
+                        val isSelected = selectedVaultTier == tier
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    selectedVaultTier = tier
+                                }
+                                .testTag("vault_tier_${tier.name.lowercase()}"),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) Color(0x3300F2FE) else Color(0x1F121826),
+                            border = BorderStroke(
+                                1.dp,
+                                if (isSelected) PulseCyan else Color(0x22FFFFFF)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = if (isArabic) tier.titleAr else tier.titleEn,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isSelected) PulseCyan else Color.White,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                        fontSize = 10.5.sp
+                                    )
+                                )
+                                Text(
+                                    text = tier.rangeText,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isSelected) Color(0xFF67E8F9) else Color(0xFF64748B),
+                                        fontSize = 9.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
+            // Render Curated Milestones for Selected Tier (365-Level Feature Vault)
+            val tierMilestones = VaultProgressionRegistry.getTierMilestones(selectedVaultTier)
+            items(tierMilestones.size, key = { index -> "vault_milestone_${selectedVaultTier.name}_${tierMilestones[index].level}" }) { index ->
+                val item = tierMilestones[index]
+                val isUnlocked = currentProgressionLevel >= item.level
+                val isClaimed = claimedLevels.contains(item.level)
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .border(
+                            1.dp,
+                            when {
+                                isClaimed -> BorderStroke(1.dp, Color(0x4410B981)).brush
+                                isUnlocked -> BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f)).brush
+                                else -> BorderStroke(1.dp, Color(0x22FFFFFF)).brush
+                            },
+                            RoundedCornerShape(20.dp)
+                        ),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isUnlocked) Color(0xD9121826) else Color(0x990D131F)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                // Level Indicator Badge
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            when {
+                                                isClaimed -> Color(0x3310B981)
+                                                isUnlocked -> Color(0x3300F2FE)
+                                                else -> Color(0x22334155)
+                                            }
+                                        )
+                                        .border(
+                                            1.dp,
+                                            when {
+                                                isClaimed -> Color(0xFF10B981)
+                                                isUnlocked -> PulseCyan
+                                                else -> Color(0x3364748B)
+                                            },
+                                            CircleShape
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${item.level}",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            color = when {
+                                                isClaimed -> Color(0xFF10B981)
+                                                isUnlocked -> PulseCyan
+                                                else -> Color(0xFF64748B)
+                                            },
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 12.sp
+                                        )
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(10.dp))
+
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
-                                            text = if (isArabic) "الخزنة مقفلة حالياً 🔒" else "Vault is Locked 🔒",
-                                            style = MaterialTheme.typography.bodyMedium.copy(
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Bold
+                                            text = if (isArabic) item.titleAr else item.titleEn,
+                                            style = MaterialTheme.typography.titleSmall.copy(
+                                                color = if (isUnlocked) Color.White else Color(0xFF94A3B8),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.5.sp
                                             )
                                         )
-                                        Text(
-                                            text = if (isArabic) "اضغط للتحقق وفتح الملفات السرية" else "Enter PIN to access confidential files",
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                color = Color(0xFF94A3B8),
-                                                fontSize = 11.sp
-                                            )
-                                        )
+                                        if (item.isMajor) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = Color(0x33FFD700)
+                                            ) {
+                                                Text(
+                                                    text = "★",
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = Color(0xFFFFD700),
+                                                        fontSize = 10.sp
+                                                    )
+                                                )
+                                            }
+                                        }
                                     }
 
+                                    Text(
+                                        text = if (isArabic) item.descriptionAr else item.descriptionEn,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = Color(0xFF64748B),
+                                            fontSize = 10.5.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            // Shields Reward Pill
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isUnlocked) Color(0x2600F2FE) else Color(0x1F334155),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isUnlocked) PulseCyan.copy(alpha = 0.5f) else Color(0x2264748B)
+                                )
+                            ) {
+                                Text(
+                                    text = "+${item.shieldsReward} 🛡️",
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isUnlocked) PulseCyan else Color(0xFF64748B),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.5.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Action / Claim Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            if (isUnlocked) {
+                                if (isClaimed) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = Color(0x2610B981),
+                                        border = BorderStroke(1.dp, Color(0x5510B981))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(13.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = if (isArabic) "تم الاستلام ✓" else "Claimed ✓",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = Color(0xFF34D399),
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp
+                                                )
+                                            )
+                                        }
+                                    }
+                                } else {
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
                                         color = Color(0x3300FFCC),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f)),
+                                        border = BorderStroke(1.dp, PulseCyan),
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(10.dp))
                                             .clickable {
-                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                vaultPinInput = ""
-                                                vaultPinError = null
-                                                showVaultAuthDialog = true
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                streakViewModel.claimVaultLevelReward(item.level, item.shieldsReward)
+                                                claimedLevels = streakViewModel.getClaimedVaultLevels()
                                             }
+                                            .testTag("claim_level_reward_${item.level}")
                                     ) {
-                                        Text(
-                                            text = if (isArabic) "فتح الخزنة 🔓" else "Unlock 🔓",
+                                        Row(
                                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                color = PulseCyan,
-                                                fontWeight = FontWeight.Bold
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Shield,
+                                                contentDescription = null,
+                                                tint = PulseCyan,
+                                                modifier = Modifier.size(14.dp)
                                             )
-                                        )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = if (isArabic) "استلام المكافأة (+${item.shieldsReward} دروع 🛡️)" else "Claim Reward (+${item.shieldsReward} 🛡️)",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = PulseCyan,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 11.sp
+                                                )
+                                            )
+                                        }
                                     }
                                 }
                             } else {
-                                // Vault is Unlocked
-                                Column {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Color(0x1F1E293B),
+                                    border = BorderStroke(1.dp, Color(0x2264748B))
+                                ) {
+                                    Text(
+                                        text = if (isArabic) "🔒 يفتح في المستوى ${item.level}" else "🔒 Unlocks at Level ${item.level}",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color(0xFF64748B),
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            if (item.badgeName != null && isUnlocked) {
+                                Text(
+                                    text = item.badgeName,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFFFFD700),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Embedded Interactive Feature Controls for Core Levels
+                        if (isUnlocked) {
+                            when (item.level) {
+                                5 -> {
+                                    // Theme Mode Switcher
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        ThemeChip(
+                                            icon = Icons.Default.DarkMode,
+                                            label = if (isArabic) "ليلي" else "Dark",
+                                            isSelected = currentThemeMode == ThemeMode.DARK,
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                onThemeModeChange(ThemeMode.DARK)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        ThemeChip(
+                                            icon = Icons.Default.LightMode,
+                                            label = if (isArabic) "نهاري" else "Light",
+                                            isSelected = currentThemeMode == ThemeMode.LIGHT,
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                onThemeModeChange(ThemeMode.LIGHT)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        ThemeChip(
+                                            icon = Icons.Default.BrightnessAuto,
+                                            label = if (isArabic) "نظام" else "System",
+                                            isSelected = currentThemeMode == ThemeMode.SYSTEM,
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                onThemeModeChange(ThemeMode.SYSTEM)
+                                            },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                                10 -> {
+                                    // App Lock & Secret Media Vault
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    if (!isVaultUnlocked) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                text = if (isArabic) "الخزنة مقفلة حالياً 🔒" else "Vault is Locked 🔒",
+                                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8))
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = Color(0x3300FFCC),
+                                                border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f)),
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        vaultPinInput = ""
+                                                        vaultPinError = null
+                                                        showVaultAuthDialog = true
+                                                    }
+                                            ) {
+                                                Text(
+                                                    text = if (isArabic) "فتح الخزنة 🔓" else "Unlock 🔓",
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = PulseCyan,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = Color(0x1F10B981),
+                                            border = BorderStroke(1.dp, Color(0x4410B981)),
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
+                                                Text(
+                                                    text = if (isArabic) "الخزنة مفعلة ومحمية بتشفير محلي ✓" else "Vault active & protected ✓",
+                                                    style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF34D399), fontSize = 11.sp)
+                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(6.dp),
+                                                    color = Color(0x22FFFFFF),
+                                                    modifier = Modifier.clickable { isVaultUnlocked = false }
+                                                ) {
+                                                    Text(
+                                                        text = if (isArabic) "قفل" else "Lock",
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                        style = MaterialTheme.typography.labelSmall.copy(color = Color.White, fontSize = 10.sp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                15 -> {
+                                    // Manual Language Selection
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (currentLanguage == AppLanguage.ARABIC) Color(0x3300F2FE) else Color(0x1F121826),
+                                            border = BorderStroke(1.dp, if (currentLanguage == AppLanguage.ARABIC) PulseCyan else Color(0x22FFFFFF)),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    onLanguageChange(AppLanguage.ARABIC)
+                                                }
+                                        ) {
+                                            Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                                                Text("العربية", color = if (currentLanguage == AppLanguage.ARABIC) PulseCyan else Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                            }
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = if (currentLanguage == AppLanguage.ENGLISH) Color(0x3300F2FE) else Color(0x1F121826),
+                                            border = BorderStroke(1.dp, if (currentLanguage == AppLanguage.ENGLISH) PulseCyan else Color(0x22FFFFFF)),
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                    onLanguageChange(AppLanguage.ENGLISH)
+                                                }
+                                        ) {
+                                            Box(modifier = Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+                                                Text("English", color = if (currentLanguage == AppLanguage.ENGLISH) PulseCyan else Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                                20 -> {
+                                    // Wi-Fi Direct Sharing Switch
+                                    Spacer(modifier = Modifier.height(8.dp))
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.LockOpen,
-                                                contentDescription = null,
-                                                tint = PulseCyan,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Text(
-                                                text = if (isArabic) "الخزنة مفتوحة (3 ملفات خاصة)" else "Vault Unlocked (3 Private Files)",
-                                                style = MaterialTheme.typography.bodyMedium.copy(
-                                                    color = PulseCyan,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            )
-                                        }
-
                                         Text(
-                                            text = if (isArabic) "قفل الخزنة 🔒" else "Lock Vault 🔒",
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .clickable {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                    isVaultUnlocked = false
-                                                }
-                                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                color = Color(0xFFFF5252),
-                                                fontWeight = FontWeight.Bold
-                                            )
+                                            text = if (mediaSharingEnabled)
+                                                (if (isArabic) "مشاركة الوسائط اللاسلكية مفعلة" else "Offline P2P Sharing Active")
+                                            else
+                                                (if (isArabic) "المشاركة معطلة" else "Sharing Inactive"),
+                                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 11.sp)
+                                        )
+                                        Switch(
+                                            checked = mediaSharingEnabled,
+                                            onCheckedChange = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                mediaSharingEnabled = it
+                                            },
+                                            colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
                                         )
                                     }
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    listOf("Secret_Recording_2026.mp4", "Private_Family_Vault.mkv", "Encrypted_Backup.mp4").forEach { name ->
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Folder,
-                                                contentDescription = null,
-                                                tint = Color(0xFFFFD700),
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = name,
-                                                style = MaterialTheme.typography.bodySmall.copy(
-                                                    color = Color.White,
-                                                    fontSize = 12.sp
-                                                )
+                                }
+                                25 -> {
+                                    // Exclusive 6 Themes Pack
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    val themePresets = listOf(
+                                        "Cyan Glass" to PulseCyan,
+                                        "Neon Amber" to Color(0xFFFFB74D),
+                                        "Royal Emerald" to Color(0xFF10B981),
+                                        "Pulse Violet" to PulseViolet,
+                                        "Solar Crimson" to Color(0xFFFF5722),
+                                        "Obsidian OLED" to Color(0xFF1E293B)
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        themePresets.forEachIndexed { i, (_, color) ->
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .clip(CircleShape)
+                                                    .background(color)
+                                                    .border(
+                                                        if (selectedCustomThemeIndex == i) 2.dp else 1.dp,
+                                                        if (selectedCustomThemeIndex == i) Color.White else Color.Transparent,
+                                                        CircleShape
+                                                    )
+                                                    .clickable {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        selectedCustomThemeIndex = i
+                                                    }
                                             )
                                         }
                                     }
                                 }
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Feature 3: Manual Language Selection (Day 15)
-            item(key = "vault_day_15") {
-                val isUnlocked = streakDays >= 15
-                VaultFeatureCard(
-                    dayRequired = 15,
-                    isUnlocked = isUnlocked,
-                    icon = Icons.Default.Language,
-                    title = if (isArabic) "اختيار لغة التطبيق يدوياً" else "Manual Language Selection",
-                    subtitle = if (isArabic) "التبديل الفوري بين اللغة العربية واللغة الإنجليزية" else "Instant toggle between Arabic and English localization",
-                    isArabic = isArabic
-                ) {
-                    if (isUnlocked) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (currentLanguage == AppLanguage.ARABIC) Color(0x3300F2FE) else Color(0x1F1E293B),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (currentLanguage == AppLanguage.ARABIC) PulseCyan else Color(0x22FFFFFF)
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onLanguageChange(AppLanguage.ARABIC)
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = "العربية (Arabic)",
-                                        style = MaterialTheme.typography.labelMedium.copy(
-                                            color = if (currentLanguage == AppLanguage.ARABIC) PulseCyan else Color.White,
-                                            fontWeight = FontWeight.Bold
+                                30 -> {
+                                    // Smart Notifications Switch
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = if (isArabic) "تنبيهات حماية السلسلة مفعلة" else "Streak Protection Alerts ON",
+                                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 11.sp)
                                         )
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (currentLanguage == AppLanguage.ENGLISH) Color(0x3300F2FE) else Color(0x1F1E293B),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (currentLanguage == AppLanguage.ENGLISH) PulseCyan else Color(0x22FFFFFF)
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onLanguageChange(AppLanguage.ENGLISH)
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Text(
-                                        text = "English (الإنجليزية)",
-                                        style = MaterialTheme.typography.labelMedium.copy(
-                                            color = if (currentLanguage == AppLanguage.ENGLISH) PulseCyan else Color.White,
-                                            fontWeight = FontWeight.Bold
+                                        Switch(
+                                            checked = smartNotificationsEnabled,
+                                            onCheckedChange = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                smartNotificationsEnabled = it
+                                            },
+                                            colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
                                         )
-                                    )
+                                    }
+                                }
+                                35 -> {
+                                    // Background Play Switch
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = if (backgroundPlayEnabled)
+                                                (if (isArabic) "التشغيل في الخلفية مفعل" else "Background Engine ON")
+                                            else
+                                                (if (isArabic) "التشغيل في الخلفية معطل" else "Background Engine OFF"),
+                                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 11.sp)
+                                        )
+                                        Switch(
+                                            checked = backgroundPlayEnabled,
+                                            onCheckedChange = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                backgroundPlayEnabled = it
+                                            },
+                                            colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
+                                        )
+                                    }
+                                }
+                                40 -> {
+                                    // PiP Mode Switch
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = if (pipModeEnabled)
+                                                (if (isArabic) "نافذة المشغل العائم مفعلة" else "Floating PiP Player Enabled")
+                                            else
+                                                (if (isArabic) "النافذة العائمة معطلة" else "Floating PiP Player Disabled"),
+                                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 11.sp)
+                                        )
+                                        Switch(
+                                            checked = pipModeEnabled,
+                                            onCheckedChange = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                pipModeEnabled = it
+                                            },
+                                            colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Feature 4: Media Sharing capabilities (Day 20)
-            item(key = "vault_day_20") {
-                val isUnlocked = streakDays >= 20
-                VaultFeatureCard(
-                    dayRequired = 20,
-                    isUnlocked = isUnlocked,
-                    icon = Icons.Default.Share,
-                    title = if (isArabic) "مشاركة الوسائط محلياً" else "Media Sharing Capabilities",
-                    subtitle = if (isArabic) "إرسال المقاطع للأجهزة القريبة عبر Wi-Fi Direct فائق السرعة" else "High-speed Wi-Fi Direct offline transfer to nearby devices",
-                    isArabic = isArabic
-                ) {
-                    if (isUnlocked) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = if (mediaSharingEnabled)
-                                    (if (isArabic) "المشاركة اللاسلكية مفعلة" else "Local Offline P2P Sharing Active")
-                                else
-                                    (if (isArabic) "المشاركة اللاسلكية معطلة" else "Offline Sharing Paused"),
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 12.sp)
-                            )
-                            Switch(
-                                checked = mediaSharingEnabled,
-                                onCheckedChange = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    mediaSharingEnabled = it
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = PulseCyan,
-                                    checkedThumbColor = Color.White
-                                )
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Feature 5: Custom Themes selection - 3 Dark / 3 Light (Day 25)
-            item(key = "vault_day_25") {
-                val isUnlocked = streakDays >= 25
-                VaultFeatureCard(
-                    dayRequired = 25,
-                    isUnlocked = isUnlocked,
-                    icon = Icons.Default.Palette,
-                    title = if (isArabic) "ثيمات حصرية (3 ليلي / 3 نهاري)" else "Custom Themes (3 Dark / 3 Light)",
-                    subtitle = if (isArabic) "ألوان النيون والتدرجات الزجاجية الحصرية للمشغل" else "Cyber Cyan, Obsidian Dark, Sunset Violet, Pure Pearl, Solar Light",
-                    isArabic = isArabic
-                ) {
-                    if (isUnlocked) {
-                        Column(modifier = Modifier.padding(top = 10.dp)) {
-                            val themes = listOf(
-                                "Obsidian Matrix (Dark)",
-                                "Cyan Pulse (Dark)",
-                                "Neon Sunset (Dark)",
-                                "Pure Glass (Light)",
-                                "Aurora Glow (Light)",
-                                "Solar Pearl (Light)"
-                            )
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                themes.take(3).forEachIndexed { idx, thName ->
-                                    ThemePill(
-                                        title = thName.substringBefore(" ("),
-                                        isSelected = selectedCustomThemeIndex == idx,
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            selectedCustomThemeIndex = idx
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                themes.drop(3).forEachIndexed { idx, thName ->
-                                    val realIdx = idx + 3
-                                    ThemePill(
-                                        title = thName.substringBefore(" ("),
-                                        isSelected = selectedCustomThemeIndex == realIdx,
-                                        onClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            selectedCustomThemeIndex = realIdx
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Feature 6: Smart Notifications toggle (Day 30)
-            item(key = "vault_day_30") {
-                val isUnlocked = streakDays >= 30
-                VaultFeatureCard(
-                    dayRequired = 30,
-                    isUnlocked = isUnlocked,
-                    icon = Icons.Default.Notifications,
-                    title = if (isArabic) "إشعارات ذكية مخصصة" else "Smart Notifications Toggle",
-                    subtitle = if (isArabic) "تنبيهات استكمال المشاهدة وتذكير حماية السلسلة قبل منتصف الليل" else "Continue watching prompts & streak preservation alerts",
-                    isArabic = isArabic
-                ) {
-                    if (isUnlocked) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = if (smartNotificationsEnabled)
-                                    (if (isArabic) "التنبيهات الذكية مفعلة" else "Smart Alerts Active")
-                                else
-                                    (if (isArabic) "التنبيهات الذكية معطلة" else "Smart Alerts Muted"),
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 12.sp)
-                            )
-                            Switch(
-                                checked = smartNotificationsEnabled,
-                                onCheckedChange = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    smartNotificationsEnabled = it
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = PulseCyan,
-                                    checkedThumbColor = Color.White
-                                )
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Feature 7: Background Play settings (Day 35)
-            item(key = "vault_day_35") {
-                val isUnlocked = streakDays >= 35
-                VaultFeatureCard(
-                    dayRequired = 35,
-                    isUnlocked = isUnlocked,
-                    icon = Icons.Default.Headset,
-                    title = if (isArabic) "التشغيل في الخلفية (Background Play)" else "Background Audio & Video Play",
-                    subtitle = if (isArabic) "الاستمرار في سماع الصوت عند إغلاق الشاشة أو تصفح تطبيقات أخرى" else "Keep audio playing when screen is locked or switching apps",
-                    isArabic = isArabic
-                ) {
-                    if (isUnlocked) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = if (backgroundPlayEnabled)
-                                    (if (isArabic) "التشغيل في الخلفية مفعل" else "Background Engine ON")
-                                else
-                                    (if (isArabic) "التشغيل في الخلفية معطل" else "Background Engine OFF"),
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 12.sp)
-                            )
-                            Switch(
-                                checked = backgroundPlayEnabled,
-                                onCheckedChange = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    backgroundPlayEnabled = it
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = PulseCyan,
-                                    checkedThumbColor = Color.White
-                                )
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-
-            // Feature 8: Pop-up Video / PiP Mode settings (Day 40)
-            item(key = "vault_day_40") {
-                val isUnlocked = streakDays >= 40
-                VaultFeatureCard(
-                    dayRequired = 40,
-                    isUnlocked = isUnlocked,
-                    icon = Icons.Default.PictureInPicture,
-                    title = if (isArabic) "فيديو عائم في نافذة منبثقة (PiP Mode)" else "Pop-up Video / PiP Mode Settings",
-                    subtitle = if (isArabic) "مشغل فيديو عائم قابل لتغيير الحجم فوق كافة التطبيقات" else "Floating resizable picture-in-picture video player",
-                    isArabic = isArabic
-                ) {
-                    if (isUnlocked) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = if (pipModeEnabled)
-                                    (if (isArabic) "نافذة المشغل العائم مفعلة" else "Floating PiP Player Enabled")
-                                else
-                                    (if (isArabic) "النافذة العائمة معطلة" else "Floating PiP Player Disabled"),
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 12.sp)
-                            )
-                            Switch(
-                                checked = pipModeEnabled,
-                                onCheckedChange = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    pipModeEnabled = it
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = PulseCyan,
-                                    checkedThumbColor = Color.White
-                                )
-                            )
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
-            }
 
             // 4. System Settings Hub (Appearance, Media Management, Playback, and Backup)
             item(key = "system_settings_hub_card") {

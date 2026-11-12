@@ -74,10 +74,12 @@ class StreakViewModel(
 
     fun getUserTierBadge(streakDays: Int, isArabic: Boolean): String {
         return when {
-            streakDays <= 20 -> if (isArabic) "مستخدم عادي" else "Standard User"
-            streakDays in 21..60 -> if (isArabic) "مستخدم مميز" else "Special User"
-            streakDays in 61..180 -> if (isArabic) "مستخدم مميز" else "VIP User"
-            else -> "Vip II Member"
+            streakDays >= 365 -> if (isArabic) "🏆 Yearly Aura Legend (Lvl 365)" else "🏆 Yearly Aura Legend (Lvl 365)"
+            streakDays >= 200 -> if (isArabic) "🎖️ Local System Master (Lvl 200+)" else "🎖️ Local System Master (Lvl 200+)"
+            streakDays >= 100 -> if (isArabic) "✨ Aura Pro Title (Lvl 100+)" else "✨ Aura Pro Title (Lvl 100+)"
+            streakDays >= 50 -> if (isArabic) "💎 Acoustic Master (Lvl 50+)" else "💎 Acoustic Master (Lvl 50+)"
+            streakDays >= 20 -> if (isArabic) "🛡️ مستخدم مميز (المستوى $streakDays)" else "🛡️ Special User (Lvl $streakDays)"
+            else -> if (isArabic) "المستوى $streakDays • التأسيسي" else "Level $streakDays • Foundation"
         }
     }
 
@@ -292,4 +294,22 @@ class StreakViewModel(
     fun clearThumbnailCache(): Long = repository.clearThumbnailCache()
     fun exportPreferencesToJson(): String = repository.exportPreferencesToJson()
     fun importPreferencesFromJson(json: String): Boolean = repository.importPreferencesFromJson(json)
+
+    // 365-Level Progression & Feature Vault
+    fun getClaimedVaultLevels(): Set<Int> = repository.getClaimedVaultLevels()
+    fun isVaultLevelClaimed(level: Int): Boolean = repository.getClaimedVaultLevels().contains(level)
+
+    fun claimVaultLevelReward(level: Int, shieldsToAward: Int): Boolean {
+        val success = repository.claimVaultLevelReward(level, shieldsToAward)
+        if (success) {
+            val updated = repository.loadInitialState()
+            _uiState.update {
+                it.copy(
+                    shieldsCount = updated.shieldsCount,
+                    feedbackMessage = "🎉 تم استلام مكافأة المستوى $level بنجاح (+ $shieldsToAward دروع 🛡️)"
+                )
+            }
+        }
+        return success
+    }
 }

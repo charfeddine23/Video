@@ -55,6 +55,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
         // Hidden Vault
         private const val KEY_VAULT_PIN = "key_vault_pin"
         private const val KEY_VAULT_MEDIA_IDS = "key_vault_media_ids"
+        private const val KEY_CLAIMED_VAULT_LEVELS = "key_claimed_vault_levels"
 
         // System Settings
         private const val KEY_RGB_ACCENT = "key_rgb_accent"
@@ -578,6 +579,28 @@ class StreakPreferencesRepository private constructor(context: Context) {
             .remove("key_vid_thumb_$key")
             .remove("key_vid_time_$key")
             .apply()
+    }
+
+    fun getClaimedVaultLevels(): Set<Int> {
+        val raw = prefs.getStringSet(KEY_CLAIMED_VAULT_LEVELS, emptySet()) ?: emptySet()
+        return raw.mapNotNull { it.toIntOrNull() }.toSet()
+    }
+
+    fun claimVaultLevelReward(level: Int, shieldsToAward: Int): Boolean {
+        val claimed = getClaimedVaultLevels().toMutableSet()
+        if (claimed.contains(level)) return false
+        claimed.add(level)
+
+        val current = loadInitialState()
+        val newShields = (current.shieldsCount + shieldsToAward).coerceAtMost(current.maxShields)
+
+        prefs.edit()
+            .putStringSet(KEY_CLAIMED_VAULT_LEVELS, claimed.map { it.toString() }.toSet())
+            .putInt(KEY_SHIELDS_COUNT, newShields)
+            .apply()
+
+        saveStreakState(current.copy(shieldsCount = newShields))
+        return true
     }
 }
 
