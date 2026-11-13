@@ -3,6 +3,7 @@ package com.example.ui.components
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Bitmap
@@ -98,12 +99,14 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.foundation.Canvas
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.WarningAmber
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -116,6 +119,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -252,7 +256,7 @@ fun ExoVideoPlayer(
 
     val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(context) }
     val streakState = streakViewModel?.uiState?.collectAsState()?.value
-    val streakDays = streakState?.streakDays ?: 0
+    val isPremiumActivated = streakViewModel?.isPremiumActivated?.collectAsState()?.value ?: prefsRepo.isPremiumActivated()
     val isAntiCheatSeekingLocked = streakState != null && !streakState.isGoalCompletedToday
 
     val audioManager = remember { context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager }
@@ -319,7 +323,10 @@ fun ExoVideoPlayer(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showAudioSubtitleSheet by remember { mutableStateOf(false) }
     var showStrikeLockPopup by remember { mutableStateOf(false) }
-    var strikeLockPopupMessage by remember { mutableStateOf("Locked. Unlocks at the required level.") }
+    var strikeLockPopupMessage by remember { mutableStateOf("Locked until daily goal is reached.") }
+    var showPremiumUnlockDialog by remember { mutableStateOf(false) }
+    var lockedPremiumFeatureName by remember { mutableStateOf("") }
+    var isBackgroundPlayActive by remember { mutableStateOf(prefsRepo.isBackgroundPlayEnabled()) }
 
     var gestureOverlayType by remember { mutableStateOf<String?>(null) }
     var seekPreviewText by remember { mutableStateOf("") }
@@ -413,15 +420,23 @@ fun ExoVideoPlayer(
         }
     }
 
-    // Trigger Dynamic Strike Lock Alert Popup
+    // Trigger Anti-Cheat Alert Popup or Aura Pulse Premium Unlock Dialog
     fun triggerStrikeLockAlert(featureName: String, requiredDay: Int = 0) {
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-        strikeLockPopupMessage = if (requiredDay > 0) {
-            "مغلق. يتطلب الوصول لليوم $requiredDay من السلسلة.\nLocked. Unlocks at day $requiredDay."
+        if (requiredDay > 0) {
+            lockedPremiumFeatureName = featureName
+            showPremiumUnlockDialog = true
         } else {
-            "مغلق. يفتح عند الوصول للمستوى المطلوب.\nLocked. Unlocks at the required level."
+            strikeLockPopupMessage =
+                "التمرير مقفل مؤقتاً لحين إكمال هدف المشاهدة اليومي (5 دقائق).\nSeek locked until 5-min daily watch goal is completed."
+            showStrikeLockPopup = true
         }
-        showStrikeLockPopup = true
+    }
+
+    fun triggerPremiumFeatureLock(featureName: String) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        lockedPremiumFeatureName = featureName
+        showPremiumUnlockDialog = true
     }
 
     // Initialize ExoPlayer
@@ -1635,14 +1650,14 @@ fun ExoVideoPlayer(
                                             )
                                         }
 
-                                        // Picture-in-Picture (PiP) Trigger Button (Strike Locked if day < 40)
-                                        val isPipLocked = streakDays < 40
+                                        // Picture-in-Picture (PiP) Trigger Button (Unlocks via Aura Pulse Premium)
+                                        val isPipLocked = !isPremiumActivated
                                         Box(
                                             modifier = Modifier
                                                 .size(34.dp)
                                                 .clickable {
                                                     if (isPipLocked) {
-                                                        triggerStrikeLockAlert("Picture-in-Picture (PiP)", 40)
+                                                        triggerPremiumFeatureLock("وضع صورة داخل صورة (PiP)")
                                                     } else {
                                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                         triggerPictureInPicture(context)
@@ -1661,7 +1676,7 @@ fun ExoVideoPlayer(
                                                 Icon(
                                                     imageVector = Icons.Default.Lock,
                                                     contentDescription = "Locked",
-                                                    tint = Color(0xFFFFB74D),
+                                                    tint = Color(0xFFFFD700),
                                                     modifier = Modifier
                                                         .size(11.dp)
                                                         .align(Alignment.TopEnd)
@@ -2026,7 +2041,7 @@ fun ExoVideoPlayer(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "ميزة مقفلة في نظام السلسلة",
+                            text = "نظام حماية السلسلة (مؤقت)",
                             style = MaterialTheme.typography.titleSmall.copy(
                                 color = Color.White,
                                 fontWeight = FontWeight.ExtraBold,
@@ -2219,26 +2234,52 @@ fun ExoVideoPlayer(
                         )
                     }
 
-                    // 3. Background Play (Strike-Locked at Day 35)
-                    val isBackgroundPlayLocked = streakDays < 35
+                    // 3. Background Play (Unlocks via Aura Pulse Premium)
+                    val isBackgroundPlayLocked = !isPremiumActivated
                     PlayerSettingItem(
                         icon = Icons.Default.GraphicEq,
                         title = "Background Audio Playback (التشغيل في الخلفية)",
-                        subtitle = if (isBackgroundPlayLocked) "Locked: Unlocks at Streak Day 35" else "Active (Plays with screen locked)",
-                        badge = if (isBackgroundPlayLocked) "LOCKED" else "UNLOCKED",
+                        subtitle = when {
+                            isBackgroundPlayLocked -> "مغلق: يفتح عبر Aura Pulse Premium"
+                            isBackgroundPlayActive -> "مفعل بـ Aura Pulse Premium (يعمل مع إغلاق الشاشة)"
+                            else -> "مفتوح بـ Aura Pulse Premium • اضغط للتفعيل"
+                        },
+                        badge = when {
+                            isBackgroundPlayLocked -> "PREMIUM"
+                            isBackgroundPlayActive -> "ACTIVE ✓"
+                            else -> "UNLOCKED"
+                        },
                         isLocked = isBackgroundPlayLocked,
-                        onLockedClick = { triggerStrikeLockAlert("Background Play", 35) }
+                        onLockedClick = { triggerPremiumFeatureLock("التشغيل في الخلفية (Background Play)") },
+                        onUnlockedClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            val next = !isBackgroundPlayActive
+                            isBackgroundPlayActive = next
+                            streakViewModel?.setBackgroundPlayEnabled(next) ?: prefsRepo.setBackgroundPlayEnabled(next)
+                        }
                     )
 
-                    // 4. Offline Sharing (Strike-Locked at Day 20)
-                    val isSharingLocked = streakDays < 20
+                    // 4. Offline Sharing (Unlocks via Aura Pulse Premium)
+                    val isSharingLocked = !isPremiumActivated
                     PlayerSettingItem(
                         icon = Icons.Default.Share,
                         title = "High-Speed Offline Sharing (مشاركة الفيديو)",
-                        subtitle = if (isSharingLocked) "Locked: Unlocks at Streak Day 20" else "Active (P2P Transfer)",
-                        badge = if (isSharingLocked) "LOCKED" else "UNLOCKED",
+                        subtitle = if (isSharingLocked) "مغلق: يفتح عبر Aura Pulse Premium" else "مفتوح بـ Aura Pulse Premium • اضغط لمشاركة الفيديو",
+                        badge = if (isSharingLocked) "PREMIUM" else "SHARE",
                         isLocked = isSharingLocked,
-                        onLockedClick = { triggerStrikeLockAlert("Offline Sharing", 20) }
+                        onLockedClick = { triggerPremiumFeatureLock("مشاركة الفيديو السريعة (Offline Sharing)") },
+                        onUnlockedClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            runCatching {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "video/*"
+                                    putExtra(Intent.EXTRA_STREAM, Uri.parse(mediaItem.uriString))
+                                    putExtra(Intent.EXTRA_SUBJECT, mediaItem.title)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, mediaItem.title))
+                            }
+                        }
                     )
 
                     // 5. Hardware Acceleration
@@ -2541,6 +2582,75 @@ fun ExoVideoPlayer(
                 }
             }
         }
+
+        // =========================================================================
+        // AURA PULSE PREMIUM UNLOCK DIALOG FOR LOCKED VIDEO PLAYER FEATURES
+        // =========================================================================
+        if (showPremiumUnlockDialog) {
+            AlertDialog(
+                onDismissRequest = { showPremiumUnlockDialog = false },
+                containerColor = Color(0xF5121826),
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(34.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Aura Pulse Premium",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color(0xFFFFD700)
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                text = {
+                    Text(
+                        text = if (lockedPremiumFeatureName.isNotBlank()) {
+                            "ميزة \"$lockedPremiumFeatureName\" تفتح عبر باقة Aura Pulse Premium.\n\nفعّل Aura Pulse Premium الآن لفتح جميع المزايا المغلقة في مشغل الفيديو فوراً (صورة داخل صورة، التشغيل في الخلفية، والمشاركة السريعة)."
+                        } else {
+                            "تفتح باقة Aura Pulse Premium جميع المزايا المغلقة في مشغل الفيديو فوراً."
+                        },
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 20.sp
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            streakViewModel?.setPremiumActivated(true) ?: prefsRepo.setPremiumActivated(true)
+                            showPremiumUnlockDialog = false
+                        },
+                        modifier = Modifier.testTag("player_activate_premium_button")
+                    ) {
+                        Text(
+                            text = "تفعيل Aura Pulse Premium 👑",
+                            color = Color(0xFFFFD700),
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPremiumUnlockDialog = false }) {
+                        Text(
+                            text = "إغلاق",
+                            color = NeonCyan,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -2698,14 +2808,16 @@ private fun PlayerSettingItem(
     subtitle: String,
     badge: String,
     isLocked: Boolean = false,
-    onLockedClick: (() -> Unit)? = null
+    onLockedClick: (() -> Unit)? = null,
+    onUnlockedClick: (() -> Unit)? = null
 ) {
+    val clickAction = if (isLocked) onLockedClick else onUnlockedClick
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(enabled = isLocked && onLockedClick != null) {
-                onLockedClick?.invoke()
+            .clickable(enabled = clickAction != null) {
+                clickAction?.invoke()
             }
             .padding(vertical = 8.dp, horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,

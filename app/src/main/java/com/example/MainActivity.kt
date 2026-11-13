@@ -367,15 +367,11 @@ fun VideoPulseApp(
             )
         }
 
-        // Compact floating App Update Modal (never full-screen)
+        // Compact floating App Update Modal (never full-screen; downloads & installs fully in-app)
         if (showUpdateDialog && availableUpdate != null) {
             AppUpdateDialog(
                 updateInfo = availableUpdate!!,
                 isArabic = isArabic,
-                onUpdateClick = {
-                    AppUpdateChecker.openUpdateUrl(context, availableUpdate!!.downloadUrl)
-                    showUpdateDialog = false
-                },
                 onDismiss = {
                     showUpdateDialog = false
                 }

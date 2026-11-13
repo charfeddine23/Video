@@ -38,39 +38,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Headset
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.WorkspacePremium
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,6 +65,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,12 +78,8 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.VaultProgressionRegistry
 import com.example.data.model.VaultTier
 import com.example.ui.theme.AppLanguage
-import com.example.ui.theme.Charcoal950
 import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.ThemeMode
-import com.example.ui.viewmodel.MilestoneItem
-import com.example.ui.viewmodel.MilestoneStatus
 import com.example.ui.viewmodel.StreakViewModel
 
 data class ShieldTypeItem(
@@ -116,7 +98,7 @@ data class ShieldTypeItem(
 
 private enum class RoadmapSectionTab {
     VAULT_365,
-    SNAKE_ROAD
+    INVENTORY
 }
 
 @Composable
@@ -138,9 +120,7 @@ fun MilestoneRoadmapScreen(
         onBack()
     }
 
-    val milestones = streakViewModel.milestones
-
-    // Section switcher: Shields + 365-Level Feature Vault (default) vs Winding Snake Prize Road
+    // Section switcher: 365-Level Feature Vault vs Inventory (Owned Shields Vault & Badges)
     var activeSectionTab by remember { mutableStateOf(RoadmapSectionTab.VAULT_365) }
 
     // 365-Level Progression System & Shield Rewards States
@@ -148,11 +128,12 @@ fun MilestoneRoadmapScreen(
     var claimedLevels by remember { mutableStateOf(streakViewModel.getClaimedVaultLevels()) }
     val currentProgressionLevel = streakDays.coerceAtLeast(1).coerceAtMost(365)
 
-    // Calculate individual shield inventory breakdown
+    // Shield inventory breakdown
     val standardShields = shieldsCount.coerceAtLeast(0)
     val goldenShields = if (streakDays >= 20) (streakDays / 20) else 0
     val diamondShields = if (streakDays >= 60) (streakDays / 60) else 0
     val flameTokens = if (streakDays >= 5) (streakDays / 5) * 2 else 0
+    val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceIn(0, 3)
 
     val shieldTypes = listOf(
         ShieldTypeItem(
@@ -209,6 +190,13 @@ fun MilestoneRoadmapScreen(
         )
     )
 
+    // Curated collectible badges in Inventory
+    val badgeLevels = remember { listOf(5, 10, 15, 20, 25, 30, 50, 75, 100, 150, 200, 365) }
+    val inventoryBadges = remember(streakDays) {
+        badgeLevels.map { lvl -> VaultProgressionRegistry.getMilestone(lvl) }
+    }
+    val unlockedBadgesCount = inventoryBadges.count { streakDays >= it.level }
+
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_rewards")
     val ambientGlow by infiniteTransition.animateFloat(
         initialValue = 0.5f,
@@ -240,7 +228,7 @@ fun MilestoneRoadmapScreen(
                             ),
                             radius = size.width * 1.1f
                         ),
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.15f)
+                        center = Offset(size.width * 0.5f, size.height * 0.15f)
                     )
                 }
         )
@@ -293,7 +281,7 @@ fun MilestoneRoadmapScreen(
                             )
                         )
                         Text(
-                            text = if (isArabic) "خزينة الدروع ومسار الـ 365 مستوى" else "Shields Vault & 365-Level Progression",
+                            text = if (isArabic) "مسار الـ 365 مستوى والمخزون (Inventory)" else "365-Level Vault & Inventory",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF94A3B8),
                                 fontSize = 11.sp
@@ -332,7 +320,7 @@ fun MilestoneRoadmapScreen(
                 }
             }
 
-            // Segmented View Mode Pills
+            // Segmented View Mode Pills: 365-Level Vault vs Inventory
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -370,23 +358,23 @@ fun MilestoneRoadmapScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isArabic) "الدروع ومسار 365 مستوى" else "Shields & 365 Vault",
+                            text = if (isArabic) "مسار 365 مستوى" else "365-Level Vault",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 color = if (isVaultSelected) PulseCyan else Color.White,
                                 fontWeight = if (isVaultSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                                fontSize = 11.5.sp
+                                fontSize = 12.sp
                             )
                         )
                     }
                 }
 
-                val isSnakeSelected = activeSectionTab == RoadmapSectionTab.SNAKE_ROAD
+                val isInventorySelected = activeSectionTab == RoadmapSectionTab.INVENTORY
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = if (isSnakeSelected) Color(0x3310B981) else Color(0x1F121826),
+                    color = if (isInventorySelected) Color(0x3310B981) else Color(0x1F121826),
                     border = BorderStroke(
                         1.dp,
-                        if (isSnakeSelected) Color(0xFF10B981) else Color(0x22FFFFFF)
+                        if (isInventorySelected) Color(0xFF10B981) else Color(0x22FFFFFF)
                     ),
                     modifier = Modifier
                         .weight(1f)
@@ -394,9 +382,9 @@ fun MilestoneRoadmapScreen(
                         .clip(RoundedCornerShape(14.dp))
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            activeSectionTab = RoadmapSectionTab.SNAKE_ROAD
+                            activeSectionTab = RoadmapSectionTab.INVENTORY
                         }
-                        .testTag("roadmap_tab_snake_road")
+                        .testTag("roadmap_tab_inventory")
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize(),
@@ -404,18 +392,18 @@ fun MilestoneRoadmapScreen(
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Map,
+                            imageVector = Icons.Default.Inventory2,
                             contentDescription = null,
-                            tint = if (isSnakeSelected) Color(0xFF34D399) else Color(0xFF94A3B8),
+                            tint = if (isInventorySelected) Color(0xFF34D399) else Color(0xFF94A3B8),
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isArabic) "طريق الجائزة المتعرج" else "Prize Road",
+                            text = if (isArabic) "المخزون Inventory" else "Inventory",
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = if (isSnakeSelected) Color(0xFF34D399) else Color.White,
-                                fontWeight = if (isSnakeSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                                fontSize = 11.5.sp
+                                color = if (isInventorySelected) Color(0xFF34D399) else Color.White,
+                                fontWeight = if (isInventorySelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                fontSize = 12.sp
                             )
                         )
                     }
@@ -437,128 +425,8 @@ fun MilestoneRoadmapScreen(
                                 .padding(horizontal = 16.dp),
                             contentPadding = PaddingValues(top = 8.dp, bottom = 36.dp)
                         ) {
-                            // Section 1: Types of Shields & Quantities (خزينة الدروع المملوكة)
-                            item(key = "shields_vault_header") {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Shield,
-                                        contentDescription = null,
-                                        tint = PulseCyan,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (isArabic) "خزينة الدروع المملوكة (الأنواع والكميات)" else "Owned Shields Inventory",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White,
-                                            fontSize = 15.sp
-                                        )
-                                    )
-                                }
-                            }
-
-                            itemsIndexed(shieldTypes, key = { _, s -> s.id }) { _, shield ->
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 5.dp)
-                                        .border(
-                                            1.dp,
-                                            Brush.horizontalGradient(listOf(shield.iconColor.copy(alpha = 0.6f), Color(0x22FFFFFF))),
-                                            RoundedCornerShape(18.dp)
-                                        ),
-                                    shape = RoundedCornerShape(18.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xDD121826))
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(44.dp)
-                                                    .clip(CircleShape)
-                                                    .background(shield.bgGlow),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = shield.icon,
-                                                    contentDescription = null,
-                                                    tint = shield.iconColor,
-                                                    modifier = Modifier.size(24.dp)
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.width(12.dp))
-
-                                            Column {
-                                                Text(
-                                                    text = if (isArabic) shield.nameAr else shield.nameEn,
-                                                    style = MaterialTheme.typography.titleSmall.copy(
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = Color.White,
-                                                        fontSize = 13.sp
-                                                    )
-                                                )
-                                                Spacer(modifier = Modifier.height(3.dp))
-                                                Text(
-                                                    text = if (isArabic) shield.descriptionAr else shield.descriptionEn,
-                                                    style = MaterialTheme.typography.bodySmall.copy(
-                                                        color = Color(0xFF94A3B8),
-                                                        fontSize = 11.sp,
-                                                        lineHeight = 15.sp
-                                                    )
-                                                )
-                                            }
-                                        }
-
-                                        Spacer(modifier = Modifier.width(10.dp))
-
-                                        // Quantity Badge
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            Surface(
-                                                shape = RoundedCornerShape(10.dp),
-                                                color = shield.bgGlow,
-                                                border = BorderStroke(1.dp, shield.iconColor.copy(alpha = 0.7f))
-                                            ) {
-                                                Text(
-                                                    text = "× ${shield.count}",
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                                    style = MaterialTheme.typography.titleMedium.copy(
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        color = shield.iconColor,
-                                                        fontSize = 14.sp
-                                                    )
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Text(
-                                                text = if (isArabic) shield.tagAr else shield.tagEn,
-                                                style = MaterialTheme.typography.labelSmall.copy(
-                                                    color = if (shield.count > 0) Color(0xFF10B981) else Color(0xFF64748B),
-                                                    fontSize = 9.5.sp,
-                                                    fontWeight = FontWeight.SemiBold
-                                                )
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Section 2: 365-Level Progression System & Feature Vault (Moved from My Space)
+                            // 365-Level Progression System & Feature Vault Header
                             item(key = "feature_vault_header") {
-                                Spacer(modifier = Modifier.height(18.dp))
                                 Column {
                                     Text(
                                         text = if (isArabic) "خزانة الميزات ومسار الـ 365 مستوى" else "365-Level Feature Vault",
@@ -768,7 +636,6 @@ fun MilestoneRoadmapScreen(
                                                 verticalAlignment = Alignment.CenterVertically,
                                                 modifier = Modifier.weight(1f)
                                             ) {
-                                                // Level Indicator Badge
                                                 Box(
                                                     modifier = Modifier
                                                         .size(38.dp)
@@ -847,7 +714,6 @@ fun MilestoneRoadmapScreen(
 
                                             Spacer(modifier = Modifier.width(8.dp))
 
-                                            // Shields Reward Pill
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
                                                 color = if (isUnlocked) Color(0x2600F2FE) else Color(0x1F334155),
@@ -870,7 +736,6 @@ fun MilestoneRoadmapScreen(
 
                                         Spacer(modifier = Modifier.height(10.dp))
 
-                                        // Action / Claim Row
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             verticalAlignment = Alignment.CenterVertically,
@@ -976,59 +841,294 @@ fun MilestoneRoadmapScreen(
                         }
                     }
 
-                    RoadmapSectionTab.SNAKE_ROAD -> {
+                    RoadmapSectionTab.INVENTORY -> {
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 16.dp),
+                                .padding(horizontal = 16.dp)
+                                .testTag("inventory_tab_list"),
                             contentPadding = PaddingValues(top = 8.dp, bottom = 36.dp)
                         ) {
-                            // Section 2: Winding Snake Prize Road (طريق الجائزة)
-                            item(key = "milestones_timeline_header") {
+                            // Inventory Hero Summary Banner
+                            item(key = "inventory_summary_banner") {
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = Color(0x3310B981),
-                                    border = BorderStroke(1.dp, Color(0x5510B981).copy(alpha = ambientGlow)),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = Color(0x2A10B981),
+                                    border = BorderStroke(1.dp, Color(0x6610B981).copy(alpha = ambientGlow)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(40.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color(0x3310B981))
+                                                        .border(1.dp, Color(0xFF34D399), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Inventory2,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF34D399),
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (isArabic) "المخزون (Inventory)" else "Player Inventory",
+                                                        style = MaterialTheme.typography.titleMedium.copy(
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            color = Color.White,
+                                                            fontSize = 16.sp
+                                                        )
+                                                    )
+                                                    Text(
+                                                        text = if (isArabic) "خزينة الدروع المملوكة والشارات المكتسبة" else "Owned shields vault, quantities & earned badges",
+                                                        style = MaterialTheme.typography.bodySmall.copy(
+                                                            color = Color(0xFFCBD5E1),
+                                                            fontSize = 11.sp
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(14.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            InventoryStatChip(
+                                                label = if (isArabic) "إجمالي الدروع" else "Total Shields",
+                                                value = "$shieldsCount / 30",
+                                                accent = PulseCyan,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            InventoryStatChip(
+                                                label = if (isArabic) "مكتسب اليوم" else "Farmed Today",
+                                                value = "$dailyShieldsToday / 3",
+                                                accent = Color(0xFF34D399),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            InventoryStatChip(
+                                                label = if (isArabic) "الأوسمة المفتوحة" else "Badges Owned",
+                                                value = "$unlockedBadgesCount / ${inventoryBadges.size}",
+                                                accent = Color(0xFFFFD700),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(16.dp))
+                            }
+
+                            // Section 1: Owned Shields Vault (Types & Quantities)
+                            item(key = "shields_vault_header") {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Shield,
+                                        contentDescription = null,
+                                        tint = PulseCyan,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (isArabic) "خزينة الدروع المملوكة (الأنواع والكميات)" else "Owned Shields Vault (Types & Quantities)",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            fontSize = 15.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            itemsIndexed(shieldTypes, key = { _, s -> s.id }) { _, shield ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 5.dp)
+                                        .border(
+                                            1.dp,
+                                            Brush.horizontalGradient(listOf(shield.iconColor.copy(alpha = 0.6f), Color(0x22FFFFFF))),
+                                            RoundedCornerShape(18.dp)
+                                        ),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xDD121826))
+                                ) {
                                     Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(14.dp),
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                                        horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(36.dp)
+                                                    .size(44.dp)
                                                     .clip(CircleShape)
-                                                    .background(
-                                                        Brush.radialGradient(
-                                                            listOf(Color(0xFFFFD700), Color(0xFFFF9800), Color.Transparent)
-                                                        )
-                                                    ),
+                                                    .background(shield.bgGlow),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
-                                                    imageVector = Icons.Default.EmojiEvents,
+                                                    imageVector = shield.icon,
                                                     contentDescription = null,
-                                                    tint = Charcoal950,
+                                                    tint = shield.iconColor,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                            Column {
+                                                Text(
+                                                    text = if (isArabic) shield.nameAr else shield.nameEn,
+                                                    style = MaterialTheme.typography.titleSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color.White,
+                                                        fontSize = 13.sp
+                                                    )
+                                                )
+                                                Spacer(modifier = Modifier.height(3.dp))
+                                                Text(
+                                                    text = if (isArabic) shield.descriptionAr else shield.descriptionEn,
+                                                    style = MaterialTheme.typography.bodySmall.copy(
+                                                        color = Color(0xFF94A3B8),
+                                                        fontSize = 11.sp,
+                                                        lineHeight = 15.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        // Quantity Badge
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = shield.bgGlow,
+                                                border = BorderStroke(1.dp, shield.iconColor.copy(alpha = 0.7f))
+                                            ) {
+                                                Text(
+                                                    text = "× ${shield.count}",
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                                    style = MaterialTheme.typography.titleMedium.copy(
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = shield.iconColor,
+                                                        fontSize = 14.sp
+                                                    )
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Text(
+                                                text = if (isArabic) shield.tagAr else shield.tagEn,
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = if (shield.count > 0) Color(0xFF10B981) else Color(0xFF64748B),
+                                                    fontSize = 9.5.sp,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Section 2: Collectible Badges & Titles in Inventory
+                            item(key = "inventory_badges_header") {
+                                Spacer(modifier = Modifier.height(18.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.EmojiEvents,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFD700),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = if (isArabic) "الأوسمة والشارات المملوكة" else "Collected Badges & Titles",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            fontSize = 15.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            items(inventoryBadges, key = { "inv_badge_${it.level}" }) { badgeItem ->
+                                val isOwned = streakDays >= badgeItem.level
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp)
+                                        .border(
+                                            1.dp,
+                                            if (isOwned) Color(0x55FFD700) else Color(0x1EFFFFFF),
+                                            RoundedCornerShape(16.dp)
+                                        ),
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isOwned) Color(0xDD121826) else Color(0x880D131F)
+                                    )
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if (isOwned) Color(0x33FFD700) else Color(0x1F334155)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isOwned) Icons.Default.Verified else Icons.Default.Lock,
+                                                    contentDescription = null,
+                                                    tint = if (isOwned) Color(0xFFFFD700) else Color(0xFF64748B),
                                                     modifier = Modifier.size(20.dp)
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Spacer(modifier = Modifier.width(12.dp))
                                             Column {
                                                 Text(
-                                                    text = if (isArabic) "طريق الجائزة" else "The Prize Road",
-                                                    style = MaterialTheme.typography.titleMedium.copy(
-                                                        fontWeight = FontWeight.ExtraBold,
-                                                        color = Color.White,
-                                                        fontSize = 16.sp
+                                                    text = badgeItem.badgeName ?: (if (isArabic) badgeItem.titleAr else badgeItem.titleEn),
+                                                    style = MaterialTheme.typography.titleSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isOwned) Color.White else Color(0xFF94A3B8),
+                                                        fontSize = 13.sp
                                                     )
                                                 )
                                                 Text(
-                                                    text = if (isArabic) "مسار المستويات المتموج • ارتقِ وافتح جوائزك" else "Winding serpentine path • Unlock prestige rewards",
+                                                    text = if (isArabic) badgeItem.titleAr else badgeItem.titleEn,
                                                     style = MaterialTheme.typography.bodySmall.copy(
-                                                        color = Color(0xFF94A3B8),
+                                                        color = Color(0xFF64748B),
                                                         fontSize = 11.sp
                                                     )
                                                 )
@@ -1036,42 +1136,29 @@ fun MilestoneRoadmapScreen(
                                         }
 
                                         Surface(
-                                            shape = RoundedCornerShape(10.dp),
-                                            color = Color(0x3300F2FE),
-                                            border = BorderStroke(1.dp, Color(0x6600F2FE))
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = if (isOwned) Color(0x2810B981) else Color(0x1F1E293B),
+                                            border = BorderStroke(
+                                                1.dp,
+                                                if (isOwned) Color(0x5510B981) else Color(0x2264748B)
+                                            )
                                         ) {
                                             Text(
-                                                text = if (isArabic) "المستوى $streakDays" else "LVL $streakDays",
+                                                text = if (isOwned) {
+                                                    if (isArabic) "مملوك ✓" else "Owned ✓"
+                                                } else {
+                                                    if (isArabic) "المستوى ${badgeItem.level}" else "Lvl ${badgeItem.level}"
+                                                },
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                                 style = MaterialTheme.typography.labelSmall.copy(
-                                                    color = Color(0xFF00F2FE),
+                                                    color = if (isOwned) Color(0xFF34D399) else Color(0xFF64748B),
                                                     fontWeight = FontWeight.Bold,
-                                                    fontSize = 10.5.sp
+                                                    fontSize = 10.sp
                                                 )
                                             )
                                         }
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(14.dp))
-                            }
-
-                            itemsIndexed(milestones, key = { _, item -> "milestone_${item.day}" }) { index, milestone ->
-                                val status = when {
-                                    streakDays >= milestone.day -> MilestoneStatus.UNLOCKED
-                                    streakDays < milestone.day && (index == 0 || streakDays >= milestones[index - 1].day) -> MilestoneStatus.CURRENT_TARGET
-                                    else -> MilestoneStatus.LOCKED
-                                }
-                                val isLast = index == milestones.lastIndex
-
-                                WindingSnakeMilestoneRow(
-                                    index = index,
-                                    milestone = milestone,
-                                    status = status,
-                                    isLast = isLast,
-                                    currentStreak = streakDays,
-                                    isArabic = isArabic,
-                                    pulseFactor = ambientGlow
-                                )
                             }
                         }
                     }
@@ -1082,282 +1169,39 @@ fun MilestoneRoadmapScreen(
 }
 
 @Composable
-private fun WindingSnakeMilestoneRow(
-    index: Int,
-    milestone: MilestoneItem,
-    status: MilestoneStatus,
-    isLast: Boolean,
-    currentStreak: Int,
-    isArabic: Boolean,
-    pulseFactor: Float
+private fun InventoryStatChip(
+    label: String,
+    value: String,
+    accent: Color,
+    modifier: Modifier = Modifier
 ) {
-    // Serpentine winding pattern: Left -> Center -> Right -> Center -> Left...
-    val positionMod = index % 4
-    val cardAlignment = when (positionMod) {
-        0 -> Alignment.CenterStart
-        1 -> Alignment.Center
-        2 -> Alignment.CenterEnd
-        else -> Alignment.Center
-    }
-
-    // Dynamic escalating luxury theme based on milestone day tier
-    val tierGradient = when {
-        milestone.day >= 60 -> listOf(Color(0xFFE0E7FF), Color(0xFF818CF8), Color(0xFFC084FC), Color(0xFF38BDF8))
-        milestone.day >= 40 -> listOf(Color(0xFFFFD700), Color(0xFFFFA000), Color(0xFFFF5722))
-        milestone.day >= 20 -> listOf(Color(0xFF7C3AED), Color(0xFFEC4899), Color(0xFF06B6D4))
-        milestone.day >= 10 -> listOf(Color(0xFF00F2FE), Color(0xFF4FACFE), Color(0xFF10B981))
-        else -> listOf(Color(0xFF10B981), Color(0xFF059669))
-    }
-
-    val primaryTierColor = tierGradient.first()
-    val crownBadge = when {
-        milestone.day >= 60 -> "💎 MYTHIC"
-        milestone.day >= 40 -> "👑 ROYAL"
-        milestone.day >= 20 -> "⚡ ELITE"
-        milestone.day >= 10 -> "🔥 PRIME"
-        else -> "🌱 LEVEL"
-    }
-
-    val iconVector = when (milestone.iconType) {
-        "shield" -> Icons.Default.Shield
-        "trophy" -> Icons.Default.EmojiEvents
-        "gold", "crown" -> Icons.Default.WorkspacePremium
-        "diamond" -> Icons.Default.Diamond
-        "sparkle" -> Icons.Default.LocalFireDepartment
-        else -> Icons.Default.Security
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0x330B0F19),
+        border = BorderStroke(0.8.dp, accent.copy(alpha = 0.4f))
     ) {
-        // Serpentine Connector Line from previous node
-        if (index > 0) {
-            val connectorBrush = if (status == MilestoneStatus.UNLOCKED) {
-                Brush.verticalGradient(
-                    listOf(
-                        tierGradient.last().copy(alpha = 0.8f),
-                        primaryTierColor.copy(alpha = 0.8f)
-                    )
-                )
-            } else if (status == MilestoneStatus.CURRENT_TARGET) {
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF10B981).copy(alpha = 0.6f),
-                        Color(0xFF00F2FE).copy(alpha = pulseFactor)
-                    )
-                )
-            } else {
-                Brush.verticalGradient(listOf(Color(0xFF1E293B), Color(0xFF334155)))
-            }
-
-            Box(
-                modifier = Modifier
-                    .width(if (status != MilestoneStatus.LOCKED) 4.dp else 2.5.dp)
-                    .height(28.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(connectorBrush)
-            )
-        }
-
-        // The Milestone Node on the winding track
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = cardAlignment
+        Column(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.92f)
-                    .border(
-                        width = when (status) {
-                            MilestoneStatus.UNLOCKED -> 1.8.dp
-                            MilestoneStatus.CURRENT_TARGET -> (2.2.dp * pulseFactor).coerceAtLeast(1.8.dp)
-                            MilestoneStatus.LOCKED -> 1.dp
-                        },
-                        brush = when (status) {
-                            MilestoneStatus.UNLOCKED -> Brush.linearGradient(tierGradient)
-                            MilestoneStatus.CURRENT_TARGET -> Brush.linearGradient(
-                                listOf(Color(0xFF00F2FE), Color(0xFFFFD700), Color(0xFF00FFCC))
-                            )
-                            MilestoneStatus.LOCKED -> Brush.linearGradient(
-                                listOf(Color(0x33FFFFFF), Color(0x11FFFFFF))
-                            )
-                        },
-                        shape = RoundedCornerShape(22.dp)
-                    ),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = when (status) {
-                        MilestoneStatus.UNLOCKED -> Color(0xD9101626)
-                        MilestoneStatus.CURRENT_TARGET -> Color(0xF2131F33)
-                        MilestoneStatus.LOCKED -> Color(0xCC0D121D)
-                    }
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleSmall.copy(
+                    color = accent,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 13.5.sp
                 )
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        when (status) {
-                                            MilestoneStatus.UNLOCKED -> Brush.radialGradient(tierGradient)
-                                            MilestoneStatus.CURRENT_TARGET -> Brush.radialGradient(
-                                                listOf(Color(0xFF00F2FE), Color(0xFF0088FF))
-                                            )
-                                            MilestoneStatus.LOCKED -> Brush.radialGradient(
-                                                listOf(Color(0x22334155), Color(0x111E293B))
-                                            )
-                                        }
-                                    )
-                                    .border(
-                                        width = 1.2.dp,
-                                        color = if (status != MilestoneStatus.LOCKED) Color.White.copy(alpha = 0.6f) else Color(0x33FFFFFF),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (status == MilestoneStatus.LOCKED) Icons.Default.Lock else iconVector,
-                                    contentDescription = null,
-                                    tint = when (status) {
-                                        MilestoneStatus.UNLOCKED -> if (milestone.day >= 40) Charcoal950 else Color.White
-                                        MilestoneStatus.CURRENT_TARGET -> Charcoal950
-                                        MilestoneStatus.LOCKED -> Color(0xFF64748B)
-                                    },
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = if (isArabic) "المحطة ${milestone.day}" else "Day ${milestone.day}",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = when (status) {
-                                                MilestoneStatus.UNLOCKED -> primaryTierColor
-                                                MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE)
-                                                MilestoneStatus.LOCKED -> Color(0xFF94A3B8)
-                                            },
-                                            fontSize = 16.sp
-                                        )
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(6.dp),
-                                        color = primaryTierColor.copy(alpha = 0.2f),
-                                        border = BorderStroke(0.8.dp, primaryTierColor.copy(alpha = 0.5f))
-                                    ) {
-                                        Text(
-                                            text = crownBadge,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                            style = MaterialTheme.typography.labelSmall.copy(
-                                                color = primaryTierColor,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 9.sp
-                                            )
-                                        )
-                                    }
-                                }
-
-                                Text(
-                                    text = if (isArabic) milestone.titleArabic else milestone.title,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (status == MilestoneStatus.LOCKED) Color(0xFF94A3B8) else Color.White,
-                                        fontSize = 14.sp
-                                    )
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = when (status) {
-                                MilestoneStatus.UNLOCKED -> Color(0x3310B981)
-                                MilestoneStatus.CURRENT_TARGET -> Color(0x3300F2FE)
-                                MilestoneStatus.LOCKED -> Color(0x22334155)
-                            },
-                            border = BorderStroke(
-                                1.dp,
-                                when (status) {
-                                    MilestoneStatus.UNLOCKED -> Color(0xFF10B981).copy(alpha = 0.6f)
-                                    MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE).copy(alpha = pulseFactor)
-                                    MilestoneStatus.LOCKED -> Color(0x3364748B)
-                                }
-                            )
-                        ) {
-                            Text(
-                                text = when (status) {
-                                    MilestoneStatus.UNLOCKED -> if (isArabic) "مفتوحة ✓" else "UNLOCKED ✓"
-                                    MilestoneStatus.CURRENT_TARGET -> if (isArabic) "هدفك الحالي 🔥" else "CURRENT 🔥"
-                                    MilestoneStatus.LOCKED -> if (isArabic) "مقفلة 🔒" else "LOCKED 🔒"
-                                },
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    color = when (status) {
-                                        MilestoneStatus.UNLOCKED -> Color(0xFF34D399)
-                                        MilestoneStatus.CURRENT_TARGET -> Color(0xFF00F2FE)
-                                        MilestoneStatus.LOCKED -> Color(0xFF64748B)
-                                    }
-                                )
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = if (isArabic) milestone.descriptionArabic else milestone.description,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (status == MilestoneStatus.LOCKED) Color(0xFF64748B) else Color(0xFFCBD5E1),
-                            fontSize = 12.sp,
-                            lineHeight = 17.sp
-                        )
-                    )
-
-                    if (status == MilestoneStatus.CURRENT_TARGET) {
-                        val daysLeft = (milestone.day - currentStreak).coerceAtLeast(1)
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = Color(0x2600F2FE),
-                            border = BorderStroke(1.dp, Color(0x5500F2FE))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (isArabic) "⚡ يتبقى $daysLeft أيام فقط في السلسلة لفتح هذه الجائزة!" else "⚡ Only $daysLeft days in streak to unlock this reward!",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFF00F2FE),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.5.sp
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = Color(0xFF94A3B8),
+                    fontSize = 9.5.sp
+                ),
+                maxLines = 1
+            )
         }
     }
 }
