@@ -645,6 +645,31 @@ class StreakPreferencesRepository private constructor(context: Context) {
         saveStreakState(current.copy(shieldsCount = newShields))
         return true
     }
+
+    fun claimAllUnlockedVaultRewards(levelsWithRewards: List<Pair<Int, Int>>): Int {
+        val claimed = getClaimedVaultLevels().toMutableSet()
+        var newlyClaimed = 0
+        var totalShields = 0
+        for ((level, reward) in levelsWithRewards) {
+            if (!claimed.contains(level)) {
+                claimed.add(level)
+                newlyClaimed++
+                totalShields += reward
+            }
+        }
+        if (newlyClaimed == 0) return 0
+
+        val current = loadInitialState()
+        val newShields = (current.shieldsCount + totalShields).coerceAtMost(current.maxShields)
+
+        prefs.edit()
+            .putStringSet(KEY_CLAIMED_VAULT_LEVELS, claimed.map { it.toString() }.toSet())
+            .putInt(KEY_SHIELDS_COUNT, newShields)
+            .apply()
+
+        saveStreakState(current.copy(shieldsCount = newShields))
+        return newlyClaimed
+    }
 }
 
 data class LastWatchedVideoInfo(

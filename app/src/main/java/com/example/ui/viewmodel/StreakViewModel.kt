@@ -333,4 +333,18 @@ class StreakViewModel(
         }
         return success
     }
+
+    fun claimAllUnlockedVaultRewards(levelsWithRewards: List<Pair<Int, Int>>): Int {
+        val count = repository.claimAllUnlockedVaultRewards(levelsWithRewards)
+        if (count > 0) {
+            val updated = repository.loadInitialState()
+            _uiState.update {
+                it.copy(
+                    shieldsCount = updated.shieldsCount,
+                    feedbackMessage = "🎉 تم استلام $count مكافآت دفعة واحدة بنجاح!"
+                )
+            }
+        }
+        return count
+    }
 }
