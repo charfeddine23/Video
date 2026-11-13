@@ -29,6 +29,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -38,6 +39,10 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.MediaItem
+import com.example.data.update.AppUpdateChecker
+import com.example.data.update.AppUpdateInfo
+import com.example.data.update.UpdateCheckResult
+import com.example.ui.components.AppUpdateDialog
 import com.example.ui.components.ExoVideoPlayer
 
 import com.example.ui.components.NavDestination
@@ -94,6 +99,7 @@ fun VideoPulseApp(
     streakViewModel: StreakViewModel = viewModel()
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     val streakState by streakViewModel.uiState.collectAsState()
@@ -103,7 +109,48 @@ fun VideoPulseApp(
     var isRoadmapOpen by remember { mutableStateOf(false) }
     var isEditingProfile by remember { mutableStateOf(false) }
 
+    var availableUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var isCheckingForUpdates by remember { mutableStateOf(false) }
+
     val isArabic = currentLanguage == AppLanguage.ARABIC
+
+    // Automatic in-app update check against GitHub releases on launch
+    LaunchedEffect(Unit) {
+        delay(1500L)
+        val result = AppUpdateChecker.checkForUpdates()
+        if (result is UpdateCheckResult.UpdateAvailable) {
+            availableUpdate = result.updateInfo
+            showUpdateDialog = true
+        }
+    }
+
+    val onCheckForUpdates: () -> Unit = {
+        if (!isCheckingForUpdates) {
+            scope.launch {
+                isCheckingForUpdates = true
+                when (val result = AppUpdateChecker.checkForUpdates()) {
+                    is UpdateCheckResult.UpdateAvailable -> {
+                        availableUpdate = result.updateInfo
+                        showUpdateDialog = true
+                    }
+                    is UpdateCheckResult.UpToDate -> {
+                        snackbarHostState.showSnackbar(
+                            if (isArabic) "أنت تستخدم أحدث إصدار بالفعل ✓"
+                            else "You are already on the latest version ✓"
+                        )
+                    }
+                    is UpdateCheckResult.Error -> {
+                        snackbarHostState.showSnackbar(
+                            if (isArabic) "تعذر التحقق من التحديثات، تحقق من الاتصال"
+                            else "Unable to check for updates. Check connection."
+                        )
+                    }
+                }
+                isCheckingForUpdates = false
+            }
+        }
+    }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var isAppInForeground by remember { mutableStateOf(true) }
@@ -216,7 +263,9 @@ fun VideoPulseApp(
                                 },
                                 onNavigateToEditProfile = {
                                     isEditingProfile = true
-                                }
+                                },
+                                onCheckForUpdates = onCheckForUpdates,
+                                isCheckingForUpdates = isCheckingForUpdates
                             )
                         }
                     }
@@ -235,12 +284,16 @@ fun VideoPulseApp(
             )
         }
 
-        // Milestone Roadmap Screen (Triggered by 1-second long-press on flame)
+        // Milestone Roadmap Screen (Achievements, Shields & 365-Level Feature Vault)
         if (isRoadmapOpen) {
             MilestoneRoadmapScreen(
                 streakViewModel = streakViewModel,
                 streakDays = streakState.streakDays,
                 shieldsCount = streakState.shieldsCount,
+                currentThemeMode = currentThemeMode,
+                onThemeModeChange = onThemeModeChange,
+                currentLanguage = currentLanguage,
+                onLanguageChange = onLanguageChange,
                 onBack = {
                     isRoadmapOpen = false
                 },
@@ -255,6 +308,21 @@ fun VideoPulseApp(
                 streakViewModel = streakViewModel,
                 onClose = {
                     activePlayerMedia = null
+                }
+            )
+        }
+
+        // Compact floating App Update Modal (never full-screen)
+        if (showUpdateDialog && availableUpdate != null) {
+            AppUpdateDialog(
+                updateInfo = availableUpdate!!,
+                isArabic = isArabic,
+                onUpdateClick = {
+                    AppUpdateChecker.openUpdateUrl(context, availableUpdate!!.downloadUrl)
+                    showUpdateDialog = false
+                },
+                onDismiss = {
+                    showUpdateDialog = false
                 }
             )
         }
