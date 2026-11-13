@@ -51,6 +51,9 @@ import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MilestoneRoadmapScreen
 import com.example.ui.screens.MySpaceScreen
 import com.example.ui.screens.ListenScreen
+import com.example.ui.screens.ShieldFarmingScreen
+import com.example.ui.screens.StatisticsScreen
+import com.example.ui.screens.SystemSettingsScreen
 import com.example.ui.screens.WatchScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.MyApplicationTheme
@@ -108,6 +111,9 @@ fun VideoPulseApp(
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
     var isRoadmapOpen by remember { mutableStateOf(false) }
     var isEditingProfile by remember { mutableStateOf(false) }
+    var isShieldFarmingOpen by remember { mutableStateOf(false) }
+    var isStatisticsOpen by remember { mutableStateOf(false) }
+    var isSystemSettingsOpen by remember { mutableStateOf(false) }
 
     var availableUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
     var showUpdateDialog by remember { mutableStateOf(false) }
@@ -184,10 +190,13 @@ fun VideoPulseApp(
 
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isEditingProfile || isRoadmapOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isEditingProfile || isShieldFarmingOpen || isStatisticsOpen || isSystemSettingsOpen || isRoadmapOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
             isEditingProfile -> isEditingProfile = false
+            isShieldFarmingOpen -> isShieldFarmingOpen = false
+            isStatisticsOpen -> isStatisticsOpen = false
+            isSystemSettingsOpen -> isSystemSettingsOpen = false
             isRoadmapOpen -> isRoadmapOpen = false
             activePlayerMedia != null -> activePlayerMedia = null
             currentDestination != NavDestination.HOME -> currentDestination = NavDestination.HOME
@@ -251,7 +260,7 @@ fun VideoPulseApp(
                         }
 
                         NavDestination.MY_SPACE -> {
-                            // Tab 1: "My Space" Screen (Settings & Rewards Hub)
+                            // Tab 1: "My Space" Screen
                             MySpaceScreen(
                                 streakViewModel = streakViewModel,
                                 currentThemeMode = currentThemeMode,
@@ -263,6 +272,15 @@ fun VideoPulseApp(
                                 },
                                 onNavigateToEditProfile = {
                                     isEditingProfile = true
+                                },
+                                onOpenShieldFarming = {
+                                    isShieldFarmingOpen = true
+                                },
+                                onOpenStatistics = {
+                                    isStatisticsOpen = true
+                                },
+                                onOpenSystemSettings = {
+                                    isSystemSettingsOpen = true
                                 },
                                 onCheckForUpdates = onCheckForUpdates,
                                 isCheckingForUpdates = isCheckingForUpdates
@@ -279,6 +297,43 @@ fun VideoPulseApp(
                 streakViewModel = streakViewModel,
                 onNavigateBack = {
                     isEditingProfile = false
+                },
+                isArabic = isArabic
+            )
+        }
+
+        // Shield Farming Screen Overlay (opened from Profile Shields tile)
+        if (isShieldFarmingOpen) {
+            ShieldFarmingScreen(
+                streakViewModel = streakViewModel,
+                onBack = {
+                    isShieldFarmingOpen = false
+                },
+                isArabic = isArabic
+            )
+        }
+
+        // Statistics Screen Overlay (opened from Profile Statistics tile)
+        if (isStatisticsOpen) {
+            StatisticsScreen(
+                streakViewModel = streakViewModel,
+                onBack = {
+                    isStatisticsOpen = false
+                },
+                isArabic = isArabic
+            )
+        }
+
+        // System Settings Screen Overlay (opened from My Space System Settings card)
+        if (isSystemSettingsOpen) {
+            SystemSettingsScreen(
+                streakViewModel = streakViewModel,
+                currentThemeMode = currentThemeMode,
+                onThemeModeChange = onThemeModeChange,
+                currentLanguage = currentLanguage,
+                onLanguageChange = onLanguageChange,
+                onBack = {
+                    isSystemSettingsOpen = false
                 },
                 isArabic = isArabic
             )

@@ -33,160 +33,165 @@ object VaultProgressionRegistry {
     fun getMilestone(level: Int): VaultLevelMilestone {
         val clampedLevel = level.coerceIn(1, 365)
 
-        // Tier 1: Levels 1 to 30 (Foundation Milestones & Core Unlocks)
+        // Tier 1: Levels 1 to 30 (Foundation Milestones & Shield Rewards)
         if (clampedLevel in 1..30) {
             return when (clampedLevel) {
                 1 -> VaultLevelMilestone(
                     level = 1,
-                    titleAr = "المتصفح المحلي الذكي للوسائط",
-                    titleEn = "Base Local Media Browser",
-                    descriptionAr = "فحص وقراءة سريعة لجميع الفيديوهات والملفات المخزنة في جهازك دون إنترنت.",
-                    descriptionEn = "Lightning-fast zero-permission offline scanner for all local device media.",
+                    titleAr = "بداية رحلة الشعلة",
+                    titleEn = "Flame Journey Kickoff",
+                    descriptionAr = "انطلاقة السلسلة اليومية الأولى مع درع حماية ترحيبي.",
+                    descriptionEn = "Begin your daily watch streak with a starter protection shield.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
-                    iconType = "browser"
+                    iconType = "flame"
                 )
                 2 -> VaultLevelMilestone(
                     level = 2,
-                    titleAr = "منظف الذاكرة المؤقتة للصور المصغرة",
-                    titleEn = "Cache & Thumbnail Cleaner",
-                    descriptionAr = "تفريغ الذاكرة المؤقتة واستعادة مساحة التخزين فوراً مع حماية الأداء.",
-                    descriptionEn = "One-tap thumbnail cache purger freeing valuable device storage.",
+                    titleAr = "شرارة الاستمرارية الأولى",
+                    titleEn = "First Persistence Spark",
+                    descriptionAr = "إثبات التزام اليوم الثاني مع مكافأة درع إضافي.",
+                    descriptionEn = "Day-2 consistency milestone awarding +1 Streak Shield.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
-                    iconType = "cleaner"
+                    iconType = "shield"
                 )
                 3 -> VaultLevelMilestone(
                     level = 3,
-                    titleAr = "التحكم في سرعة التشغيل الافتراضية",
-                    titleEn = "Playback Speed Multiplier Defaults",
-                    descriptionAr = "تخصيص سرعة التشغيل الافتراضية للفيديوهات (1.0x, 1.25x, 1.5x) بسلاسة.",
-                    descriptionEn = "Set your persistent default video playback speed preference.",
+                    titleAr = "تعزيز الشعلة الثلاثي",
+                    titleEn = "Triple Flame Momentum",
+                    descriptionAr = "ثلاثة أيام متواصلة من التغذية المستمرة للشعلة.",
+                    descriptionEn = "Three consecutive days keeping the daily watch flame alive.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
-                    iconType = "speed"
+                    iconType = "flame"
                 )
                 4 -> VaultLevelMilestone(
                     level = 4,
-                    titleAr = "مرشح حماية العين الليلي للزجاج السائل",
-                    titleEn = "Visual Eye Protection Scrim",
-                    descriptionAr = "تفعيل طبقة تعتيم سينمائية ناعمة مريحة للعين أثناء المشاهدة في الظلام.",
-                    descriptionEn = "Softer ambient display scrim protecting vision during night playback.",
+                    titleAr = "حارس البوابة الأول",
+                    titleEn = "Gatekeeper Rank I",
+                    descriptionAr = "تعزيز مخزون الحماية بدرع إضافي قبل محطة اليوم الخامس.",
+                    descriptionEn = "Reinforce your inventory with +1 Shield ahead of Day 5.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
-                    iconType = "eye"
+                    iconType = "shield"
                 )
                 5 -> VaultLevelMilestone(
                     level = 5,
-                    titleAr = "مبدل المظهر (ليلي / نهاري زجاجي)",
-                    titleEn = "Theme Mode Switcher (Light/Dark Glass)",
-                    descriptionAr = "التحكم اليدوي الفوري بين الوضع الليلي والنهاري ومظهر الزجاج السائل M5.",
-                    descriptionEn = "Manual instant toggling between Liquid Glass Dark and Light modes.",
+                    titleAr = "درع البداية المتوهج (محطة كبرى)",
+                    titleEn = "Glowing Starter Shield Milestone",
+                    descriptionAr = "إنجاز الأيام الخمسة الأولى مع منحة مضاعفة (+2 دروع حماية).",
+                    descriptionEn = "First 5-day milestone completed with a +2 Shields boost.",
                     shieldsReward = 2,
                     tier = VaultTier.FOUNDATION,
                     isMajor = true,
-                    iconType = "theme"
+                    badgeName = "Starter Flame",
+                    iconType = "trophy"
                 )
                 in 6..9 -> VaultLevelMilestone(
                     level = clampedLevel,
-                    titleAr = "تأثيرات الزجاج السائل M${clampedLevel} المتوهجة",
-                    titleEn = "Glass UI Accent FX Lvl $clampedLevel",
-                    descriptionAr = "إبراز حدود البطاقات الزجاجية بتوهج نيون أزرق وبنفسجي ديناميكي.",
-                    descriptionEn = "Enhanced frosted glass border glow with pulsating neon accents.",
+                    titleAr = "توهج النيون المتصاعد للمستوى $clampedLevel",
+                    titleEn = "Rising Neon Aura Lvl $clampedLevel",
+                    descriptionAr = "شارة تقدم مستمرة مع +1 درع حماية يضاف إلى رصيدك.",
+                    descriptionEn = "Continuous streak progression awarding +1 Shield.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
                     iconType = "sparkle"
                 )
                 10 -> VaultLevelMilestone(
                     level = 10,
-                    titleAr = "قفل التطبيق وخزنة الوسائط السرية",
-                    titleEn = "App Lock & Biometric Vault (PIN / Fingerprint)",
-                    descriptionAr = "حماية الخصوصية المطلقة للملفات والمجلدات برمز PIN وبصمة الإصبع دون اتصال.",
-                    descriptionEn = "Secure PIN & biometric local vault keeping your private videos encrypted.",
+                    titleAr = "حارس الشعلة الفضي (محطة كبرى)",
+                    titleEn = "Silver Flame Guardian Milestone",
+                    descriptionAr = "إتمام العشرة أيام الأولى بنجاح مع جائزة 3 دروع حماية.",
+                    descriptionEn = "10-day streak milestone awarding Silver Guardian badge + 3 Shields.",
                     shieldsReward = 3,
                     tier = VaultTier.FOUNDATION,
                     isMajor = true,
-                    iconType = "lock"
+                    badgeName = "Silver Guardian",
+                    iconType = "shield_pack"
                 )
                 in 11..14 -> VaultLevelMilestone(
                     level = clampedLevel,
-                    titleAr = "أدوات تنظيم وفرز المجلدات M${clampedLevel - 10}",
-                    titleEn = "Folder Organization Utilities Lvl ${clampedLevel - 10}",
-                    descriptionAr = "حظر المجلدات غير المرغوب فيها وتصنيف الوسائط حسب الحجم والمدة والتاريخ.",
-                    descriptionEn = "Folder blacklisting, smart sorting, and media catalog management.",
+                    titleAr = "صمود السلسلة للمستوى $clampedLevel",
+                    titleEn = "Streak Resilience Lvl $clampedLevel",
+                    descriptionAr = "تواصل يومي يحفظ السلسلة ويمنحك درع حماية إضافي.",
+                    descriptionEn = "Daily consistency milestone granting +1 Protection Shield.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
-                    iconType = "folder"
+                    iconType = "shield"
                 )
                 15 -> VaultLevelMilestone(
                     level = 15,
-                    titleAr = "اختيار اللغة يدوياً (العربية / English)",
-                    titleEn = "Manual Language Selection (Arabic / English)",
-                    descriptionAr = "تبديل فوري للغة التطبيق واتجاه الواجهة (RTL/LTR) مع الحفاظ على كل البيانات.",
-                    descriptionEn = "Instant multilingual toggle between Arabic and English with full RTL.",
+                    titleAr = "حزمة دروع منتصف الشهر",
+                    titleEn = "Mid-Month Shield Pack",
+                    descriptionAr = "نصف شهر من الالتزام المتواصل ومكافأة 3 دروع حماية.",
+                    descriptionEn = "Half-month milestone unlocked with a +3 Shields drop.",
                     shieldsReward = 3,
                     tier = VaultTier.FOUNDATION,
                     isMajor = true,
-                    iconType = "language"
+                    badgeName = "Half-Month Vanguard",
+                    iconType = "trophy"
                 )
                 in 16..19 -> VaultLevelMilestone(
                     level = clampedLevel,
-                    titleAr = "تخصيص تنبيهات الحماية المحلية M${clampedLevel - 15}",
-                    titleEn = "Local Notification Customization Lvl ${clampedLevel - 15}",
-                    descriptionAr = "تذكيرات ذكية بموعد تجديد السترايك قبل نهاية اليوم لحماية دروعك.",
-                    descriptionEn = "Customizable offline streak preservation alerts.",
+                    titleAr = "وهج المثابرة للمستوى $clampedLevel",
+                    titleEn = "Persistence Glow Lvl $clampedLevel",
+                    descriptionAr = "خطوة إضافية نحو الدرع الذهبي مع مكافأة درع حماية.",
+                    descriptionEn = "One step closer to the Golden Shield with +1 Shield.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
-                    iconType = "notification"
+                    iconType = "sparkle"
                 )
                 20 -> VaultLevelMilestone(
                     level = 20,
-                    titleAr = "المشاركة المحلية فائقة السرعة للوسائط",
-                    titleEn = "High-Speed Offline Media Sharing (Wi-Fi Direct)",
-                    descriptionAr = "مشاركة ونقل مقاطع الفيديو الكبيرة بين الأجهزة بسرعة فائقة بدون إنترنت.",
-                    descriptionEn = "Blazing-fast offline Wi-Fi Direct file sharing for videos.",
+                    titleAr = "الدرع الذهبي الملكي (محطة كبرى)",
+                    titleEn = "Golden Royal Shield Milestone",
+                    descriptionAr = "إتمام 20 يوماً واستحقاق وسام الدرع الذهبي مع +5 دروع.",
+                    descriptionEn = "20-day mastery unlocking the Golden Shield crest + 5 Shields.",
                     shieldsReward = 5,
                     tier = VaultTier.FOUNDATION,
                     isMajor = true,
-                    iconType = "share"
+                    badgeName = "Golden Guardian",
+                    iconType = "crown"
                 )
                 in 21..24 -> VaultLevelMilestone(
                     level = clampedLevel,
-                    titleAr = "تحسينات عتادية لمسرع الفيديو GPU M${clampedLevel - 20}",
-                    titleEn = "GPU Decoder Optimization Toggles Lvl ${clampedLevel - 20}",
-                    descriptionAr = "استهلاك أدنى للبطارية وتشغيل فائق النعومة بمعدل 120 إطاراً في الثانية.",
-                    descriptionEn = "Hardware-accelerated rendering profiles for butter-smooth 120 FPS playback.",
+                    titleAr = "طاقة النخبة للمستوى $clampedLevel",
+                    titleEn = "Elite Momentum Lvl $clampedLevel",
+                    descriptionAr = "تعزيز إضافي لرصيد الدروع مع الحفاظ على اشتعال الشعلة.",
+                    descriptionEn = "Keep your daily flame burning to collect +1 Shield.",
                     shieldsReward = 1,
                     tier = VaultTier.FOUNDATION,
-                    iconType = "gpu"
+                    iconType = "shield"
                 )
                 25 -> VaultLevelMilestone(
                     level = 25,
-                    titleAr = "حزمة الثيمات الزجاجية الحصرية (3 ليلي / 3 نهاري)",
-                    titleEn = "Exclusive Glass Themes Pack (3 Dark / 3 Light)",
-                    descriptionAr = "فتح 6 أنماط لونية مميزة: النيون السيان، والأمبير الشمسي، والزمرد الملكي.",
-                    descriptionEn = "Unlock 6 handcrafted liquid glass aesthetic palettes.",
+                    titleAr = "وسام الهالة المشعّة (محطة كبرى)",
+                    titleEn = "Radiant Aura Crest Milestone",
+                    descriptionAr = "إنجاز الـ 25 يوماً مع منحة 5 دروع وشارة الشرف الزجاجية.",
+                    descriptionEn = "25-day achievement granting Radiant Crest + 5 Shields.",
                     shieldsReward = 5,
                     tier = VaultTier.FOUNDATION,
                     isMajor = true,
-                    iconType = "palette"
+                    badgeName = "Radiant Aura",
+                    iconType = "aura"
                 )
                 in 26..29 -> VaultLevelMilestone(
                     level = clampedLevel,
                     titleAr = "توهج أورا النيوني المتطور M${clampedLevel - 25}",
-                    titleEn = "Advanced Neon Aura Glow Effects Lvl ${clampedLevel - 25}",
-                    descriptionAr = "توهج محيطي أعمق يتفاعل مع ألوان الفيديو والصوتيات في المشغل.",
-                    descriptionEn = "Dynamic ambient backlight aura that smoothly reflects video colors.",
+                    titleEn = "Neon Aura Flame Boost Lvl ${clampedLevel - 25}",
+                    descriptionAr = "تعزيز الشعلة اليومية مع مكافأة +2 دروع حماية للمخزون.",
+                    descriptionEn = "Vibrant neon aura flair awarding +2 Streak Shields.",
                     shieldsReward = 2,
                     tier = VaultTier.FOUNDATION,
                     iconType = "aura"
                 )
                 else -> VaultLevelMilestone(
                     level = 30,
-                    titleAr = "تنبيهات السترايك الذكية ومكافأة الشهر الأول",
-                    titleEn = "Smart Streak Protection Reminders + Month-1 Bonus",
-                    descriptionAr = "اكتمال 30 يوماً من الحماسة! تنبيهات ذكية متقدمة مع مكافأة كبرى 10 دروع.",
-                    descriptionEn = "30-day mastery unlocked! Smart streak reminders and massive +10 shields drop.",
+                    titleAr = "مكافأة الشهر الأول الكبرى (+10 دروع)",
+                    titleEn = "Month-1 Grand Milestone (+10 Shields)",
+                    descriptionAr = "اكتمال 30 يوماً من الحماسة! لقب حارس الشهر الأول مع مكافأة كبرى 10 دروع.",
+                    descriptionEn = "30-day mastery unlocked! Month-1 Guardian title and massive +10 shields drop.",
                     shieldsReward = 10,
                     tier = VaultTier.FOUNDATION,
                     isMajor = true,

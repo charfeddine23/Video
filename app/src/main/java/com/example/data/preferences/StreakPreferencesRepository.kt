@@ -57,12 +57,19 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_VAULT_MEDIA_IDS = "key_vault_media_ids"
         private const val KEY_CLAIMED_VAULT_LEVELS = "key_claimed_vault_levels"
 
-        // System Settings
+        // System Settings & Premium Gate
         private const val KEY_RGB_ACCENT = "key_rgb_accent"
         private const val KEY_OLED_BLACK = "key_oled_black"
         private const val KEY_AUTO_RESUME = "key_auto_resume"
         private const val KEY_DEFAULT_SPEED = "key_default_speed"
         private const val KEY_BLACKLISTED_FOLDERS = "key_blacklisted_folders"
+        private const val KEY_PREMIUM_ACTIVATED = "key_premium_activated"
+        private const val KEY_SELECTED_THEME_PRESET = "key_selected_theme_preset"
+        private const val KEY_WIFI_DIRECT_SHARING = "key_wifi_direct_sharing"
+        private const val KEY_SMART_NOTIFICATIONS = "key_smart_notifications"
+        private const val KEY_BACKGROUND_PLAY = "key_background_play"
+        private const val KEY_PIP_MODE = "key_pip_mode"
+        private const val KEY_EYE_PROTECTION = "key_eye_protection"
 
         @Volatile
         private var instance: StreakPreferencesRepository? = null
@@ -460,6 +467,42 @@ class StreakPreferencesRepository private constructor(context: Context) {
     fun clearThumbnailCache(): Long {
         // Returns simulated/freed cache size in MB (e.g. 48MB)
         return 48L
+    }
+
+    // --- Aura Pulse Premium & Moved System Settings ---
+    fun isPremiumActivated(): Boolean = prefs.getBoolean(KEY_PREMIUM_ACTIVATED, false)
+    fun setPremiumActivated(activated: Boolean) {
+        prefs.edit().putBoolean(KEY_PREMIUM_ACTIVATED, activated).apply()
+    }
+
+    fun getSelectedThemePresetIndex(): Int = prefs.getInt(KEY_SELECTED_THEME_PRESET, 0)
+    fun saveSelectedThemePresetIndex(index: Int) {
+        prefs.edit().putInt(KEY_SELECTED_THEME_PRESET, index).apply()
+    }
+
+    fun isWifiDirectSharingEnabled(): Boolean = prefs.getBoolean(KEY_WIFI_DIRECT_SHARING, true)
+    fun setWifiDirectSharingEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_WIFI_DIRECT_SHARING, enabled).apply()
+    }
+
+    fun isSmartNotificationsEnabled(): Boolean = prefs.getBoolean(KEY_SMART_NOTIFICATIONS, true)
+    fun setSmartNotificationsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SMART_NOTIFICATIONS, enabled).apply()
+    }
+
+    fun isBackgroundPlayEnabled(): Boolean = prefs.getBoolean(KEY_BACKGROUND_PLAY, true)
+    fun setBackgroundPlayEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BACKGROUND_PLAY, enabled).apply()
+    }
+
+    fun isPipModeEnabled(): Boolean = prefs.getBoolean(KEY_PIP_MODE, true)
+    fun setPipModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PIP_MODE, enabled).apply()
+    }
+
+    fun isEyeProtectionEnabled(): Boolean = prefs.getBoolean(KEY_EYE_PROTECTION, false)
+    fun setEyeProtectionEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EYE_PROTECTION, enabled).apply()
     }
 
     fun exportPreferencesToJson(): String {

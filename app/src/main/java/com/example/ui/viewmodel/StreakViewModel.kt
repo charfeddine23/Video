@@ -86,67 +86,67 @@ class StreakViewModel(
     val milestones = listOf(
         MilestoneItem(
             day = 5,
-            title = "Manual Dark/Light Mode",
-            titleArabic = "تبديل الوضع الليلي والنهاري",
-            description = "Customizable light and dark appearances anytime.",
-            descriptionArabic = "التحكم اليدوي الكامل بين الوضع الليلي والنهاري في أي وقت.",
-            iconType = "theme"
+            title = "Glowing Starter Shield",
+            titleArabic = "درع البداية المتوهج",
+            description = "Bonus streak shield drop & neon border aura badge.",
+            descriptionArabic = "مكافأة دروع إضافية وشارة توهج الزجاج السائل للملف الشخصي.",
+            iconType = "shield"
         ),
         MilestoneItem(
             day = 10,
-            title = "App Lock (PIN/Pattern)",
-            titleArabic = "قفل التطبيق (PIN / نمط)",
-            description = "Biometric & PIN security for local video vaults.",
-            descriptionArabic = "حماية الخصوصية وقفل الفيديوهات برمز سري وبصمة الإصبع.",
-            iconType = "lock"
+            title = "Silver Flame Guardian",
+            titleArabic = "حارس الشعلة الفضي",
+            description = "Awarded 3 extra Streak Shields & silver prestige badge.",
+            descriptionArabic = "منح 3 دروع حماية إضافية مع وسام الحارس الفضي في مسار الإنجاز.",
+            iconType = "trophy"
         ),
         MilestoneItem(
             day = 15,
-            title = "Manual Language Selection",
-            titleArabic = "اختيار اللغة يدوياً",
-            description = "Switch between Arabic & English on demand.",
-            descriptionArabic = "التبديل الفوري بين اللغة العربية والإنجليزية وتغيير اتجاه الواجهة.",
-            iconType = "language"
+            title = "Perseverance Shield Pack",
+            titleArabic = "حزمة دروع المثابرة",
+            description = "Half-month milestone drop with +3 Streak Shields.",
+            descriptionArabic = "إنجاز منتصف الشهر مع مكافأة فورية +3 دروع حماية للسلسلة.",
+            iconType = "shield"
         ),
         MilestoneItem(
             day = 20,
-            title = "Media Sharing Capabilities",
-            titleArabic = "مشاركة الوسائط محلياً",
-            description = "High-speed offline transfer to nearby devices.",
-            descriptionArabic = "إرسال ومشاركة ملفات الفيديو محلياً بسرعة فائقة بدون إنترنت.",
-            iconType = "share"
+            title = "Golden Royal Shield",
+            titleArabic = "الدرع الذهبي الملكي",
+            description = "Rare Golden Shield protecting streaks across 2 days.",
+            descriptionArabic = "درع ذهبي نادر يحمي سلسلتك ليومين متتاليين مع لقب مميز.",
+            iconType = "gold"
         ),
         MilestoneItem(
             day = 25,
-            title = "Custom Themes (3 Dark / 3 Light)",
-            titleArabic = "ثيمات مخصصة (3 ليلي / 3 نهاري)",
-            description = "Exclusive neon gradients and glass colors.",
-            descriptionArabic = "6 ثيمات لونية حصرية تشمل النيون الفاقع والزجاج المصقول.",
-            iconType = "palette"
+            title = "Radiant Aura Emblem",
+            titleArabic = "وسام الهالة المشعّة",
+            description = "Exclusive +5 Shields bonus & luminous glass crest.",
+            descriptionArabic = "شعار هالة نيوني لامع مع مكافأة +5 دروع حماية فورية.",
+            iconType = "sparkle"
         ),
         MilestoneItem(
             day = 30,
-            title = "Smart Notifications",
-            titleArabic = "إشعارات ذكية مخصصة",
-            description = "Continue watching & streak preservation reminders.",
-            descriptionArabic = "تنبيهات ذكية لاستكمال المشاهدة وحماية الدرع وتجنب فقدان السلسلة.",
-            iconType = "notification"
+            title = "Month-1 Grand Drop",
+            titleArabic = "مكافأة الشهر الأول الكبرى",
+            description = "Complete 30 days to earn +10 Shields & Month-1 Guardian title.",
+            descriptionArabic = "اكتمال 30 يوماً متواصلة مع مكافأة كبرى +10 دروع ووسام حارس الشهر.",
+            iconType = "crown"
         ),
         MilestoneItem(
-            day = 35,
-            title = "Background Play",
-            titleArabic = "التشغيل في الخلفية",
-            description = "Audio & video playback with screen locked.",
-            descriptionArabic = "الاستمرار في سماع الصوت وتشغيل الفيديو عند إغلاق الشاشة أو التبديل.",
-            iconType = "background_play"
+            day = 45,
+            title = "Elite Streak Champion",
+            titleArabic = "وسام بطل السلسلة المتواصلة",
+            description = "45-day dedication trophy & +12 Shields inventory boost.",
+            descriptionArabic = "إنجاز 45 يوماً من الاستمرارية مع تعزيز +12 درعاً في الخزينة.",
+            iconType = "trophy"
         ),
         MilestoneItem(
-            day = 40,
-            title = "Pop-up Videos / PiP Mode",
-            titleArabic = "فيديو منبثق (PiP Mode)",
-            description = "Floating resizable player over any Android app.",
-            descriptionArabic = "مشغل عائم متعدد المهام فوق التطبيقات بحرية تامة وسلاسة.",
-            iconType = "pip"
+            day = 60,
+            title = "Legendary Diamond Shield",
+            titleArabic = "الدرع الماسي الأسطوري",
+            description = "Mythic VIP Diamond Shield freezing streaks for 7 full days.",
+            descriptionArabic = "الدرع الماسي الأسطوري لتجميد وحماية السلسلة لأسبوع كامل.",
+            iconType = "diamond"
         )
     )
 
@@ -282,7 +282,7 @@ class StreakViewModel(
     fun getVaultMediaIds(): Set<String> = repository.getVaultMediaIds()
     fun toggleVaultMedia(id: String): Boolean = repository.toggleVaultMedia(id)
 
-    // System Settings Hub
+    // System Settings Hub & Aura Pulse Premium
     fun getRgbAccentColor(): Long = repository.getRgbAccentColor()
     fun saveRgbAccentColor(color: Long) = repository.saveRgbAccentColor(color)
     fun isOledBlackEnabled(): Boolean = repository.isOledBlackEnabled()
@@ -294,6 +294,27 @@ class StreakViewModel(
     fun clearThumbnailCache(): Long = repository.clearThumbnailCache()
     fun exportPreferencesToJson(): String = repository.exportPreferencesToJson()
     fun importPreferencesFromJson(json: String): Boolean = repository.importPreferencesFromJson(json)
+
+    private val _isPremiumActivated = MutableStateFlow(repository.isPremiumActivated())
+    val isPremiumActivated: StateFlow<Boolean> = _isPremiumActivated.asStateFlow()
+
+    fun setPremiumActivated(activated: Boolean) {
+        repository.setPremiumActivated(activated)
+        _isPremiumActivated.value = activated
+    }
+
+    fun getSelectedThemePresetIndex(): Int = repository.getSelectedThemePresetIndex()
+    fun saveSelectedThemePresetIndex(index: Int) = repository.saveSelectedThemePresetIndex(index)
+    fun isWifiDirectSharingEnabled(): Boolean = repository.isWifiDirectSharingEnabled()
+    fun setWifiDirectSharingEnabled(enabled: Boolean) = repository.setWifiDirectSharingEnabled(enabled)
+    fun isSmartNotificationsEnabled(): Boolean = repository.isSmartNotificationsEnabled()
+    fun setSmartNotificationsEnabled(enabled: Boolean) = repository.setSmartNotificationsEnabled(enabled)
+    fun isBackgroundPlayEnabled(): Boolean = repository.isBackgroundPlayEnabled()
+    fun setBackgroundPlayEnabled(enabled: Boolean) = repository.setBackgroundPlayEnabled(enabled)
+    fun isPipModeEnabled(): Boolean = repository.isPipModeEnabled()
+    fun setPipModeEnabled(enabled: Boolean) = repository.setPipModeEnabled(enabled)
+    fun isEyeProtectionEnabled(): Boolean = repository.isEyeProtectionEnabled()
+    fun setEyeProtectionEnabled(enabled: Boolean) = repository.setEyeProtectionEnabled(enabled)
 
     // 365-Level Progression & Feature Vault
     fun getClaimedVaultLevels(): Set<Int> = repository.getClaimedVaultLevels()
