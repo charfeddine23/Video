@@ -3,7 +3,10 @@ package com.example
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -32,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
@@ -63,8 +67,10 @@ import com.example.ui.screens.StatisticsScreen
 import com.example.ui.screens.SystemSettingsScreen
 import com.example.ui.screens.WatchScreen
 import com.example.ui.theme.AppLanguage
+import com.example.ui.theme.LocalStableStatusBarTop
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.ThemeMode
+import com.example.ui.theme.rememberStableStatusBarTopDp
 import com.example.ui.viewmodel.StreakViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -73,6 +79,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
+        }
         setContent {
             val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(applicationContext) }
             var currentThemeMode by remember { mutableStateOf(prefsRepo.loadThemeMode()) }
@@ -184,9 +199,10 @@ fun VideoPulseApp(
         }
     }
 
-    // Apply Full Screen mode (hide/show top phone status bar) on toggle and resume
+    // Apply Full Screen mode (hide/show top phone status bar) without resizing/shrinking window
     LaunchedEffect(isFullScreenMode, isAppInForeground) {
         val window = context.findActivity()?.window ?: return@LaunchedEffect
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val controller = WindowCompat.getInsetsController(window, view)
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -194,6 +210,19 @@ fun VideoPulseApp(
             controller.hide(WindowInsetsCompat.Type.statusBars())
         } else {
             controller.show(WindowInsetsCompat.Type.statusBars())
+        }
+    }
+
+    val configuration = LocalConfiguration.current
+    val isPortrait = configuration.orientation == Configuration.ORIENTATION_PORTRAIT
+    val cachedStatusBarDp = remember { streakViewModel.getLastStatusBarHeightDp().dp }
+    val stableStatusBarTop = rememberStableStatusBarTopDp(
+        isFullScreenMode = isFullScreenMode,
+        cachedPortraitHeightDp = cachedStatusBarDp
+    )
+    LaunchedEffect(stableStatusBarTop, isPortrait) {
+        if (isPortrait && stableStatusBarTop > 0.dp) {
+            streakViewModel.saveLastStatusBarHeightDp(stableStatusBarTop.value)
         }
     }
 
@@ -225,6 +254,7 @@ fun VideoPulseApp(
         }
     }
 
+    CompositionLocalProvider(LocalStableStatusBarTop provides stableStatusBarTop) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -410,6 +440,7 @@ fun VideoPulseApp(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 80.dp)
         )
+    }
     }
 }
 

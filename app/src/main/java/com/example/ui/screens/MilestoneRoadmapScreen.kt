@@ -28,7 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.ui.theme.stableStatusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Inventory2
@@ -52,10 +53,12 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -133,6 +136,12 @@ fun MilestoneRoadmapScreen(
     val diamondShields = if (streakDays >= 60) (streakDays / 60) else 0
     val flameTokens = if (streakDays >= 5) (streakDays / 5) * 2 else 0
     val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceIn(0, 3)
+    val farmSecs by streakViewModel.shieldFarmSeconds.collectAsState()
+    val farmMins = (farmSecs / 60).coerceIn(0, 60)
+    val remainingMins = (60 - farmMins).coerceAtLeast(0)
+    val isDailyFarmCapReached = dailyShieldsToday >= 3
+    val isShieldVaultFull = shieldsCount >= maxShields
+    val farmProgress = if (isDailyFarmCapReached) 1f else (farmSecs.toFloat() / 3600f).coerceIn(0f, 1f)
 
     val shieldTypes = listOf(
         ShieldTypeItem(
@@ -235,7 +244,7 @@ fun MilestoneRoadmapScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .stableStatusBarsPadding()
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             // Top App Bar
@@ -563,6 +572,124 @@ fun MilestoneRoadmapScreen(
                                                 modifier = Modifier.weight(1f)
                                             )
                                         }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(14.dp))
+                            }
+
+                            // Shield Farming Progress Bar Card (above Owned Shields Vault)
+                            item(key = "inventory_shield_farming_progress") {
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(
+                                            1.dp,
+                                            Brush.horizontalGradient(
+                                                listOf(
+                                                    PulseCyan.copy(alpha = 0.65f),
+                                                    Color(0x6610B981)
+                                                )
+                                            ),
+                                            RoundedCornerShape(18.dp)
+                                        )
+                                        .testTag("inventory_shield_farming_card"),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xDD101827))
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(34.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color(0x2800F2FE)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.AccessTime,
+                                                        contentDescription = null,
+                                                        tint = if (isDailyFarmCapReached) Color(0xFF34D399) else PulseCyan,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (isArabic) "شريط تقدم مزرعة الدروع" else "Shield Farming Progress",
+                                                        style = MaterialTheme.typography.titleSmall.copy(
+                                                            color = Color.White,
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            fontSize = 13.5.sp
+                                                        )
+                                                    )
+                                                    Text(
+                                                        text = when {
+                                                            isShieldVaultFull -> if (isArabic) {
+                                                                "خزينة الدروع ممتلئة ($shieldsCount / $maxShields)"
+                                                            } else {
+                                                                "Shield vault is full ($shieldsCount / $maxShields)"
+                                                            }
+                                                            isDailyFarmCapReached -> if (isArabic) {
+                                                                "تم بلوغ الحد اليومي (3/3 دروع) ✓"
+                                                            } else {
+                                                                "Daily limit reached (3/3 shields) ✓"
+                                                            }
+                                                            else -> if (isArabic) {
+                                                                "$farmMins / 60 دقيقة للدرع القادم • متبقي $remainingMins د"
+                                                            } else {
+                                                                "$farmMins / 60 mins to next shield • $remainingMins min left"
+                                                            }
+                                                        },
+                                                        style = MaterialTheme.typography.bodySmall.copy(
+                                                            color = Color(0xFF94A3B8),
+                                                            fontSize = 11.sp
+                                                        )
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = if (isDailyFarmCapReached) Color(0x2810B981) else Color(0x2800F2FE),
+                                                border = BorderStroke(
+                                                    1.dp,
+                                                    if (isDailyFarmCapReached) Color(0x6634D399) else PulseCyan.copy(alpha = 0.55f)
+                                                )
+                                            ) {
+                                                Text(
+                                                    text = "${(farmProgress * 100).toInt()}%",
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = if (isDailyFarmCapReached) Color(0xFF34D399) else PulseCyan,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        fontSize = 11.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        LinearProgressIndicator(
+                                            progress = { farmProgress },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(9.dp)
+                                                .clip(RoundedCornerShape(5.dp))
+                                                .testTag("inventory_shield_farming_progress_bar"),
+                                            color = if (isDailyFarmCapReached) Color(0xFF10B981) else PulseCyan,
+                                            trackColor = Color(0x26FFFFFF)
+                                        )
                                     }
                                 }
                                 Spacer(modifier = Modifier.height(16.dp))

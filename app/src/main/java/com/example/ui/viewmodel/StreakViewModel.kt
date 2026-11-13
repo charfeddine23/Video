@@ -62,6 +62,9 @@ class StreakViewModel(
     private val _userAvatarPreset = MutableStateFlow(repository.getUserAvatarPreset())
     val userAvatarPreset: StateFlow<Int> = _userAvatarPreset.asStateFlow()
 
+    private val _shieldFarmSeconds = MutableStateFlow(repository.getShieldFarmAccumulatedSeconds())
+    val shieldFarmSeconds: StateFlow<Int> = _shieldFarmSeconds.asStateFlow()
+
     fun updateProfile(name: String, avatarUri: String?, presetId: Int) {
         val safeName = name.trim().ifBlank { "Charfeddine Kahlessenane" }
         repository.saveUserName(safeName)
@@ -192,6 +195,7 @@ class StreakViewModel(
      */
     fun tickActiveForegroundUsage(seconds: Int = 1) {
         val (updatedState, earnedShield) = repository.tickActiveForegroundUsage(seconds)
+        _shieldFarmSeconds.value = repository.getShieldFarmAccumulatedSeconds()
         if (earnedShield) {
             val todayEarned = repository.getShieldsEarnedToday()
             _uiState.update { current ->
@@ -323,6 +327,9 @@ class StreakViewModel(
         repository.setFullScreenModeEnabled(enabled)
         _isFullScreenMode.value = enabled
     }
+
+    fun getLastStatusBarHeightDp(): Float = repository.getLastStatusBarHeightDp()
+    fun saveLastStatusBarHeightDp(heightDp: Float) = repository.saveLastStatusBarHeightDp(heightDp)
 
     // 365-Level Progression & Feature Vault
     fun getClaimedVaultLevels(): Set<Int> = repository.getClaimedVaultLevels()

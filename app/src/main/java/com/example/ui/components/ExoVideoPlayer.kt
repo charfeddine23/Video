@@ -62,7 +62,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.ui.theme.stableStatusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -1174,7 +1174,7 @@ fun ExoVideoPlayer(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .statusBarsPadding()
+                        .stableStatusBarsPadding()
                         .navigationBarsPadding(),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -1703,7 +1703,7 @@ fun ExoVideoPlayer(
                         Surface(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .statusBarsPadding()
+                                .stableStatusBarsPadding()
                                 .padding(start = 16.dp, top = 76.dp)
                                 .width(52.dp)
                                 .height(containerHeight)
@@ -1898,7 +1898,7 @@ fun ExoVideoPlayer(
                         Surface(
                             modifier = Modifier
                                 .align(Alignment.TopStart)
-                                .statusBarsPadding()
+                                .stableStatusBarsPadding()
                                 .padding(start = 22.dp, top = 76.dp + containerHeight + 8.dp)
                                 .graphicsLayer {
                                     translationY = bounceY
@@ -2000,7 +2000,7 @@ fun ExoVideoPlayer(
             exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .statusBarsPadding()
+                .stableStatusBarsPadding()
                 .padding(top = 16.dp, start = 20.dp, end = 20.dp)
         ) {
             Surface(
@@ -2500,7 +2500,7 @@ fun ExoVideoPlayer(
             exit = fadeOut(tween(300)) + slideOutVertically { -it },
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .statusBarsPadding()
+                .stableStatusBarsPadding()
                 .padding(top = 18.dp)
         ) {
             Surface(

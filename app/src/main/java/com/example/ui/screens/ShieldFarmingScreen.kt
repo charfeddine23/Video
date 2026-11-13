@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.ui.theme.stableStatusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,7 +70,7 @@ fun ShieldFarmingScreen(
         onBack()
     }
 
-    val farmSecs = streakViewModel.getShieldFarmAccumulatedSeconds()
+    val farmSecs by streakViewModel.shieldFarmSeconds.collectAsState()
     val farmMins = (farmSecs / 60).coerceIn(0, 60)
     val remainingMins = (60 - farmMins).coerceAtLeast(0)
     val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceIn(0, 3)
@@ -100,7 +100,7 @@ fun ShieldFarmingScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
+                .stableStatusBarsPadding()
                 .windowInsetsPadding(WindowInsets.navigationBars)
         ) {
             // Top Bar

@@ -72,6 +72,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_PIP_MODE = "key_pip_mode"
         private const val KEY_EYE_PROTECTION = "key_eye_protection"
         private const val KEY_FULL_SCREEN_MODE = "key_full_screen_mode"
+        private const val KEY_LAST_STATUS_BAR_HEIGHT_DP = "key_last_status_bar_height_dp"
 
         @Volatile
         private var instance: StreakPreferencesRepository? = null
@@ -514,6 +515,13 @@ class StreakPreferencesRepository private constructor(context: Context) {
     fun isFullScreenModeEnabled(): Boolean = prefs.getBoolean(KEY_FULL_SCREEN_MODE, false)
     fun setFullScreenModeEnabled(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_FULL_SCREEN_MODE, enabled).apply()
+    }
+
+    fun getLastStatusBarHeightDp(): Float = prefs.getFloat(KEY_LAST_STATUS_BAR_HEIGHT_DP, 0f)
+    fun saveLastStatusBarHeightDp(heightDp: Float) {
+        if (heightDp > 0f) {
+            prefs.edit().putFloat(KEY_LAST_STATUS_BAR_HEIGHT_DP, heightDp).apply()
+        }
     }
 
     fun exportPreferencesToJson(): String {
