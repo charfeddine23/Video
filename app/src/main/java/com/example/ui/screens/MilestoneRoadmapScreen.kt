@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -96,7 +97,8 @@ data class ShieldTypeItem(
 
 private enum class RoadmapSectionTab {
     ROADMAP,
-    INVENTORY
+    INVENTORY,
+    SHOP
 }
 
 @Composable
@@ -278,7 +280,7 @@ fun MilestoneRoadmapScreen(
                             )
                         )
                         Text(
-                            text = if (isArabic) "خريطة Roadmap (365) والمخزون" else "365-Level Roadmap & Inventory",
+                            text = if (isArabic) "خريطة Roadmap (365)، المخزون والمتجر" else "365-Level Roadmap, Inventory & Shop",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF94A3B8),
                                 fontSize = 11.sp
@@ -317,7 +319,7 @@ fun MilestoneRoadmapScreen(
                 }
             }
 
-            // Segmented View Mode Pills: Roadmap vs Inventory
+            // Segmented View Mode Pills: Roadmap vs Inventory vs Shop
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -353,13 +355,14 @@ fun MilestoneRoadmapScreen(
                             tint = if (isRoadmapSelected) PulseCyan else Color(0xFF94A3B8),
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
                             text = "Roadmap",
+                            maxLines = 1,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 color = if (isRoadmapSelected) PulseCyan else Color.White,
                                 fontWeight = if (isRoadmapSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                                fontSize = 12.5.sp
+                                fontSize = 12.sp
                             )
                         )
                     }
@@ -394,12 +397,56 @@ fun MilestoneRoadmapScreen(
                             tint = if (isInventorySelected) Color(0xFF34D399) else Color(0xFF94A3B8),
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = if (isArabic) "المخزون Inventory" else "Inventory",
+                            text = if (isArabic) "المخزون" else "Inventory",
+                            maxLines = 1,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 color = if (isInventorySelected) Color(0xFF34D399) else Color.White,
                                 fontWeight = if (isInventorySelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                fontSize = 12.sp
+                            )
+                        )
+                    }
+                }
+
+                val isShopSelected = activeSectionTab == RoadmapSectionTab.SHOP
+                val shopAccent = Color(0xFFFFD700)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isShopSelected) Color(0x33FFD700) else Color(0x1F121826),
+                    border = BorderStroke(
+                        1.dp,
+                        if (isShopSelected) shopAccent else Color(0x22FFFFFF)
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            activeSectionTab = RoadmapSectionTab.SHOP
+                        }
+                        .testTag("roadmap_tab_shop")
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Storefront,
+                            contentDescription = null,
+                            tint = if (isShopSelected) shopAccent else Color(0xFF94A3B8),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = "Shop",
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = if (isShopSelected) shopAccent else Color.White,
+                                fontWeight = if (isShopSelected) FontWeight.ExtraBold else FontWeight.Medium,
                                 fontSize = 12.sp
                             )
                         )
@@ -749,6 +796,82 @@ fun MilestoneRoadmapScreen(
                                             )
                                         }
                                     }
+                                }
+                            }
+                        }
+                    }
+
+                    RoadmapSectionTab.SHOP -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 24.dp, vertical = 20.dp)
+                                .testTag("shop_tab_coming_soon"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(24.dp),
+                                color = Color(0xD9121826),
+                                border = BorderStroke(
+                                    1.2.dp,
+                                    Brush.horizontalGradient(
+                                        listOf(
+                                            Color(0x88FFD700).copy(alpha = ambientGlow),
+                                            PulseCyan.copy(alpha = 0.55f)
+                                        )
+                                    )
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 36.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(74.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                Brush.radialGradient(
+                                                    listOf(Color(0x44FFD700), Color(0x1400F2FE))
+                                                )
+                                            )
+                                            .border(1.5.dp, Color(0xFFFFD700).copy(alpha = ambientGlow), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Storefront,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFFD700),
+                                            modifier = Modifier.size(36.dp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(18.dp))
+
+                                    Text(
+                                        text = if (isArabic) "قريباً" else "Soon",
+                                        style = MaterialTheme.typography.headlineMedium.copy(
+                                            color = Color(0xFFFFD700),
+                                            fontWeight = FontWeight.ExtraBold
+                                        )
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Text(
+                                        text = if (isArabic) {
+                                            "متجر الدروع والمكافآت قيد التجهيز وسيكون متاحاً قريباً"
+                                        } else {
+                                            "Shields & Rewards Shop is coming soon"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            color = Color(0xFF94A3B8),
+                                            fontSize = 13.sp
+                                        ),
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
                                 }
                             }
                         }
