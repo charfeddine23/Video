@@ -521,16 +521,20 @@ private fun SerpentineLevelNodeRow(
     // Force LTR coordinates for pixel-accurate alignment between Canvas Bezier curves and Cards
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min)
-                .defaultMinSize(minHeight = 148.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
-            val orbCenterDp = maxWidth * currXFraction
-            val orbOffsetX = (orbCenterDp - (orbSize / 2)).coerceIn(10.dp, maxWidth - orbSize - 10.dp)
+            val containerWidth = maxWidth
+            val orbCenterDp = containerWidth * currXFraction
+            val orbOffsetX = (orbCenterDp - (orbSize / 2)).coerceIn(10.dp, containerWidth - orbSize - 10.dp)
 
-            // 1. Live Glowing Serpentine Bezier Snake Track Canvas (adapts dynamically to actual row height)
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min)
+                    .defaultMinSize(minHeight = 148.dp)
+            ) {
+                // 1. Live Glowing Serpentine Bezier Snake Track Canvas (matches measured row height)
+                Canvas(modifier = Modifier.matchParentSize()) {
                 val widthPx = size.width
                 val heightPx = size.height
                 val centerY = heightPx / 2f
@@ -679,7 +683,7 @@ private fun SerpentineLevelNodeRow(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .offset(
-                            x = (orbCenterDp - 34.dp).coerceIn(10.dp, maxWidth - 80.dp),
+                            x = (orbCenterDp - 34.dp).coerceIn(10.dp, containerWidth - 80.dp),
                             y = 6.dp
                         )
                 ) {
@@ -700,7 +704,7 @@ private fun SerpentineLevelNodeRow(
             val screenMargin = 14.dp
             val orbGap = 14.dp
             val cardStartPadding = if (isOrbOnRight) screenMargin else (orbOffsetX + orbSize + orbGap)
-            val cardEndPadding = if (isOrbOnRight) ((maxWidth - orbOffsetX) + orbGap) else screenMargin
+            val cardEndPadding = if (isOrbOnRight) ((containerWidth - orbOffsetX) + orbGap) else screenMargin
 
             CompositionLocalProvider(LocalLayoutDirection provides parentLayoutDirection) {
                 Card(
@@ -849,6 +853,7 @@ private fun SerpentineLevelNodeRow(
                         }
                     }
                 }
+            }
             }
         }
     }
