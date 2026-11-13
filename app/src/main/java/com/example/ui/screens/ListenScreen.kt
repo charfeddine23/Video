@@ -429,9 +429,9 @@ fun ListenScreen(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color(0xDD0B0F19),
-                            Color(0xEE0B0F19),
-                            Color(0xFA0B0F19),
+                            Color(0xAA0B0F19),
+                            Color(0xDE0B0F19),
+                            Color(0xF50B0F19),
                             Color(0xFF0B0F19)
                         )
                     )

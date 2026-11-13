@@ -51,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -116,6 +117,19 @@ fun DeviceVideosScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color(0xFF0B0F19))
+            .drawBehind {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x2200F2FE),
+                            Color(0x127928CA),
+                            Color.Transparent
+                        ),
+                        startY = 0f,
+                        endY = size.height * 0.22f
+                    )
+                )
+            }
             .testTag("device_videos_screen")
     ) {
         Column(

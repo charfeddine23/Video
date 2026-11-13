@@ -77,11 +77,22 @@ fun HomeScreen(
             .background(Color(0xFF0B0F19))
             .testTag("home_screen_minimal")
     ) {
-        // Ambient liquid neon glow behind the central flame
+        // Ambient liquid neon glow behind the central flame and extending cleanly to top edge
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawBehind {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0x28FF5722),
+                                Color(0x1400F2FE),
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = size.height * 0.24f
+                        )
+                    )
                     // Central warm flame glow
                     drawCircle(
                         brush = Brush.radialGradient(

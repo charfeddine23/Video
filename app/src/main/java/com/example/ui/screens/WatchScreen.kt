@@ -289,11 +289,22 @@ fun WatchScreen(
             .background(Color(0xFF0B0F19))
             .testTag("watch_screen_part2")
     ) {
-        // Liquid Glass M5 Ambient Glow
+        // Liquid Glass M5 Ambient Glow extending into hidden status bar area
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .drawBehind {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0x2200F2FE),
+                                Color(0x127928CA),
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = size.height * 0.22f
+                        )
+                    )
                     drawCircle(
                         brush = Brush.radialGradient(
                             listOf(Color(0x1800F2FE), Color(0x107928CA), Color.Transparent),

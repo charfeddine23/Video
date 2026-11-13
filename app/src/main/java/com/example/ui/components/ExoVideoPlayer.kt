@@ -697,7 +697,7 @@ fun ExoVideoPlayer(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Charcoal950)
             .testTag("high_end_exo_video_player")
             // Double Tap (10s seek) & Single Tap (toggle controls)
             .pointerInput(uiState.isScreenLocked) {
@@ -847,12 +847,12 @@ fun ExoVideoPlayer(
                         drawRect(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    animatedAmbientPrimary.copy(alpha = 0.55f),
-                                    animatedAmbientSecondary.copy(alpha = 0.35f),
-                                    animatedAmbientTertiary.copy(alpha = 0.20f),
-                                    Color.Black.copy(alpha = 0.90f)
+                                    animatedAmbientPrimary.copy(alpha = 0.58f),
+                                    animatedAmbientSecondary.copy(alpha = 0.38f),
+                                    animatedAmbientTertiary.copy(alpha = 0.22f),
+                                    Charcoal950.copy(alpha = 0.78f)
                                 ),
-                                radius = size.maxDimension * 0.72f
+                                radius = size.maxDimension * 0.85f
                             )
                         )
                     }
@@ -864,11 +864,11 @@ fun ExoVideoPlayer(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    animatedAmbientPrimary.copy(alpha = 0.30f),
-                                    animatedAmbientSecondary.copy(alpha = 0.15f),
+                                    animatedAmbientPrimary.copy(alpha = 0.38f),
+                                    animatedAmbientSecondary.copy(alpha = 0.18f),
                                     Color.Transparent,
-                                    animatedAmbientSecondary.copy(alpha = 0.15f),
-                                    animatedAmbientPrimary.copy(alpha = 0.30f)
+                                    animatedAmbientSecondary.copy(alpha = 0.18f),
+                                    animatedAmbientPrimary.copy(alpha = 0.38f)
                                 )
                             )
                         )
@@ -881,20 +881,33 @@ fun ExoVideoPlayer(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            if (uiState.isAmbientGlowEnabled && uiState.resizeMode == VideoResizeMode.FIT) {
+            if (uiState.resizeMode != VideoResizeMode.CROP) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .drawBehind {
                             drawRect(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(
-                                        animatedAmbientPrimary.copy(alpha = 0.40f),
-                                        Color.Transparent,
-                                        Color.Transparent,
-                                        animatedAmbientSecondary.copy(alpha = 0.40f)
+                                brush = if (uiState.isAmbientGlowEnabled) {
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            animatedAmbientPrimary.copy(alpha = 0.42f),
+                                            animatedAmbientSecondary.copy(alpha = 0.14f),
+                                            Color.Transparent,
+                                            Color.Transparent,
+                                            animatedAmbientSecondary.copy(alpha = 0.16f),
+                                            animatedAmbientPrimary.copy(alpha = 0.38f)
+                                        )
                                     )
-                                )
+                                } else {
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFF0B0F19).copy(alpha = 0.72f),
+                                            Color.Transparent,
+                                            Color.Transparent,
+                                            Color(0xFF0B0F19).copy(alpha = 0.72f)
+                                        )
+                                    )
+                                }
                             )
                         }
                 )
@@ -907,6 +920,8 @@ fun ExoVideoPlayer(
                         useController = false
                         resizeMode = uiState.resizeMode.exoMode
                         keepScreenOn = true
+                        setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT

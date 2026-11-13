@@ -93,13 +93,30 @@ fun LiveTVScreen(
         label = "live_dot_alpha"
     )
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(Charcoal950)
-            .stableStatusBarsPadding()
+            .drawBehind {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x20FF3366),
+                            Color(0x1400F2FE),
+                            Color.Transparent
+                        ),
+                        startY = 0f,
+                        endY = size.height * 0.22f
+                    )
+                )
+            }
             .testTag("live_tv_screen")
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .stableStatusBarsPadding()
+        ) {
         // Screen Header
         Row(
             modifier = Modifier
@@ -432,6 +449,7 @@ fun LiveTVScreen(
                     }
                 }
             }
+        }
         }
     }
 }

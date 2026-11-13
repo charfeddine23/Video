@@ -44,6 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -96,10 +98,26 @@ fun SearchOverlay(
         modifier = modifier
             .fillMaxSize()
             .background(Charcoal950)
-            .stableStatusBarsPadding()
+            .drawBehind {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0x1E00F2FE),
+                            Color(0x107928CA),
+                            Color.Transparent
+                        ),
+                        startY = 0f,
+                        endY = size.height * 0.20f
+                    )
+                )
+            }
             .testTag("search_overlay_screen")
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .stableStatusBarsPadding()
+        ) {
             // Search Bar Header
             Row(
                 modifier = Modifier
