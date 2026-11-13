@@ -191,7 +191,7 @@ class StreakViewModel(
     /**
      * Ticks active foreground app usage time.
      * Core Rule: Background usage does NOT count.
-     * 1 shield awarded per 1 full hour of active app usage (max 3 shields/day, max 1000 total).
+     * 1 shield awarded per 1 full hour of active app usage (unlimited daily farming, max 1000 total).
      */
     fun tickActiveForegroundUsage(seconds: Int = 1) {
         val (updatedState, earnedShield) = repository.tickActiveForegroundUsage(seconds)
@@ -201,7 +201,7 @@ class StreakViewModel(
             _uiState.update { current ->
                 current.copy(
                     shieldsCount = updatedState.shieldsCount,
-                    feedbackMessage = "🛡️ كسبت درع حماية جديد بعد ساعة كاملة من استخدام التطبيق! ($todayEarned/3 اليوم)"
+                    feedbackMessage = "🛡️ كسبت درع حماية جديد بعد ساعة كاملة من استخدام التطبيق! (مكتسب اليوم: $todayEarned)"
                 )
             }
         }

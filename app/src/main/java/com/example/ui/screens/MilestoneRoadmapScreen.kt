@@ -135,13 +135,12 @@ fun MilestoneRoadmapScreen(
     val goldenShields = if (streakDays >= 20) (streakDays / 20) else 0
     val diamondShields = if (streakDays >= 60) (streakDays / 60) else 0
     val flameTokens = if (streakDays >= 5) (streakDays / 5) * 2 else 0
-    val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceIn(0, 3)
+    val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceAtLeast(0)
     val farmSecs by streakViewModel.shieldFarmSeconds.collectAsState()
     val farmMins = (farmSecs / 60).coerceIn(0, 60)
     val remainingMins = (60 - farmMins).coerceAtLeast(0)
-    val isDailyFarmCapReached = dailyShieldsToday >= 3
     val isShieldVaultFull = shieldsCount >= maxShields
-    val farmProgress = if (isDailyFarmCapReached) 1f else (farmSecs.toFloat() / 3600f).coerceIn(0f, 1f)
+    val farmProgress = if (isShieldVaultFull) 1f else (farmSecs.toFloat() / 3600f).coerceIn(0f, 1f)
 
     val shieldTypes = listOf(
         ShieldTypeItem(
@@ -561,7 +560,7 @@ fun MilestoneRoadmapScreen(
                                             )
                                             InventoryStatChip(
                                                 label = if (isArabic) "مكتسب اليوم" else "Farmed Today",
-                                                value = "$dailyShieldsToday / 3",
+                                                value = "$dailyShieldsToday ♾️",
                                                 accent = Color(0xFF34D399),
                                                 modifier = Modifier.weight(1f)
                                             )
@@ -616,14 +615,14 @@ fun MilestoneRoadmapScreen(
                                                     Icon(
                                                         imageVector = Icons.Default.AccessTime,
                                                         contentDescription = null,
-                                                        tint = if (isDailyFarmCapReached) Color(0xFF34D399) else PulseCyan,
+                                                        tint = if (isShieldVaultFull) Color(0xFF34D399) else PulseCyan,
                                                         modifier = Modifier.size(18.dp)
                                                     )
                                                 }
                                                 Spacer(modifier = Modifier.width(10.dp))
                                                 Column {
                                                     Text(
-                                                        text = if (isArabic) "شريط تقدم مزرعة الدروع" else "Shield Farming Progress",
+                                                        text = if (isArabic) "شريط تقدم مزرعة الدروع (غير محدود ∞)" else "Shield Farming Progress (Unlimited ∞)",
                                                         style = MaterialTheme.typography.titleSmall.copy(
                                                             color = Color.White,
                                                             fontWeight = FontWeight.ExtraBold,
@@ -636,11 +635,6 @@ fun MilestoneRoadmapScreen(
                                                                 "خزينة الدروع ممتلئة ($shieldsCount / $maxShields)"
                                                             } else {
                                                                 "Shield vault is full ($shieldsCount / $maxShields)"
-                                                            }
-                                                            isDailyFarmCapReached -> if (isArabic) {
-                                                                "تم بلوغ الحد اليومي (3/3 دروع) ✓"
-                                                            } else {
-                                                                "Daily limit reached (3/3 shields) ✓"
                                                             }
                                                             else -> if (isArabic) {
                                                                 "$farmMins / 60 دقيقة للدرع القادم • متبقي $remainingMins د"
@@ -660,17 +654,17 @@ fun MilestoneRoadmapScreen(
 
                                             Surface(
                                                 shape = RoundedCornerShape(10.dp),
-                                                color = if (isDailyFarmCapReached) Color(0x2810B981) else Color(0x2800F2FE),
+                                                color = if (isShieldVaultFull) Color(0x2810B981) else Color(0x2800F2FE),
                                                 border = BorderStroke(
                                                     1.dp,
-                                                    if (isDailyFarmCapReached) Color(0x6634D399) else PulseCyan.copy(alpha = 0.55f)
+                                                    if (isShieldVaultFull) Color(0x6634D399) else PulseCyan.copy(alpha = 0.55f)
                                                 )
                                             ) {
                                                 Text(
                                                     text = "${(farmProgress * 100).toInt()}%",
                                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                                     style = MaterialTheme.typography.labelSmall.copy(
-                                                        color = if (isDailyFarmCapReached) Color(0xFF34D399) else PulseCyan,
+                                                        color = if (isShieldVaultFull) Color(0xFF34D399) else PulseCyan,
                                                         fontWeight = FontWeight.ExtraBold,
                                                         fontSize = 11.sp
                                                     )
@@ -687,7 +681,7 @@ fun MilestoneRoadmapScreen(
                                                 .height(9.dp)
                                                 .clip(RoundedCornerShape(5.dp))
                                                 .testTag("inventory_shield_farming_progress_bar"),
-                                            color = if (isDailyFarmCapReached) Color(0xFF10B981) else PulseCyan,
+                                            color = if (isShieldVaultFull) Color(0xFF10B981) else PulseCyan,
                                             trackColor = Color(0x26FFFFFF)
                                         )
                                     }

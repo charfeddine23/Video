@@ -73,9 +73,9 @@ fun ShieldFarmingScreen(
     val farmSecs by streakViewModel.shieldFarmSeconds.collectAsState()
     val farmMins = (farmSecs / 60).coerceIn(0, 60)
     val remainingMins = (60 - farmMins).coerceAtLeast(0)
-    val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceIn(0, 3)
-    val isDailyCapReached = dailyShieldsToday >= 3
-    val farmProgress = if (isDailyCapReached) 1f else (farmSecs.toFloat() / 3600f).coerceIn(0f, 1f)
+    val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceAtLeast(0)
+    val isVaultFull = uiState.shieldsCount >= uiState.maxShields
+    val farmProgress = if (isVaultFull) 1f else (farmSecs.toFloat() / 3600f).coerceIn(0f, 1f)
 
     Box(
         modifier = modifier
@@ -211,7 +211,7 @@ fun ShieldFarmingScreen(
                                 Icon(
                                     imageVector = Icons.Default.Shield,
                                     contentDescription = null,
-                                    tint = if (isDailyCapReached) Color(0xFF10B981) else PulseCyan,
+                                    tint = if (isVaultFull) Color(0xFF10B981) else PulseCyan,
                                     modifier = Modifier.size(36.dp)
                                 )
                             }
@@ -219,8 +219,8 @@ fun ShieldFarmingScreen(
                             Spacer(modifier = Modifier.height(14.dp))
 
                             Text(
-                                text = if (isDailyCapReached) {
-                                    if (isArabic) "تم بلوغ الحد اليومي (3/3 دروع) ✓" else "Daily Limit Reached (3/3) ✓"
+                                text = if (isVaultFull) {
+                                    if (isArabic) "تم امتلاء خزينة الدروع (${uiState.shieldsCount}/${uiState.maxShields}) ✓" else "Shield Vault Full (${uiState.shieldsCount}/${uiState.maxShields}) ✓"
                                 } else {
                                     if (isArabic) "$farmMins / 60 دقيقة للدرع القادم" else "$farmMins / 60 mins to next shield"
                                 },
@@ -233,10 +233,10 @@ fun ShieldFarmingScreen(
                             Spacer(modifier = Modifier.height(4.dp))
 
                             Text(
-                                text = if (isDailyCapReached) {
-                                    if (isArabic) "أحسنت! يمكنك كسب المزيد من الدروع غداً" else "Great job! Daily farming resets tomorrow"
+                                text = if (isVaultFull) {
+                                    if (isArabic) "وصلت للحد الأقصى لتخزين الدروع (${uiState.maxShields})" else "Vault storage capacity reached (${uiState.maxShields})"
                                 } else {
-                                    if (isArabic) "متبقي $remainingMins دقيقة من الاستخدام النشط" else "$remainingMins minutes of foreground activity remaining"
+                                    if (isArabic) "متبقي $remainingMins دقيقة من الاستخدام النشط • زراعة غير محدودة ∞" else "$remainingMins minutes remaining • Unlimited daily farming ∞"
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = Color(0xFF94A3B8),
@@ -252,7 +252,7 @@ fun ShieldFarmingScreen(
                                     .fillMaxWidth()
                                     .height(10.dp)
                                     .clip(RoundedCornerShape(5.dp)),
-                                color = if (isDailyCapReached) Color(0xFF10B981) else PulseCyan,
+                                color = if (isVaultFull) Color(0xFF10B981) else PulseCyan,
                                 trackColor = Color(0x22FFFFFF)
                             )
                         }
@@ -275,16 +275,16 @@ fun ShieldFarmingScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (isArabic) "حصيلة اليوم (3 دروع كحد أقصى)" else "Today's Shield Quota (Max 3)",
+                                    text = if (isArabic) "حصيلة اليوم (زراعة غير محدودة ∞)" else "Today's Shield Farming (Unlimited ∞)",
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
                                 Text(
-                                    text = "$dailyShieldsToday / 3",
+                                    text = "$dailyShieldsToday ♾️",
                                     style = MaterialTheme.typography.labelLarge.copy(
-                                        color = if (isDailyCapReached) Color(0xFF10B981) else PulseCyan,
+                                        color = Color(0xFF34D399),
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                 )
@@ -292,11 +292,13 @@ fun ShieldFarmingScreen(
 
                             Spacer(modifier = Modifier.height(14.dp))
 
+                            val baseSlot = (dailyShieldsToday / 3) * 3
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                (1..3).forEach { slot ->
+                                (1..3).forEach { offset ->
+                                    val slot = baseSlot + offset
                                     val earned = dailyShieldsToday >= slot
                                     Surface(
                                         modifier = Modifier.weight(1f),
@@ -372,7 +374,7 @@ fun ShieldFarmingScreen(
                             )
                             RuleLine(
                                 icon = Icons.Default.Shield,
-                                text = if (isArabic) "الحد الأقصى اليومي هو 3 دروع، وبسعة خزينة تصل إلى ${uiState.maxShields} درع." else "Maximum 3 shields earned per day, up to ${uiState.maxShields} shields total inventory.",
+                                text = if (isArabic) "مزرعة الدروع غير محدودة يومياً (بدون سقف يومي)، وبسعة خزينة تصل إلى ${uiState.maxShields} درع." else "Unlimited daily shield farming (no daily cap), up to ${uiState.maxShields} shields total inventory.",
                                 tint = Color(0xFFFFB74D)
                             )
                             RuleLine(

@@ -70,6 +70,7 @@ data class FlameParticle(
 fun FlameParticleComponent(
     streakDays: Int,
     onLongPressToRoadmap: () -> Unit,
+    isArabic: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -229,18 +230,21 @@ fun FlameParticleComponent(
                 .size(200.dp)
                 .testTag("flame_interactive_component")
                 .pointerInput(Unit) {
+                    var triggeredDuringPress = false
                     detectTapGestures(
                         onPress = {
                             isPressing = true
+                            triggeredDuringPress = false
                             val job = scope.launch {
                                 chargeProgress.animateTo(
                                     targetValue = 1f,
                                     animationSpec = tween(durationMillis = 1000, easing = LinearEasing)
                                 )
                             }
-                            val completed = tryAwaitRelease()
+                            tryAwaitRelease()
                             isPressing = false
-                            if (chargeProgress.value >= 0.98f) {
+                            if (!triggeredDuringPress && chargeProgress.value >= 0.98f) {
+                                triggeredDuringPress = true
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onLongPressToRoadmap()
                             }
@@ -248,8 +252,11 @@ fun FlameParticleComponent(
                             chargeProgress.snapTo(0f)
                         },
                         onLongPress = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onLongPressToRoadmap()
+                            if (!triggeredDuringPress) {
+                                triggeredDuringPress = true
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onLongPressToRoadmap()
+                            }
                         }
                     )
                 }
@@ -451,7 +458,7 @@ fun FlameParticleComponent(
             )
         )
         Text(
-            text = if (isFrozen) "Hold 1s on flame to open Milestone Roadmap" else "اضغط مطولاً (1 ثانية) لفتح طريق الجائزة والمكافآت",
+            text = if (isArabic) "اضغط مطولاً (1 ثانية) لفتح صفحة Vault" else "Hold 1s on flame to open Vault",
             style = MaterialTheme.typography.labelSmall.copy(
                 color = if (isFrozen) Color(0xFFB2EBF2) else Color(0xFF00F2FE).copy(alpha = 0.85f),
                 fontSize = 10.sp,

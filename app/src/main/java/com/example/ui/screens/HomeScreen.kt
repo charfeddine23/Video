@@ -63,6 +63,7 @@ import com.example.ui.viewmodel.StreakViewModel
 fun HomeScreen(
     streakViewModel: StreakViewModel,
     onNavigateToRoadmap: () -> Unit,
+    onNavigateToVault: () -> Unit = {},
     isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
@@ -125,14 +126,15 @@ fun HomeScreen(
             }
 
             // Central Glowing Animated Flame Component
-            // Triggers Milestone Roadmap Screen on 1-second Long Press
+            // Triggers Vault Screen on 1-second Long Press
             item(key = "flame_center") {
                 FlameParticleComponent(
                     streakDays = uiState.streakDays,
                     onLongPressToRoadmap = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onNavigateToRoadmap()
+                        onNavigateToVault()
                     },
+                    isArabic = isArabic,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)

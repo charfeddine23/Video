@@ -327,7 +327,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
      * Strict Rules:
      * - Background usage does NOT count.
      * - 1 shield awarded per 1 full hour (3600s) of active app usage.
-     * - Maximum 3 shields awarded per day.
+     * - Unlimited daily shield farming.
      * - Maximum inventory capacity: 1000 shields.
      */
     fun tickActiveForegroundUsage(seconds: Int = 1): Pair<StreakUiState, Boolean> {
@@ -345,20 +345,19 @@ class StreakPreferencesRepository private constructor(context: Context) {
         var newShields = current.shieldsCount
         var earnedShieldNow = false
 
-        if (todayEarned < 3 && current.shieldsCount < current.maxShields) {
+        if (current.shieldsCount < current.maxShields) {
             farmSeconds += seconds
             if (farmSeconds >= 3600) {
                 val possibleShields = farmSeconds / 3600
                 farmSeconds %= 3600
-                val allowable = (3 - todayEarned).coerceAtMost(possibleShields)
+                val remainingCapacity = (current.maxShields - newShields).coerceAtLeast(0)
+                val allowable = possibleShields.coerceAtMost(remainingCapacity)
                 if (allowable > 0) {
                     todayEarned += allowable
                     newShields = (newShields + allowable).coerceAtMost(current.maxShields)
                     earnedShieldNow = true
                 }
             }
-        } else if (todayEarned >= 3) {
-            farmSeconds = 3600
         }
 
         prefs.edit()

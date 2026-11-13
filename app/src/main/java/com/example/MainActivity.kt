@@ -65,6 +65,7 @@ import com.example.ui.screens.ListenScreen
 import com.example.ui.screens.ShieldFarmingScreen
 import com.example.ui.screens.StatisticsScreen
 import com.example.ui.screens.SystemSettingsScreen
+import com.example.ui.screens.VaultScreen
 import com.example.ui.screens.WatchScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.LocalStableStatusBarTop
@@ -138,6 +139,7 @@ fun VideoPulseApp(
     var isShieldFarmingOpen by remember { mutableStateOf(false) }
     var isStatisticsOpen by remember { mutableStateOf(false) }
     var isSystemSettingsOpen by remember { mutableStateOf(false) }
+    var isVaultOpen by remember { mutableStateOf(false) }
 
     var availableUpdate by remember { mutableStateOf<AppUpdateInfo?>(null) }
     var showUpdateDialog by remember { mutableStateOf(false) }
@@ -241,7 +243,7 @@ fun VideoPulseApp(
 
     // Android System Back Navigation Handling
     BackHandler(
-        enabled = isEditingProfile || isShieldFarmingOpen || isStatisticsOpen || isSystemSettingsOpen || isRoadmapOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
+        enabled = isEditingProfile || isShieldFarmingOpen || isStatisticsOpen || isSystemSettingsOpen || isRoadmapOpen || isVaultOpen || activePlayerMedia != null || currentDestination != NavDestination.HOME
     ) {
         when {
             isEditingProfile -> isEditingProfile = false
@@ -249,6 +251,7 @@ fun VideoPulseApp(
             isStatisticsOpen -> isStatisticsOpen = false
             isSystemSettingsOpen -> isSystemSettingsOpen = false
             isRoadmapOpen -> isRoadmapOpen = false
+            isVaultOpen -> isVaultOpen = false
             activePlayerMedia != null -> activePlayerMedia = null
             currentDestination != NavDestination.HOME -> currentDestination = NavDestination.HOME
         }
@@ -291,6 +294,9 @@ fun VideoPulseApp(
                                 streakViewModel = streakViewModel,
                                 onNavigateToRoadmap = {
                                     isRoadmapOpen = true
+                                },
+                                onNavigateToVault = {
+                                    isVaultOpen = true
                                 },
                                 isArabic = isArabic
                             )
@@ -404,6 +410,16 @@ fun VideoPulseApp(
                 onLanguageChange = onLanguageChange,
                 onBack = {
                     isRoadmapOpen = false
+                },
+                isArabic = isArabic
+            )
+        }
+
+        // Vault Screen (opened via 1-second long press on the Home flame)
+        if (isVaultOpen) {
+            VaultScreen(
+                onBack = {
+                    isVaultOpen = false
                 },
                 isArabic = isArabic
             )
