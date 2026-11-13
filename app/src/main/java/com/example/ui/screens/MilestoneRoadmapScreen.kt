@@ -104,6 +104,7 @@ fun MilestoneRoadmapScreen(
     streakViewModel: StreakViewModel,
     streakDays: Int,
     shieldsCount: Int,
+    maxShields: Int = 1000,
     currentThemeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
     currentLanguage: AppLanguage,
@@ -498,7 +499,7 @@ fun MilestoneRoadmapScreen(
                                         ) {
                                             InventoryStatChip(
                                                 label = if (isArabic) "إجمالي الدروع" else "Total Shields",
-                                                value = "$shieldsCount / 30",
+                                                value = "$shieldsCount / $maxShields",
                                                 accent = PulseCyan,
                                                 modifier = Modifier.weight(1f)
                                             )

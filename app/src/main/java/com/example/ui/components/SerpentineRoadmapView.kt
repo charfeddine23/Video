@@ -55,6 +55,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -138,10 +139,19 @@ fun SerpentineRoadmapView(
 ) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
 
     val allMilestones = remember {
         (1..365).map { lvl -> VaultProgressionRegistry.getMilestone(lvl) }
+    }
+
+    val focusIndex = remember(currentProgressionLevel, allMilestones.size) {
+        val exact = (currentProgressionLevel - 1).coerceIn(0, allMilestones.lastIndex)
+        if (exact > 0) exact - 1 else 0
+    }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = focusIndex)
+
+    LaunchedEffect(focusIndex) {
+        listState.scrollToItem(focusIndex)
     }
 
     val readyToClaim = remember(currentProgressionLevel, claimedLevels) {
@@ -244,9 +254,10 @@ fun SerpentineRoadmapView(
                 isArabic = isArabic,
                 onJumpToLevel = { targetLvl ->
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    val idx = (targetLvl - 1).coerceIn(0, allMilestones.lastIndex)
+                    val exact = (targetLvl - 1).coerceIn(0, allMilestones.lastIndex)
+                    val scrollIdx = if (targetLvl == currentProgressionLevel && exact > 0) exact - 1 else exact
                     scope.launch {
-                        listState.animateScrollToItem(idx)
+                        listState.animateScrollToItem(scrollIdx)
                     }
                 },
                 onClaimAllReady = {

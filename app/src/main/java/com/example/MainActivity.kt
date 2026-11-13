@@ -1,5 +1,8 @@
 package com.example
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -31,6 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -106,6 +113,8 @@ fun VideoPulseApp(
     val snackbarHostState = remember { SnackbarHostState() }
 
     val streakState by streakViewModel.uiState.collectAsState()
+    val isFullScreenMode by streakViewModel.isFullScreenMode.collectAsState()
+    val view = LocalView.current
 
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
     var activePlayerMedia by remember { mutableStateOf<MediaItem?>(null) }
@@ -172,6 +181,19 @@ fun VideoPulseApp(
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    // Apply Full Screen mode (hide/show top phone status bar) on toggle and resume
+    LaunchedEffect(isFullScreenMode, isAppInForeground) {
+        val window = context.findActivity()?.window ?: return@LaunchedEffect
+        val controller = WindowCompat.getInsetsController(window, view)
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        if (isFullScreenMode) {
+            controller.hide(WindowInsetsCompat.Type.statusBars())
+        } else {
+            controller.show(WindowInsetsCompat.Type.statusBars())
         }
     }
 
@@ -345,6 +367,7 @@ fun VideoPulseApp(
                 streakViewModel = streakViewModel,
                 streakDays = streakState.streakDays,
                 shieldsCount = streakState.shieldsCount,
+                maxShields = streakState.maxShields,
                 currentThemeMode = currentThemeMode,
                 onThemeModeChange = onThemeModeChange,
                 currentLanguage = currentLanguage,
@@ -388,4 +411,10 @@ fun VideoPulseApp(
                 .padding(bottom = 80.dp)
         )
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

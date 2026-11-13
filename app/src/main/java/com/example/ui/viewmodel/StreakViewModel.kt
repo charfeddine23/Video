@@ -26,7 +26,7 @@ data class MilestoneItem(
 data class StreakUiState(
     val streakDays: Int = 0,
     val shieldsCount: Int = 3,
-    val maxShields: Int = 30,
+    val maxShields: Int = StreakPreferencesRepository.MAX_SHIELDS_CAPACITY,
     val dailyWatchSeconds: Int = 0, // 0 sec / 5 min
     val dailyGoalSeconds: Int = 300, // 5 minutes actual playback
     val isGoalCompletedToday: Boolean = false,
@@ -188,7 +188,7 @@ class StreakViewModel(
     /**
      * Ticks active foreground app usage time.
      * Core Rule: Background usage does NOT count.
-     * 1 shield awarded per 1 full hour of active app usage (max 3 shields/day, max 30 total).
+     * 1 shield awarded per 1 full hour of active app usage (max 3 shields/day, max 1000 total).
      */
     fun tickActiveForegroundUsage(seconds: Int = 1) {
         val (updatedState, earnedShield) = repository.tickActiveForegroundUsage(seconds)
@@ -232,7 +232,7 @@ class StreakViewModel(
     }
 
     /**
-     * Add a shield up to max 30 and save immediately.
+     * Add a shield up to max 1000 and save immediately.
      */
     fun addShield() {
         _uiState.update { current ->
@@ -243,7 +243,7 @@ class StreakViewModel(
                 )
             } else {
                 current.copy(
-                    feedbackMessage = "🛡️ Shield inventory is full (max 30 shields)."
+                    feedbackMessage = "🛡️ Shield inventory is full (max ${current.maxShields} shields)."
                 )
             }
             repository.saveStreakState(newState)
@@ -315,6 +315,14 @@ class StreakViewModel(
     fun setPipModeEnabled(enabled: Boolean) = repository.setPipModeEnabled(enabled)
     fun isEyeProtectionEnabled(): Boolean = repository.isEyeProtectionEnabled()
     fun setEyeProtectionEnabled(enabled: Boolean) = repository.setEyeProtectionEnabled(enabled)
+
+    private val _isFullScreenMode = MutableStateFlow(repository.isFullScreenModeEnabled())
+    val isFullScreenMode: StateFlow<Boolean> = _isFullScreenMode.asStateFlow()
+
+    fun setFullScreenModeEnabled(enabled: Boolean) {
+        repository.setFullScreenModeEnabled(enabled)
+        _isFullScreenMode.value = enabled
+    }
 
     // 365-Level Progression & Feature Vault
     fun getClaimedVaultLevels(): Set<Int> = repository.getClaimedVaultLevels()

@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LightMode
@@ -105,6 +106,7 @@ fun SystemSettingsScreen(
     // Core System Settings States
     var currentRgbAccent by remember { mutableStateOf(streakViewModel.getRgbAccentColor()) }
     var isOledBlackMode by remember { mutableStateOf(streakViewModel.isOledBlackEnabled()) }
+    val isFullScreenMode by streakViewModel.isFullScreenMode.collectAsState()
     var isAutoResumeEnabled by remember { mutableStateOf(streakViewModel.getAutoResume()) }
     var defaultPlaybackSpeed by remember { mutableStateOf(streakViewModel.getDefaultSpeed()) }
 
@@ -310,6 +312,67 @@ fun SystemSettingsScreen(
                                         isOledBlackMode = it
                                         streakViewModel.saveOledBlackEnabled(it)
                                     },
+                                    colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(14.dp))
+
+                            // Full Screen Mode (Hide Top Status Bar)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        val next = !isFullScreenMode
+                                        streakViewModel.setFullScreenModeEnabled(next)
+                                        feedbackMessage = if (next) {
+                                            if (isArabic) "تم تفعيل وضع ملء الشاشة وإخفاء الشريط العلوي 📱" else "Full Screen enabled — top status bar hidden 📱"
+                                        } else {
+                                            if (isArabic) "تم إظهار الشريط العلوي للهاتف" else "Top status bar restored"
+                                        }
+                                    }
+                                    .padding(vertical = 2.dp)
+                                    .testTag("full_screen_mode_row"),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fullscreen,
+                                        contentDescription = null,
+                                        tint = if (isFullScreenMode) PulseCyan else Color(0xFF94A3B8),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = if (isArabic) "وضع ملء الشاشة (Full Screen)" else "Full Screen Mode",
+                                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                                        )
+                                        Text(
+                                            text = if (isArabic) "إخفاء الشريط العلوي للهاتف (الساعة والبطارية)" else "Hide the phone's top status bar",
+                                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Switch(
+                                    checked = isFullScreenMode,
+                                    onCheckedChange = { enabled ->
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        streakViewModel.setFullScreenModeEnabled(enabled)
+                                        feedbackMessage = if (enabled) {
+                                            if (isArabic) "تم تفعيل وضع ملء الشاشة وإخفاء الشريط العلوي 📱" else "Full Screen enabled — top status bar hidden 📱"
+                                        } else {
+                                            if (isArabic) "تم إظهار الشريط العلوي للهاتف" else "Top status bar restored"
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("full_screen_mode_switch"),
                                     colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
                                 )
                             }

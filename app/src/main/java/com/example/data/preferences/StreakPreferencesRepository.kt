@@ -26,6 +26,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_STREAK_DAYS = "key_streak_days"
         private const val KEY_SHIELDS_COUNT = "key_shields_count"
         private const val KEY_MAX_SHIELDS = "key_max_shields"
+        const val MAX_SHIELDS_CAPACITY = 1000
         private const val KEY_DAILY_WATCH_SECONDS = "key_daily_watch_seconds"
         private const val KEY_DAILY_GOAL_SECONDS = "key_daily_goal_seconds"
         private const val KEY_IS_GOAL_COMPLETED_TODAY = "key_is_goal_completed_today"
@@ -70,6 +71,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_BACKGROUND_PLAY = "key_background_play"
         private const val KEY_PIP_MODE = "key_pip_mode"
         private const val KEY_EYE_PROTECTION = "key_eye_protection"
+        private const val KEY_FULL_SCREEN_MODE = "key_full_screen_mode"
 
         @Volatile
         private var instance: StreakPreferencesRepository? = null
@@ -109,7 +111,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
                 .putInt(KEY_PREFS_VERSION, CURRENT_PREFS_VERSION)
                 .putInt(KEY_STREAK_DAYS, defaultStreak)
                 .putInt(KEY_SHIELDS_COUNT, defaultShields)
-                .putInt(KEY_MAX_SHIELDS, 30)
+                .putInt(KEY_MAX_SHIELDS, MAX_SHIELDS_CAPACITY)
                 .putInt(KEY_DAILY_WATCH_SECONDS, defaultWatchSeconds)
                 .putInt(KEY_DAILY_GOAL_SECONDS, 300)
                 .putBoolean(KEY_IS_GOAL_COMPLETED_TODAY, false)
@@ -121,7 +123,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
             return StreakUiState(
                 streakDays = defaultStreak,
                 shieldsCount = defaultShields,
-                maxShields = 30,
+                maxShields = MAX_SHIELDS_CAPACITY,
                 dailyWatchSeconds = defaultWatchSeconds,
                 dailyGoalSeconds = 300,
                 isGoalCompletedToday = false
@@ -129,8 +131,12 @@ class StreakPreferencesRepository private constructor(context: Context) {
         }
 
         val savedStreak = prefs.getInt(KEY_STREAK_DAYS, 0)
-        val savedShields = prefs.getInt(KEY_SHIELDS_COUNT, 3).coerceIn(0, 30)
-        val maxShields = prefs.getInt(KEY_MAX_SHIELDS, 30)
+        val storedMaxShields = prefs.getInt(KEY_MAX_SHIELDS, MAX_SHIELDS_CAPACITY)
+        val maxShields = storedMaxShields.coerceAtLeast(MAX_SHIELDS_CAPACITY)
+        if (storedMaxShields < MAX_SHIELDS_CAPACITY) {
+            prefs.edit().putInt(KEY_MAX_SHIELDS, MAX_SHIELDS_CAPACITY).apply()
+        }
+        val savedShields = prefs.getInt(KEY_SHIELDS_COUNT, 3).coerceIn(0, maxShields)
         val goalSeconds = prefs.getInt(KEY_DAILY_GOAL_SECONDS, 300)
         val lastDate = prefs.getString(KEY_LAST_ACTIVE_DATE, null)
 
@@ -321,7 +327,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
      * - Background usage does NOT count.
      * - 1 shield awarded per 1 full hour (3600s) of active app usage.
      * - Maximum 3 shields awarded per day.
-     * - Maximum inventory capacity: 30 shields.
+     * - Maximum inventory capacity: 1000 shields.
      */
     fun tickActiveForegroundUsage(seconds: Int = 1): Pair<StreakUiState, Boolean> {
         val current = loadInitialState()
@@ -505,6 +511,11 @@ class StreakPreferencesRepository private constructor(context: Context) {
         prefs.edit().putBoolean(KEY_EYE_PROTECTION, enabled).apply()
     }
 
+    fun isFullScreenModeEnabled(): Boolean = prefs.getBoolean(KEY_FULL_SCREEN_MODE, false)
+    fun setFullScreenModeEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_FULL_SCREEN_MODE, enabled).apply()
+    }
+
     fun exportPreferencesToJson(): String {
         val state = loadInitialState()
         return """
@@ -518,6 +529,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
               "totalWatchHours": ${getTotalWatchHours()},
               "rgbAccent": ${getRgbAccentColor()},
               "oledBlack": ${isOledBlackEnabled()},
+              "fullScreenMode": ${isFullScreenModeEnabled()},
               "autoResume": ${getAutoResumePlayback()},
               "defaultSpeed": ${getDefaultPlaybackSpeed()}
             }
@@ -528,17 +540,20 @@ class StreakPreferencesRepository private constructor(context: Context) {
         return try {
             val jsonObject = org.json.JSONObject(json)
             val streak = jsonObject.optInt("streakDays", 0)
-            val shields = jsonObject.optInt("shieldsCount", 3).coerceIn(0, 30)
+            val shields = jsonObject.optInt("shieldsCount", 3).coerceIn(0, MAX_SHIELDS_CAPACITY)
             val name = jsonObject.optString("userName", "Charfeddine Kahlessenane")
             val rgb = jsonObject.optLong("rgbAccent", 0xFF00FFCCL)
             val oled = jsonObject.optBoolean("oledBlack", false)
+            val fullScreen = jsonObject.optBoolean("fullScreenMode", false)
 
             prefs.edit()
                 .putInt(KEY_STREAK_DAYS, streak)
                 .putInt(KEY_SHIELDS_COUNT, shields)
+                .putInt(KEY_MAX_SHIELDS, MAX_SHIELDS_CAPACITY)
                 .putString(KEY_USER_NAME, name)
                 .putLong(KEY_RGB_ACCENT, rgb)
                 .putBoolean(KEY_OLED_BLACK, oled)
+                .putBoolean(KEY_FULL_SCREEN_MODE, fullScreen)
                 .apply()
             true
         } catch (_: Exception) {

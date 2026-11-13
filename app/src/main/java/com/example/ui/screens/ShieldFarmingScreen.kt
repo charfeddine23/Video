@@ -372,7 +372,7 @@ fun ShieldFarmingScreen(
                             )
                             RuleLine(
                                 icon = Icons.Default.Shield,
-                                text = if (isArabic) "الحد الأقصى اليومي هو 3 دروع، وبسعة خزينة تصل إلى 30 درعاً." else "Maximum 3 shields earned per day, up to 30 shields total inventory.",
+                                text = if (isArabic) "الحد الأقصى اليومي هو 3 دروع، وبسعة خزينة تصل إلى ${uiState.maxShields} درع." else "Maximum 3 shields earned per day, up to ${uiState.maxShields} shields total inventory.",
                                 tint = Color(0xFFFFB74D)
                             )
                             RuleLine(
