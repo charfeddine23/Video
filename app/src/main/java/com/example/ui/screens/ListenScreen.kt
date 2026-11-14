@@ -112,11 +112,11 @@ import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.model.LocalAudioTrack
 import com.example.data.util.LocalMediaScanner
-import com.example.ui.theme.Charcoal950
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
+import com.example.ui.theme.aura
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -131,6 +131,7 @@ fun ListenScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+    val aura = MaterialTheme.aura
 
     // Default built-in tracks for rich offline fallback
     val initialTracks = remember {
@@ -400,17 +401,18 @@ fun ListenScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Charcoal950)
+            .background(aura.background)
             .testTag("listen_screen")
     ) {
-        // 1. Immersive Live Blurred Album Artwork Background with Dark Gradient Overlay
+        // 1. Immersive Live Blurred Album Artwork Background with Theme-Adaptive Gradient Overlay
+        val artAlpha = if (aura.isDark) 0.35f else 0.18f
         if (currentTrack.albumArtUri != null) {
             AsyncImage(
                 model = currentTrack.albumArtUri,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.35f
+                alpha = artAlpha
             )
         } else {
             Image(
@@ -418,22 +420,31 @@ fun ListenScreen(
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.35f
+                alpha = artAlpha
             )
         }
 
-        // Dark Gradient Glass Overlay
+        // Theme-adaptive Frosted Gradient Overlay
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xAA0B0F19),
-                            Color(0xDE0B0F19),
-                            Color(0xF50B0F19),
-                            Color(0xFF0B0F19)
-                        )
+                        colors = if (aura.isDark) {
+                            listOf(
+                                Color(0xAA0B0F19),
+                                Color(0xDE0B0F19),
+                                Color(0xF50B0F19),
+                                Color(0xFF0B0F19)
+                            )
+                        } else {
+                            listOf(
+                                Color(0xD9F3F6FB),
+                                Color(0xECF3F6FB),
+                                Color(0xFAF3F6FB),
+                                Color(0xFFF3F6FB)
+                            )
+                        }
                     )
                 )
         )
@@ -460,7 +471,7 @@ fun ListenScreen(
                         .width(42.dp)
                         .height(4.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(Color(0x44FFFFFF))
+                        .background(aura.borderSubtle)
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
@@ -474,7 +485,7 @@ fun ListenScreen(
                         Icon(
                             imageVector = Icons.Default.GraphicEq,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -485,7 +496,7 @@ fun ListenScreen(
                                 if (currentTrack.isFromDevice) "Playing Real Phone Audio" else "Playing from Local Music"
                             },
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontWeight = FontWeight.SemiBold,
                                 letterSpacing = 0.5.sp
                             )
@@ -500,8 +511,8 @@ fun ListenScreen(
                         // Equalizer & Spatial Audio Button
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0x3300FFCC),
-                            border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
+                            color = aura.accentCyanSoft,
+                            border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
@@ -517,14 +528,14 @@ fun ListenScreen(
                                 Icon(
                                     imageVector = Icons.Default.Tune,
                                     contentDescription = "Equalizer",
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = if (isArabic) "معادل الصوت" else "EQ",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp
                                     )
@@ -536,8 +547,8 @@ fun ListenScreen(
                         val isTimerActive = sleepTimerRemainingSeconds > 0 || sleepTimerMinutes == -1
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isTimerActive) Color(0x33FFB74D) else Color(0x22FFFFFF),
-                            border = BorderStroke(1.dp, if (isTimerActive) Color(0xFFFFB74D) else Color(0x33FFFFFF)),
+                            color = if (isTimerActive) aura.accentGoldBg else aura.unselectedChipBg,
+                            border = BorderStroke(1.dp, if (isTimerActive) aura.accentGold else aura.borderSubtle),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
@@ -553,7 +564,7 @@ fun ListenScreen(
                                 Icon(
                                     imageVector = Icons.Default.Timer,
                                     contentDescription = "Sleep Timer",
-                                    tint = if (isTimerActive) Color(0xFFFFB74D) else PulseCyan,
+                                    tint = if (isTimerActive) aura.accentGold else aura.accentCyan,
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
@@ -565,7 +576,7 @@ fun ListenScreen(
                                 Text(
                                     text = timerLabel,
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = if (isTimerActive) Color(0xFFFFB74D) else Color.White,
+                                        color = if (isTimerActive) aura.accentGold else aura.textPrimary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp
                                     )
@@ -576,8 +587,8 @@ fun ListenScreen(
                         // Open Real Audio Files from phone button
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0x3300FFCC),
-                            border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
+                            color = aura.accentCyanSoft,
+                            border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f)),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
                                 .clickable {
@@ -597,14 +608,14 @@ fun ListenScreen(
                                 Icon(
                                     imageVector = Icons.Default.FolderOpen,
                                     contentDescription = "Open Audio",
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (isArabic) "فتح ملفات" else "Open Files",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp
                                     )
@@ -735,7 +746,7 @@ fun ListenScreen(
                         text = currentTrack.title,
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
+                            color = aura.textPrimary,
                             fontSize = 20.sp
                         ),
                         maxLines = 1,
@@ -745,7 +756,7 @@ fun ListenScreen(
                     Text(
                         text = "${currentTrack.artist} • ${currentTrack.album}",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = PulseCyan,
+                            color = aura.accentCyan,
                             fontWeight = FontWeight.Medium,
                             fontSize = 13.sp
                         ),
@@ -770,7 +781,7 @@ fun ListenScreen(
                         Icon(
                             imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = "Favorite",
-                            tint = if (isFavorite) Color(0xFFFFD700) else Color(0xFF94A3B8),
+                            tint = if (isFavorite) aura.accentGold else aura.textSecondary,
                             modifier = Modifier.size(26.dp)
                         )
                     }
@@ -785,7 +796,7 @@ fun ListenScreen(
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "Song Options",
-                            tint = Color.White,
+                            tint = aura.textPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -797,8 +808,8 @@ fun ListenScreen(
             // 5. Lyrics Section: Interactive lyrics preview/button
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0x33121826),
-                border = BorderStroke(1.dp, Color(0x2200F2FE)),
+                color = aura.surfaceCard,
+                border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.25f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
@@ -821,13 +832,13 @@ fun ListenScreen(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x3300F2FE)),
+                                .background(aura.accentCyanSoft),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.ChatBubbleOutline,
                                 contentDescription = null,
-                                tint = PulseCyan,
+                                tint = aura.accentCyan,
                                 modifier = Modifier.size(15.dp)
                             )
                         }
@@ -835,7 +846,7 @@ fun ListenScreen(
                         Text(
                             text = currentTrack.lyricsLines.firstOrNull() ?: (if (isArabic) "انقر لعرض الكلمات ومعلومات المقطع..." else "Tap to view lyrics & metadata..."),
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFFE2E8F0),
+                                color = aura.textPrimary,
                                 fontSize = 12.sp,
                                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                             ),
@@ -846,13 +857,13 @@ fun ListenScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0x22FFFFFF)
+                        color = aura.surfaceSubtle
                     ) {
                         Text(
                             text = if (isArabic) "الكلمات" else "LYRICS",
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp
                             )
@@ -882,9 +893,9 @@ fun ListenScreen(
                     },
                     valueRange = 0f..duration,
                     colors = SliderDefaults.colors(
-                        thumbColor = PulseCyan,
-                        activeTrackColor = PulseCyan,
-                        inactiveTrackColor = Color(0x33FFFFFF)
+                        thumbColor = aura.accentCyan,
+                        activeTrackColor = aura.accentCyan,
+                        inactiveTrackColor = aura.progressTrack
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -901,21 +912,19 @@ fun ListenScreen(
                     val currentSec = currentSecTotal % 60
 
                     val totalSecTotal = (duration / 1000).toInt()
-                    val totalMin = totalSecTotal / 60
-                    val totalSec = totalSecTotal % 60
                     val remainingSec = (totalSecTotal - currentSecTotal).coerceAtLeast(0)
 
                     Text(
                         text = String.format("%02d:%02d", currentMin, currentSec),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFF94A3B8),
+                            color = aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
                     Text(
                         text = String.format("-%02d:%02d", remainingSec / 60, remainingSec % 60),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFF94A3B8),
+                            color = aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
@@ -946,7 +955,7 @@ fun ListenScreen(
                     Icon(
                         imageVector = Icons.Default.SkipPrevious,
                         contentDescription = "Skip Previous",
-                        tint = Color.White,
+                        tint = aura.textPrimary,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -960,8 +969,8 @@ fun ListenScreen(
                             drawCircle(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        PulseCyan.copy(alpha = 0.5f),
-                                        Color(0xFF10B981).copy(alpha = 0.25f),
+                                        aura.accentCyan.copy(alpha = 0.5f),
+                                        aura.accentEmerald.copy(alpha = 0.25f),
                                         Color.Transparent
                                     ),
                                     radius = size.width * 0.9f
@@ -970,7 +979,7 @@ fun ListenScreen(
                         }
                         .background(
                             Brush.linearGradient(
-                                listOf(PulseCyan, Color(0xFF10B981))
+                                listOf(aura.accentCyan, aura.accentEmerald)
                             )
                         )
                         .clickable {
@@ -993,7 +1002,7 @@ fun ListenScreen(
                     Icon(
                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                         contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = TextDark,
+                        tint = if (aura.isDark) TextDark else Color.White,
                         modifier = Modifier.size(38.dp)
                     )
                 }
@@ -1012,7 +1021,7 @@ fun ListenScreen(
                     Icon(
                         imageVector = Icons.Default.SkipNext,
                         contentDescription = "Skip Next",
-                        tint = Color.White,
+                        tint = aura.textPrimary,
                         modifier = Modifier.size(36.dp)
                     )
                 }
@@ -1023,8 +1032,8 @@ fun ListenScreen(
             // 7. Bottom Utility Bar: Cast, Queue, and device indicator ("This phone")
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0x66121826),
-                border = BorderStroke(1.dp, GlassBorder),
+                color = aura.surfaceCard,
+                border = BorderStroke(1.dp, aura.borderSubtle),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 18.dp)
@@ -1050,14 +1059,14 @@ fun ListenScreen(
                         Icon(
                             imageVector = Icons.Default.Smartphone,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = castDeviceName,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color.White,
+                                color = aura.textPrimary,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp
                             )
@@ -1073,7 +1082,7 @@ fun ListenScreen(
                         Icon(
                             imageVector = Icons.Default.ChatBubbleOutline,
                             contentDescription = "Lyrics",
-                            tint = Color(0xFFCBD5E1),
+                            tint = aura.textSecondary,
                             modifier = Modifier
                                 .size(20.dp)
                                 .clickable {
@@ -1086,7 +1095,7 @@ fun ListenScreen(
                         Icon(
                             imageVector = Icons.Default.Cast,
                             contentDescription = "Cast",
-                            tint = Color(0xFFCBD5E1),
+                            tint = aura.textSecondary,
                             modifier = Modifier
                                 .size(20.dp)
                                 .clickable {
@@ -1099,7 +1108,7 @@ fun ListenScreen(
                         Icon(
                             imageVector = Icons.Default.QueueMusic,
                             contentDescription = "Queue",
-                            tint = Color(0xFFCBD5E1),
+                            tint = aura.textSecondary,
                             modifier = Modifier
                                 .size(22.dp)
                                 .clickable {
@@ -1116,8 +1125,8 @@ fun ListenScreen(
         if (snackbarMessage != null) {
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = Color(0xF2121826),
-                border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
+                color = aura.dialogBg,
+                border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f)),
                 shadowElevation = 8.dp,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -1128,7 +1137,7 @@ fun ListenScreen(
                     text = snackbarMessage!!,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color.White,
+                        color = aura.textPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
@@ -1140,7 +1149,7 @@ fun ListenScreen(
         if (showQueueSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showQueueSheet = false },
-                containerColor = Color(0xF70E1422),
+                containerColor = aura.dialogBg,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 Column(
@@ -1153,7 +1162,7 @@ fun ListenScreen(
                         text = if (isArabic) "قائمة الانتظار (${playlist.size} أغانٍ)" else "Play Queue (${playlist.size} tracks)",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = aura.textPrimary
                         )
                     )
                     Spacer(modifier = Modifier.height(12.dp))
@@ -1163,8 +1172,8 @@ fun ListenScreen(
                             val isCurrent = index == currentTrackIndex
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isCurrent) Color(0x3300FFCC) else Color(0x11FFFFFF),
-                                border = BorderStroke(1.dp, if (isCurrent) PulseCyan else Color.Transparent),
+                                color = if (isCurrent) aura.accentCyanSoft else aura.surfaceSubtle,
+                                border = BorderStroke(1.dp, if (isCurrent) aura.accentCyan else aura.borderMuted),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
@@ -1181,7 +1190,7 @@ fun ListenScreen(
                                     Icon(
                                         imageVector = if (isCurrent && isPlaying) Icons.Default.GraphicEq else Icons.Default.MusicNote,
                                         contentDescription = null,
-                                        tint = if (isCurrent) PulseCyan else Color(0xFF94A3B8),
+                                        tint = if (isCurrent) aura.accentCyan else aura.textSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
@@ -1189,7 +1198,7 @@ fun ListenScreen(
                                         Text(
                                             text = track.title,
                                             style = MaterialTheme.typography.bodyMedium.copy(
-                                                color = if (isCurrent) PulseCyan else Color.White,
+                                                color = if (isCurrent) aura.accentCyan else aura.textPrimary,
                                                 fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal
                                             ),
                                             maxLines = 1,
@@ -1198,7 +1207,7 @@ fun ListenScreen(
                                         Text(
                                             text = "${track.artist} • ${track.durationSeconds / 60}:${String.format("%02d", track.durationSeconds % 60)}",
                                             style = MaterialTheme.typography.bodySmall.copy(
-                                                color = Color(0xFF94A3B8),
+                                                color = aura.textSecondary,
                                                 fontSize = 11.sp
                                             ),
                                             maxLines = 1
@@ -1217,7 +1226,7 @@ fun ListenScreen(
         if (showLyricsDialog) {
             ModalBottomSheet(
                 onDismissRequest = { showLyricsDialog = false },
-                containerColor = Color(0xF70E1422),
+                containerColor = aura.dialogBg,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 Column(
@@ -1232,12 +1241,12 @@ fun ListenScreen(
                         text = currentTrack.title,
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = aura.textPrimary
                         )
                     )
                     Text(
                         text = currentTrack.artist,
-                        style = MaterialTheme.typography.bodySmall.copy(color = PulseCyan)
+                        style = MaterialTheme.typography.bodySmall.copy(color = aura.accentCyan)
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
@@ -1246,7 +1255,7 @@ fun ListenScreen(
                         Text(
                             text = line,
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                color = if (index == 0) Color.White else Color(0xFF94A3B8),
+                                color = if (index == 0) aura.textPrimary else aura.textSecondary,
                                 fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 16.sp,
                                 textAlign = TextAlign.Center
@@ -1266,7 +1275,7 @@ fun ListenScreen(
         if (showOptionsSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showOptionsSheet = false },
-                containerColor = Color(0xF70E1422),
+                containerColor = aura.dialogBg,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 Column(
@@ -1286,7 +1295,7 @@ fun ListenScreen(
                         Surface(
                             modifier = Modifier.size(48.dp),
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0x33121826)
+                            color = aura.surfaceSubtle
                         ) {
                             if (currentTrack.albumArtUri != null) {
                                 AsyncImage(
@@ -1308,7 +1317,7 @@ fun ListenScreen(
                                 text = currentTrack.title,
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = aura.textPrimary,
                                     fontSize = 15.sp
                                 ),
                                 maxLines = 1
@@ -1316,7 +1325,7 @@ fun ListenScreen(
                             Text(
                                 text = currentTrack.artist,
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = PulseCyan,
+                                    color = aura.accentCyan,
                                     fontSize = 12.sp
                                 )
                             )
@@ -1327,7 +1336,7 @@ fun ListenScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(Color(0x22FFFFFF))
+                            .background(aura.borderSubtle)
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -1465,7 +1474,7 @@ fun ListenScreen(
         if (showSleepTimerSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showSleepTimerSheet = false },
-                containerColor = Color(0xF20B0F19),
+                containerColor = aura.dialogBg,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 Column(
@@ -1483,20 +1492,20 @@ fun ListenScreen(
                             text = if (isArabic) "مؤقت النوم الذكي" else "Smart Sleep Timer",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = aura.textPrimary
                             )
                         )
                         Icon(
                             imageVector = Icons.Default.Timer,
                             contentDescription = null,
-                            tint = Color(0xFFFFB74D),
+                            tint = aura.accentGold,
                             modifier = Modifier.size(22.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = if (isArabic) "يتلاشى الصوت تدريجياً ليتوقف التشغيل بسلاسة أثناء النوم" else "Audio gently fades out and stops playback automatically",
-                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 12.sp)
+                        style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary, fontSize = 12.sp)
                     )
                     Spacer(modifier = Modifier.height(18.dp))
 
@@ -1512,8 +1521,8 @@ fun ListenScreen(
                         val isSelected = (minutes == sleepTimerMinutes && (minutes != 0 || sleepTimerRemainingSeconds == 0))
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) Color(0x33FFB74D) else Color(0x1AFFFFFF),
-                            border = BorderStroke(1.dp, if (isSelected) Color(0xFFFFB74D) else Color(0x22FFFFFF)),
+                            color = if (isSelected) aura.accentGoldBg else aura.surfaceSubtle,
+                            border = BorderStroke(1.dp, if (isSelected) aura.accentGold else aura.borderMuted),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
@@ -1540,7 +1549,7 @@ fun ListenScreen(
                                 Text(
                                     text = label,
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = if (isSelected) Color(0xFFFFB74D) else Color.White,
+                                        color = if (isSelected) aura.accentGold else aura.textPrimary,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     )
                                 )
@@ -1548,7 +1557,7 @@ fun ListenScreen(
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = null,
-                                        tint = Color(0xFFFFB74D),
+                                        tint = aura.accentGold,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -1567,7 +1576,7 @@ fun ListenScreen(
         if (showEqualizerSheet) {
             ModalBottomSheet(
                 onDismissRequest = { showEqualizerSheet = false },
-                containerColor = Color(0xF20B0F19),
+                containerColor = aura.dialogBg,
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 Column(
@@ -1586,13 +1595,13 @@ fun ListenScreen(
                             text = if (isArabic) "معادل الصوت والصوت المحيطي" else "Equalizer & Spatial Audio",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = aura.textPrimary
                             )
                         )
                         Icon(
                             imageVector = Icons.Default.Tune,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -1601,7 +1610,7 @@ fun ListenScreen(
                     // Preset Profiles Selector
                     Text(
                         text = if (isArabic) "الملفات الصوتية الجاهزة" else "AUDIO PROFILES",
-                        style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.labelSmall.copy(color = aura.accentCyan, fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
@@ -1613,8 +1622,8 @@ fun ListenScreen(
                             val isSelected = selectedEqualizerPreset == preset
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) Color(0x3300FFCC) else Color(0x1AFFFFFF),
-                                border = BorderStroke(1.dp, if (isSelected) PulseCyan else Color(0x22FFFFFF)),
+                                color = if (isSelected) aura.accentCyanSoft else aura.surfaceSubtle,
+                                border = BorderStroke(1.dp, if (isSelected) aura.accentCyan else aura.borderMuted),
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(10.dp))
@@ -1645,7 +1654,7 @@ fun ListenScreen(
                                     text = preset,
                                     modifier = Modifier.padding(vertical = 7.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = if (isSelected) PulseCyan else Color.White,
+                                        color = if (isSelected) aura.accentCyan else aura.textPrimary,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,
                                         textAlign = TextAlign.Center
@@ -1661,7 +1670,7 @@ fun ListenScreen(
                     val bandFrequencies = listOf("60 Hz", "230 Hz", "910 Hz", "3.6 kHz", "14 kHz")
                     Text(
                         text = if (isArabic) "نطاقات التردد (5 Bands)" else "FREQUENCY BANDS (5 BANDS)",
-                        style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                        style = MaterialTheme.typography.labelSmall.copy(color = aura.accentCyan, fontWeight = FontWeight.Bold)
                     )
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -1677,7 +1686,7 @@ fun ListenScreen(
                                 text = freq,
                                 modifier = Modifier.width(62.dp),
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color.White,
+                                    color = aura.textPrimary,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 11.5.sp
                                 )
@@ -1690,9 +1699,9 @@ fun ListenScreen(
                                     eqBands[index] = newVal
                                 },
                                 colors = SliderDefaults.colors(
-                                    thumbColor = PulseCyan,
-                                    activeTrackColor = PulseCyan,
-                                    inactiveTrackColor = Color(0x33FFFFFF)
+                                    thumbColor = aura.accentCyan,
+                                    activeTrackColor = aura.accentCyan,
+                                    inactiveTrackColor = aura.progressTrack
                                 ),
                                 modifier = Modifier.weight(1f)
                             )
@@ -1700,7 +1709,7 @@ fun ListenScreen(
                                 text = "${if (value >= 0) "+" else ""}${value.toInt()}dB",
                                 modifier = Modifier.width(44.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = if (value != 0f) PulseCyan else Color(0xFF94A3B8),
+                                    color = if (value != 0f) aura.accentCyan else aura.textSecondary,
                                     fontWeight = FontWeight.Bold,
                                     textAlign = TextAlign.End,
                                     fontSize = 10.5.sp
@@ -1722,11 +1731,11 @@ fun ListenScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = if (isArabic) "الصوت المحيطي المكاني (Spatial 3D Audio)" else "Spatial 3D Audio & Surround",
-                                style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.bodyMedium.copy(color = aura.textPrimary, fontWeight = FontWeight.Bold)
                             )
                             Text(
                                 text = if (isArabic) "محاكاة مسرح صوتي سينمائي 360° غامر" else "Virtual 360° immersive binaural acoustic room",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary, fontSize = 11.sp)
                             )
                         }
                         Switch(
@@ -1734,7 +1743,7 @@ fun ListenScreen(
                             onCheckedChange = { isSpatialAudioEnabled = it },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = PulseCyan
+                                checkedTrackColor = aura.accentCyan
                             )
                         )
                     }
@@ -1749,11 +1758,11 @@ fun ListenScreen(
                     ) {
                         Text(
                             text = if (isArabic) "مضخم البيس (Bass Boost)" else "Bass Boost Strength",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.bodyMedium.copy(color = aura.textPrimary, fontWeight = FontWeight.Bold)
                         )
                         Text(
                             text = "$bassBoostPercent%",
-                            style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.labelSmall.copy(color = aura.accentCyan, fontWeight = FontWeight.Bold)
                         )
                     }
                     Slider(
@@ -1761,9 +1770,9 @@ fun ListenScreen(
                         valueRange = 0f..100f,
                         onValueChange = { bassBoostPercent = it.toInt() },
                         colors = SliderDefaults.colors(
-                            thumbColor = PulseCyan,
-                            activeTrackColor = PulseCyan,
-                            inactiveTrackColor = Color(0x33FFFFFF)
+                            thumbColor = aura.accentCyan,
+                            activeTrackColor = aura.accentCyan,
+                            inactiveTrackColor = aura.progressTrack
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1782,6 +1791,7 @@ private fun MusicOptionItem(
     trailingAction: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1798,14 +1808,14 @@ private fun MusicOptionItem(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = PulseCyan,
+                tint = aura.accentCyan,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(14.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium.copy(
-                    color = Color.White,
+                    color = aura.textPrimary,
                     fontWeight = FontWeight.Medium,
                     fontSize = 13.5.sp
                 )

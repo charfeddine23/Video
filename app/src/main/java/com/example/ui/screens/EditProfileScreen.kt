@@ -72,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
+import com.example.ui.theme.aura
 import com.example.ui.viewmodel.StreakViewModel
 
 data class AvatarPreset(
@@ -127,6 +128,7 @@ fun EditProfileScreen(
     isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val currentSavedName by streakViewModel.userName.collectAsState()
     val currentSavedAvatarUri by streakViewModel.userAvatarUri.collectAsState()
@@ -151,7 +153,7 @@ fun EditProfileScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .testTag("edit_profile_screen")
     ) {
         // Ambient glass background glow
@@ -161,7 +163,7 @@ fun EditProfileScreen(
                 .drawBehind {
                     drawCircle(
                         brush = Brush.radialGradient(
-                            listOf(Color(0x2000F2FE), Color(0x107928CA), Color.Transparent),
+                            listOf(aura.accentCyan.copy(alpha = 0.12f), aura.accentViolet.copy(alpha = 0.06f), Color.Transparent),
                             radius = size.width * 0.9f
                         ),
                         center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.15f)
@@ -184,14 +186,14 @@ fun EditProfileScreen(
                 IconButton(
                     onClick = onNavigateBack,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
-                        .background(Color(0x26FFFFFF))
+                        .background(aura.iconButtonBg)
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Back",
-                        tint = Color.White
+                        tint = aura.textPrimary
                     )
                 }
 
@@ -201,7 +203,7 @@ fun EditProfileScreen(
                     text = if (isArabic) "تعديل الملف الشخصي" else "Edit Profile",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                        color = aura.textPrimary
                     )
                 )
             }
@@ -217,9 +219,9 @@ fun EditProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(24.dp))
-                            .border(1.dp, Color(0x2EFFFFFF), RoundedCornerShape(24.dp)),
+                            .border(1.dp, aura.borderSubtle, RoundedCornerShape(24.dp)),
                         shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                     ) {
                         Column(
                             modifier = Modifier
@@ -227,7 +229,6 @@ fun EditProfileScreen(
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Avatar Circle
                             val preset = defaultAvatarPresets.find { it.id == selectedPresetId }
                                 ?: defaultAvatarPresets[0]
 
@@ -236,7 +237,7 @@ fun EditProfileScreen(
                                     .size(108.dp)
                                     .clip(CircleShape)
                                     .background(Brush.linearGradient(preset.gradient))
-                                    .border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape),
+                                    .border(2.dp, aura.borderSubtle, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -253,7 +254,7 @@ fun EditProfileScreen(
                                 text = nameInput.ifBlank { "Charfeddine Kahlessenane" },
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = aura.textPrimary
                                 )
                             )
 
@@ -262,14 +263,14 @@ fun EditProfileScreen(
                             // Tier Badge
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = Color(0x3300F2FE),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f))
+                                color = aura.accentCyanSoft,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.6f))
                             ) {
                                 Text(
                                     text = currentTierBadge,
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.5.sp
                                     )
@@ -288,10 +289,10 @@ fun EditProfileScreen(
                                 },
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0x2600F2FE),
-                                    contentColor = PulseCyan
+                                    containerColor = aura.accentCyanSoft,
+                                    contentColor = aura.accentCyan
                                 ),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f))
+                                border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f))
                             ) {
                                 Icon(Icons.Default.AddAPhoto, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -311,7 +312,7 @@ fun EditProfileScreen(
                         Text(
                             text = if (isArabic) "أو اختر صورة رمزية افتراضية:" else "Or Select a Preset Avatar:",
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             ),
@@ -330,7 +331,7 @@ fun EditProfileScreen(
                                         .background(Brush.linearGradient(item.gradient))
                                         .border(
                                             width = if (isSelected) 3.dp else 1.dp,
-                                            color = if (isSelected) PulseCyan else Color(0x33FFFFFF),
+                                            color = if (isSelected) aura.accentCyan else aura.borderSubtle,
                                             shape = CircleShape
                                         )
                                         .clickable {
@@ -373,7 +374,7 @@ fun EditProfileScreen(
                         Text(
                             text = if (isArabic) "اسم المستخدم" else "User Name",
                             style = MaterialTheme.typography.labelMedium.copy(
-                                color = Color(0xFFCBD5E1),
+                                color = aura.textSecondary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.5.sp
                             ),
@@ -388,16 +389,16 @@ fun EditProfileScreen(
                                 .testTag("edit_username_input"),
                             shape = RoundedCornerShape(14.dp),
                             placeholder = {
-                                Text("Charfeddine Kahlessenane", color = Color(0xFF64748B))
+                                Text("Charfeddine Kahlessenane", color = aura.textTertiary)
                             },
                             singleLine = true,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PulseCyan,
-                                unfocusedBorderColor = Color(0x2AFFFFFF),
-                                focusedContainerColor = Color(0x22121826),
-                                unfocusedContainerColor = Color(0x22121826),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedBorderColor = aura.accentCyan,
+                                unfocusedBorderColor = aura.borderSubtle,
+                                focusedContainerColor = aura.surfaceCard,
+                                unfocusedContainerColor = aura.surfaceCard,
+                                focusedTextColor = aura.textPrimary,
+                                unfocusedTextColor = aura.textPrimary
                             )
                         )
                     }
@@ -409,16 +410,16 @@ fun EditProfileScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(18.dp))
-                            .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(18.dp)),
+                            .border(1.dp, aura.borderSubtle, RoundedCornerShape(18.dp)),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xB3121826))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = if (isArabic) "نظام رتب الأعضاء والسترايك" else "Member Tier System",
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = aura.textPrimary
                                 )
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -473,8 +474,8 @@ fun EditProfileScreen(
                             .testTag("save_profile_button"),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = PulseCyan,
-                            contentColor = TextDark
+                            containerColor = aura.accentCyan,
+                            contentColor = if (aura.isDark) TextDark else Color.White
                         )
                     ) {
                         Text(
@@ -498,6 +499,7 @@ private fun TierRow(
     isActive: Boolean,
     isTopTier: Boolean = false
 ) {
+    val aura = MaterialTheme.aura
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -508,14 +510,14 @@ private fun TierRow(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(if (isActive) (if (isTopTier) Color(0xFFFFD700) else PulseCyan) else Color(0xFF64748B))
+                    .background(if (isActive) (if (isTopTier) aura.accentGold else aura.accentCyan) else aura.textTertiary)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isActive) (if (isTopTier) Color(0xFFFFD700) else PulseCyan) else Color(0xFFCBD5E1),
+                    color = if (isActive) (if (isTopTier) aura.accentGold else aura.accentCyan) else aura.textSecondary,
                     fontSize = 12.sp
                 )
             )
@@ -523,7 +525,7 @@ private fun TierRow(
         Text(
             text = requirement,
             style = MaterialTheme.typography.labelSmall.copy(
-                color = if (isActive) Color.White else Color(0xFF64748B),
+                color = if (isActive) aura.textPrimary else aura.textTertiary,
                 fontSize = 11.sp
             )
         )

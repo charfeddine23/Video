@@ -74,6 +74,7 @@ import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.LocalStableStatusBarTop
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.theme.ThemeMode
+import com.example.ui.theme.aura
 import com.example.ui.theme.rememberStableStatusBarTopDp
 import com.example.ui.viewmodel.StreakViewModel
 import kotlinx.coroutines.delay
@@ -212,10 +213,11 @@ fun VideoPulseApp(
     }
 
     val configuration = LocalConfiguration.current
+    val aura = MaterialTheme.aura
 
     // Apply Full Screen mode (hide/show top phone status bar) without resizing/shrinking window
-    // and ensure backgrounds extend seamlessly into the hidden status bar / display cutout region
-    LaunchedEffect(isFullScreenMode, isAppInForeground, configuration.orientation) {
+    // and ensure backgrounds & system bar icons adapt to active Light/Dark theme
+    LaunchedEffect(isFullScreenMode, isAppInForeground, configuration.orientation, aura.isDark, activePlayerMedia) {
         val window = context.findActivity()?.window ?: return@LaunchedEffect
         WindowCompat.setDecorFitsSystemWindows(window, false)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -237,8 +239,9 @@ fun VideoPulseApp(
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
 
         val controller = WindowCompat.getInsetsController(window, view)
-        controller.isAppearanceLightStatusBars = false
-        controller.isAppearanceLightNavigationBars = false
+        val useLightSystemBars = !aura.isDark && activePlayerMedia == null
+        controller.isAppearanceLightStatusBars = useLightSystemBars
+        controller.isAppearanceLightNavigationBars = useLightSystemBars
         controller.systemBarsBehavior =
             WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         if (isFullScreenMode) {
@@ -293,11 +296,11 @@ fun VideoPulseApp(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
     ) {
         Scaffold(
             modifier = Modifier.fillMaxSize(),
-            containerColor = Color(0xFF0B0F19),
+            containerColor = aura.background,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 // Requirement 2: Clean bottom bar featuring Home and My Space

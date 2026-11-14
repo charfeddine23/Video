@@ -42,10 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.TextDark
-import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.aura
 
 @Composable
 fun VideoPulseHeader(
@@ -56,6 +53,7 @@ fun VideoPulseHeader(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse_glow")
     val pulseAlpha by infiniteTransition.animateFloat(
@@ -91,7 +89,7 @@ fun VideoPulseHeader(
                     }
                     .testTag("header_settings_button"),
                 shape = RoundedCornerShape(24.dp),
-                color = Color.White,
+                color = aura.primaryCtaBg,
                 shadowElevation = 6.dp
             ) {
                 Row(
@@ -102,7 +100,7 @@ fun VideoPulseHeader(
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Settings",
-                        tint = TextDark,
+                        tint = aura.primaryCtaContent,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
@@ -110,7 +108,7 @@ fun VideoPulseHeader(
                         text = if (isArabic) "الإعدادات" else "Settings",
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            color = TextDark,
+                            color = aura.primaryCtaContent,
                             letterSpacing = 0.2.sp
                         )
                     )
@@ -129,21 +127,21 @@ fun VideoPulseHeader(
                             drawCircle(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        PulseCyan.copy(alpha = pulseAlpha),
+                                        aura.accentCyan.copy(alpha = pulseAlpha),
                                         Color.Transparent
                                     ),
                                     radius = size.minDimension * 1.5f
                                 )
                             )
                         }
-                        .background(PulseCyan, CircleShape)
+                        .background(aura.accentCyan, CircleShape)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "VIDEO PULSE",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground,
+                        color = aura.textPrimary,
                         letterSpacing = 2.sp,
                         fontSize = 14.sp
                     )
@@ -159,8 +157,8 @@ fun VideoPulseHeader(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(Color(0x2BFFFFFF))
-                        .border(1.dp, GlassBorder, CircleShape)
+                        .background(aura.iconButtonBg)
+                        .border(1.dp, aura.borderSubtle, CircleShape)
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onSearchClick()
@@ -171,7 +169,7 @@ fun VideoPulseHeader(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search movies and shows",
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = aura.textPrimary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -180,8 +178,8 @@ fun VideoPulseHeader(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(Color(0x2BFFFFFF))
-                        .border(1.dp, GlassBorder, CircleShape)
+                        .background(aura.iconButtonBg)
+                        .border(1.dp, aura.borderSubtle, CircleShape)
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onNotificationsClick()
@@ -192,7 +190,7 @@ fun VideoPulseHeader(
                     Icon(
                         imageVector = Icons.Default.Notifications,
                         contentDescription = "Notifications",
-                        tint = MaterialTheme.colorScheme.onBackground,
+                        tint = aura.textPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }

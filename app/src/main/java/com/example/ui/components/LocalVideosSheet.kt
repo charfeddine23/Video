@@ -75,17 +75,8 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.LocalDeviceVideo
 import com.example.data.model.MediaItem
-import com.example.data.model.MediaRepository
-import com.example.ui.theme.Charcoal800
-import com.example.ui.theme.Charcoal850
-import com.example.ui.theme.Charcoal950
-import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.PulseAmber
-import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.aura
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,6 +91,7 @@ fun LocalVideosSheet(
 
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val localVideos = remember { mutableStateListOf<LocalDeviceVideo>() }
@@ -130,7 +122,7 @@ fun LocalVideosSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = aura.dialogBg,
         dragHandle = null,
         modifier = modifier.testTag("local_videos_sheet")
     ) {
@@ -153,13 +145,13 @@ fun LocalVideosSheet(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(Color(0x2200F2FE)),
+                            .background(aura.accentCyanSoft),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.PhoneAndroid,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -172,19 +164,19 @@ fun LocalVideosSheet(
                                 text = if (isArabic) "الفيديوهات المحلية على الجهاز" else "Local Device Videos",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onBackground
+                                    color = aura.textPrimary
                                 )
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = Color(0x3300F2FE)
+                                color = aura.accentCyanSoft
                             ) {
                                 Text(
                                     text = "${localVideos.size}",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
@@ -194,7 +186,7 @@ fun LocalVideosSheet(
                         Text(
                             text = if (isArabic) "الملفات المحفوظة في ذاكرة وتخزين الهاتف فقط" else "Videos stored locally on this device only",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = aura.textSecondary,
                                 fontSize = 11.sp
                             )
                         )
@@ -211,7 +203,7 @@ fun LocalVideosSheet(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                        tint = aura.textSecondary
                     )
                 }
             }
@@ -226,8 +218,8 @@ fun LocalVideosSheet(
             ) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.4f)),
+                    color = aura.surfaceSubtle,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.45f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
@@ -251,13 +243,13 @@ fun LocalVideosSheet(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(PulseCyan),
+                                    .background(aura.accentCyan),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Add,
                                     contentDescription = null,
-                                    tint = TextDark,
+                                    tint = if (aura.isDark) TextDark else Color.White,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -267,13 +259,13 @@ fun LocalVideosSheet(
                                     text = if (isArabic) "فتح فيديو من ذاكرة الهاتف" else "Open Video from Phone Storage",
                                     style = MaterialTheme.typography.labelLarge.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = aura.textPrimary
                                     )
                                 )
                                 Text(
                                     text = if (isArabic) "اختر أي فيديو لتشغيله بدقة 120fps وسلاسة" else "Pick any video from gallery to play in 120fps",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = aura.textSecondary,
                                         fontSize = 11.sp
                                     )
                                 )
@@ -283,7 +275,7 @@ fun LocalVideosSheet(
                         Icon(
                             imageVector = Icons.Default.VideoLibrary,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -338,16 +330,17 @@ fun LocalVideoItemCard(
     isArabic: Boolean,
     onClick: () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp))
+            .border(1.dp, aura.borderSubtle, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .testTag("local_video_card_${video.id}"),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = aura.surfaceCard
         )
     ) {
         Row(
@@ -429,7 +422,7 @@ fun LocalVideoItemCard(
                     text = video.title,
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = aura.textPrimary
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -442,13 +435,13 @@ fun LocalVideoItemCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = Color(0x3300F2FE)
+                        color = aura.accentCyanSoft
                     ) {
                         Text(
                             text = video.resolutionText,
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp
                             )
@@ -460,7 +453,7 @@ fun LocalVideoItemCard(
                     Text(
                         text = video.sizeText,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
@@ -469,7 +462,7 @@ fun LocalVideoItemCard(
                     Text(
                         text = "•",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = aura.textTertiary
                         )
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -477,7 +470,7 @@ fun LocalVideoItemCard(
                     Text(
                         text = video.dateAddedText,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = aura.textSecondary,
                             fontSize = 10.sp
                         )
                     )
@@ -489,14 +482,14 @@ fun LocalVideoItemCard(
                     Icon(
                         imageVector = Icons.Default.PhoneAndroid,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        tint = aura.textTertiary,
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = if (isArabic) "ذاكرة الهاتف المحلية" else "Device Local Storage",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            color = aura.textTertiary,
                             fontSize = 10.sp
                         )
                     )
@@ -510,13 +503,13 @@ fun LocalVideoItemCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(aura.primaryCtaBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
-                    tint = TextDark,
+                    tint = aura.primaryCtaContent,
                     modifier = Modifier.size(20.dp)
                 )
             }

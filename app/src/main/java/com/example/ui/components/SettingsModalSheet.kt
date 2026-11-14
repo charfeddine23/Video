@@ -75,6 +75,7 @@ import com.example.ui.theme.TextDark
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.ThemeMode
+import com.example.ui.theme.aura
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,10 +97,11 @@ fun SettingsModalSheet(
 
     val isArabic = currentLanguage == AppLanguage.ARABIC
 
+    val aura = MaterialTheme.aura
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = aura.dialogBg,
         dragHandle = null,
         modifier = modifier.testTag("settings_modal_sheet")
     ) {
@@ -121,13 +123,13 @@ fun SettingsModalSheet(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
-                            .background(Color(0x2200F2FE)),
+                            .background(aura.accentCyanSoft),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Palette,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -305,14 +307,14 @@ fun SettingsModalSheet(
                                     Icon(
                                         imageVector = Icons.Default.Verified,
                                         contentDescription = "Verified Developer",
-                                        tint = PulseCyan,
+                                        tint = aura.accentCyan,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
                                 Text(
                                     text = if (isArabic) "المطور الرئيسي ومصمم التطبيق" else "Lead Android Engineer & Designer",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 11.5.sp
                                     )
@@ -357,15 +359,15 @@ fun SettingsModalSheet(
 
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = Color(0x2200F2FE),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f))
+                            color = aura.accentCyanSoft,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f))
                         ) {
                             Text(
                                 text = "v${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = PulseCyan,
+                                    color = aura.accentCyan,
                                     fontSize = 11.sp
                                 )
                             )
@@ -436,7 +438,7 @@ fun SettingsModalSheet(
 
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Color.White,
+                        color = aura.primaryCtaBg,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(44.dp)
@@ -450,13 +452,13 @@ fun SettingsModalSheet(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = TextDark, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.SystemUpdate, contentDescription = null, tint = aura.primaryCtaContent, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (isArabic) "التحقق من وجود تحديثات" else "Check for Updates",
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = TextDark
+                                    color = aura.primaryCtaContent
                                 )
                             )
                         }
@@ -474,11 +476,12 @@ fun SectionHeader(
     icon: ImageVector,
     title: String
 ) {
+    val aura = MaterialTheme.aura
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = PulseCyan,
+            tint = aura.accentCyan,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
@@ -486,7 +489,7 @@ fun SectionHeader(
             text = title,
             style = MaterialTheme.typography.labelLarge.copy(
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
+                color = aura.textPrimary,
                 fontSize = 13.sp
             )
         )
@@ -501,16 +504,17 @@ fun LanguageSelectionCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .testTag("lang_${title.lowercase()}"),
         shape = RoundedCornerShape(14.dp),
-        color = if (isSelected) Color(0xFF16253A) else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (isSelected) aura.accentCyanSoft else aura.surfaceSubtle,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (isSelected) PulseCyan else MaterialTheme.colorScheme.outline
+            if (isSelected) aura.accentCyan else aura.borderSubtle
         )
     ) {
         Row(
@@ -525,14 +529,14 @@ fun LanguageSelectionCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = if (isSelected) PulseCyan else MaterialTheme.colorScheme.onSurface,
+                        color = if (isSelected) aura.accentCyan else aura.textPrimary,
                         fontSize = 15.sp
                     )
                 )
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = aura.textSecondary,
                         fontSize = 11.sp
                     )
                 )
@@ -543,13 +547,13 @@ fun LanguageSelectionCard(
                     modifier = Modifier
                         .size(24.dp)
                         .clip(CircleShape)
-                        .background(PulseCyan),
+                        .background(aura.accentCyan),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Selected",
-                        tint = TextDark,
+                        tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -566,16 +570,17 @@ fun ThemeOptionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .testTag("theme_${title.lowercase()}"),
         shape = RoundedCornerShape(14.dp),
-        color = if (isSelected) Color(0xFF16253A) else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (isSelected) aura.accentCyanSoft else aura.surfaceSubtle,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (isSelected) PulseCyan else MaterialTheme.colorScheme.outline
+            if (isSelected) aura.accentCyan else aura.borderSubtle
         )
     ) {
         Column(
@@ -588,7 +593,7 @@ fun ThemeOptionButton(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = if (isSelected) PulseCyan else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = if (isSelected) aura.accentCyan else aura.textSecondary,
                 modifier = Modifier.size(20.dp)
             )
 
@@ -598,7 +603,7 @@ fun ThemeOptionButton(
                 text = title,
                 style = MaterialTheme.typography.labelSmall.copy(
                     fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                    color = if (isSelected) PulseCyan else MaterialTheme.colorScheme.onSurface,
+                    color = if (isSelected) aura.accentCyan else aura.textPrimary,
                     fontSize = 11.sp
                 ),
                 textAlign = TextAlign.Center

@@ -55,15 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.MediaItem
 import com.example.data.model.MediaRepository
-import com.example.ui.theme.Charcoal800
-import com.example.ui.theme.Charcoal850
-import com.example.ui.theme.Charcoal900
-import com.example.ui.theme.Charcoal950
-import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.TextDark
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.aura
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -74,6 +66,7 @@ fun SearchOverlay(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
     var query by remember { mutableStateOf("") }
 
     val trendingKeywords = remember {
@@ -97,13 +90,13 @@ fun SearchOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Charcoal950)
+            .background(aura.background)
             .drawBehind {
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0x1E00F2FE),
-                            Color(0x107928CA),
+                            aura.accentCyan.copy(alpha = if (aura.isDark) 0.12f else 0.07f),
+                            aura.accentViolet.copy(alpha = if (aura.isDark) 0.06f else 0.03f),
                             Color.Transparent
                         ),
                         startY = 0f,
@@ -135,7 +128,7 @@ fun SearchOverlay(
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
-                        tint = TextPrimary
+                        tint = aura.textPrimary
                     )
                 }
 
@@ -145,7 +138,7 @@ fun SearchOverlay(
                     placeholder = {
                         Text(
                             text = "Search movies, shows, genres...",
-                            color = TextSecondary,
+                            color = aura.textSecondary,
                             fontSize = 14.sp
                         )
                     },
@@ -153,7 +146,7 @@ fun SearchOverlay(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = PulseCyan
+                            tint = aura.accentCyan
                         )
                     },
                     trailingIcon = {
@@ -162,19 +155,19 @@ fun SearchOverlay(
                                 Icon(
                                     imageVector = Icons.Default.Clear,
                                     contentDescription = "Clear",
-                                    tint = TextSecondary
+                                    tint = aura.textSecondary
                                 )
                             }
                         }
                     },
                     shape = RoundedCornerShape(24.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Charcoal850,
-                        unfocusedContainerColor = Charcoal900,
-                        focusedBorderColor = PulseCyan,
-                        unfocusedBorderColor = GlassBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary
+                        focusedContainerColor = aura.surfaceCard,
+                        unfocusedContainerColor = aura.surfaceSubtle,
+                        focusedBorderColor = aura.accentCyan,
+                        unfocusedBorderColor = aura.borderSubtle,
+                        focusedTextColor = aura.textPrimary,
+                        unfocusedTextColor = aura.textPrimary
                     ),
                     singleLine = true,
                     modifier = Modifier
@@ -194,7 +187,7 @@ fun SearchOverlay(
                         Icon(
                             imageVector = Icons.Default.TrendingUp,
                             contentDescription = "Trending Searches",
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -202,7 +195,7 @@ fun SearchOverlay(
                             text = "Trending Searches",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextSecondary,
+                                color = aura.textSecondary,
                                 letterSpacing = 0.5.sp
                             )
                         )
@@ -215,8 +208,8 @@ fun SearchOverlay(
                         trendingKeywords.forEach { keyword ->
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = Charcoal850,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
+                                color = aura.surfaceCard,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, aura.borderSubtle),
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable {
@@ -228,7 +221,7 @@ fun SearchOverlay(
                                     text = keyword,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = TextPrimary,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 11.sp
                                     )
@@ -244,7 +237,7 @@ fun SearchOverlay(
                 text = if (query.isBlank()) "Recommended For You" else "Results for \"$query\" (${filteredList.size})",
                 style = MaterialTheme.typography.titleMedium.copy(
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = aura.textPrimary
                 ),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )

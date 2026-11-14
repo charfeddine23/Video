@@ -48,16 +48,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.MediaItem
-import com.example.ui.theme.CairoFontFamily
-import com.example.ui.theme.Charcoal700
 import com.example.ui.theme.Charcoal800
-import com.example.ui.theme.Charcoal950
-import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.PulseAmber
 import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.TextDark
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.aura
 
 @Composable
 fun MediaRowSection(
@@ -70,6 +63,7 @@ fun MediaRowSection(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
 
     Column(
         modifier = modifier
@@ -89,7 +83,7 @@ fun MediaRowSection(
                     text = title,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = aura.textPrimary,
                         letterSpacing = (-0.2).sp
                     )
                 )
@@ -97,7 +91,7 @@ fun MediaRowSection(
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = TextSecondary,
+                            color = aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
@@ -119,14 +113,14 @@ fun MediaRowSection(
                         text = "See All",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.SemiBold,
-                            color = PulseCyan,
+                            color = aura.accentCyan,
                             fontSize = 12.sp
                         )
                     )
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = "See All",
-                        tint = PulseCyan,
+                        tint = aura.accentCyan,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -159,6 +153,7 @@ fun MediaCard(
     showProgress: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Column(
         modifier = modifier
             .width(140.dp)
@@ -170,7 +165,7 @@ fun MediaCard(
                 .fillMaxWidth()
                 .aspectRatio(0.68f)
                 .clip(RoundedCornerShape(16.dp))
-                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp)),
+                .border(1.dp, aura.borderSubtle, RoundedCornerShape(16.dp)),
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(containerColor = Charcoal800)
         ) {
@@ -278,7 +273,7 @@ fun MediaCard(
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
-                color = TextPrimary
+                color = aura.textPrimary
             ),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -287,7 +282,7 @@ fun MediaCard(
         Text(
             text = "${mediaItem.year} • ${mediaItem.seasonsOrDuration}",
             style = MaterialTheme.typography.bodySmall.copy(
-                color = TextSecondary,
+                color = aura.textSecondary,
                 fontSize = 11.sp
             ),
             maxLines = 1

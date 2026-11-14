@@ -53,17 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.CairoFontFamily
-import com.example.ui.theme.Charcoal800
-import com.example.ui.theme.Charcoal850
-import com.example.ui.theme.Charcoal950
-import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.PulseAmber
-import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.aura
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +67,7 @@ fun SubscribeModalSheet(
     if (!isOpen) return
 
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var isAnnual by remember { mutableStateOf(true) }
     var isSuccess by remember { mutableStateOf(false) }
@@ -83,7 +75,7 @@ fun SubscribeModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Charcoal950,
+        containerColor = aura.dialogBg,
         dragHandle = null,
         modifier = modifier.testTag("subscribe_modal_sheet")
     ) {
@@ -108,7 +100,7 @@ fun SubscribeModalSheet(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Close",
-                        tint = TextSecondary
+                        tint = aura.textSecondary
                     )
                 }
             }
@@ -128,20 +120,20 @@ fun SubscribeModalSheet(
                                 drawCircle(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            PulseCyan.copy(alpha = 0.5f),
+                                            aura.accentCyan.copy(alpha = 0.5f),
                                             Color.Transparent
                                         )
                                     )
                                 )
                             }
                             .clip(CircleShape)
-                            .background(PulseCyan),
+                            .background(aura.accentCyan),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Success",
-                            tint = TextDark,
+                            tint = if (aura.isDark) TextDark else Color.White,
                             modifier = Modifier.size(44.dp)
                         )
                     }
@@ -152,7 +144,7 @@ fun SubscribeModalSheet(
                         text = "VIP Pass Activated!",
                         style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = aura.textPrimary
                         ),
                         textAlign = TextAlign.Center
                     )
@@ -162,7 +154,7 @@ fun SubscribeModalSheet(
                     Text(
                         text = "Enjoy unlimited 4K HDR 120fps streaming, Dolby Atmos, and exclusive early access to Video Pulse Originals.",
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = TextSecondary,
+                            color = aura.textSecondary,
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.padding(horizontal = 16.dp)
@@ -179,13 +171,13 @@ fun SubscribeModalSheet(
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(25.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                        colors = ButtonDefaults.buttonColors(containerColor = aura.primaryCtaBg)
                     ) {
                         Text(
                             text = "Start Watching Now",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextDark
+                                color = aura.primaryCtaContent
                             )
                         )
                     }
@@ -199,21 +191,21 @@ fun SubscribeModalSheet(
                             drawCircle(
                                 brush = Brush.radialGradient(
                                     colors = listOf(
-                                        PulseAmber.copy(alpha = 0.4f),
+                                        aura.accentGold.copy(alpha = 0.35f),
                                         Color.Transparent
                                     )
                                 )
                             )
                         }
                         .clip(CircleShape)
-                        .background(Color(0xFF1E2638))
-                        .border(1.dp, PulseAmber.copy(alpha = 0.6f), CircleShape),
+                        .background(aura.accentGoldBg)
+                        .border(1.dp, aura.accentGold.copy(alpha = 0.6f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Diamond,
                         contentDescription = "VIP Diamond",
-                        tint = PulseAmber,
+                        tint = aura.accentGold,
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -223,7 +215,7 @@ fun SubscribeModalSheet(
                 Text(
                     text = "VIDEO PULSE VIP",
                     style = MaterialTheme.typography.labelLarge.copy(
-                        color = PulseAmber,
+                        color = aura.accentGold,
                         letterSpacing = 2.sp,
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -235,7 +227,7 @@ fun SubscribeModalSheet(
                     text = "Unlock Everything in 4K HDR 120fps",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = aura.textPrimary
                     ),
                     textAlign = TextAlign.Center
                 )
@@ -271,8 +263,8 @@ fun SubscribeModalSheet(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Charcoal850)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                        .background(aura.surfaceSubtle)
+                        .border(1.dp, aura.borderSubtle, RoundedCornerShape(16.dp))
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -317,13 +309,13 @@ fun SubscribeModalSheet(
                         .height(52.dp)
                         .testTag("subscribe_confirm_button"),
                     shape = RoundedCornerShape(26.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    colors = ButtonDefaults.buttonColors(containerColor = aura.primaryCtaBg)
                 ) {
                     Text(
                         text = "Start 7-Day Free Trial",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = TextDark,
+                            color = aura.primaryCtaContent,
                             fontSize = 15.sp
                         )
                     )
@@ -334,7 +326,7 @@ fun SubscribeModalSheet(
                 Text(
                     text = "Renews automatically. Cancel anytime in your account settings.",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
+                        color = aura.textSecondary,
                         fontSize = 11.sp
                     ),
                     textAlign = TextAlign.Center
@@ -350,6 +342,7 @@ fun SubscriptionPerkItem(
     title: String,
     subtitle: String
 ) {
+    val aura = MaterialTheme.aura
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -358,10 +351,10 @@ fun SubscriptionPerkItem(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(Color(0x2200F2FE)),
+                .background(aura.accentCyanSoft),
             contentAlignment = Alignment.Center
         ) {
-            Icon(icon, contentDescription = null, tint = PulseCyan, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, tint = aura.accentCyan, modifier = Modifier.size(20.dp))
         }
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -371,13 +364,13 @@ fun SubscriptionPerkItem(
                 text = title,
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = aura.textPrimary
                 )
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = TextSecondary,
+                    color = aura.textSecondary,
                     fontSize = 11.sp
                 )
             )
@@ -394,12 +387,13 @@ fun PlanButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Surface(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color.White else Color.Transparent
+        color = if (isSelected) aura.primaryCtaBg else Color.Transparent
     ) {
         Column(
             modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
@@ -408,14 +402,14 @@ fun PlanButton(
             if (badge != null) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = if (isSelected) PulseCyan else Color(0x3300F2FE)
+                    color = if (isSelected) aura.accentCyan else aura.accentCyanSoft
                 ) {
                     Text(
                         text = badge,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) TextDark else PulseCyan,
+                            color = if (isSelected) (if (aura.isDark) TextDark else Color.White) else aura.accentCyan,
                             fontSize = 9.sp
                         )
                     )
@@ -429,7 +423,7 @@ fun PlanButton(
                 text = title,
                 style = MaterialTheme.typography.labelLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) TextDark else TextPrimary,
+                    color = if (isSelected) aura.primaryCtaContent else aura.textPrimary,
                     fontSize = 13.sp
                 )
             )
@@ -438,7 +432,7 @@ fun PlanButton(
                 text = price,
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = FontWeight.Medium,
-                    color = if (isSelected) TextDark.copy(alpha = 0.8f) else TextSecondary,
+                    color = if (isSelected) aura.primaryCtaContent.copy(alpha = 0.8f) else aura.textSecondary,
                     fontSize = 12.sp
                 )
             )

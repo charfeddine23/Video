@@ -56,8 +56,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.PulseViolet
+import com.example.ui.theme.aura
 import com.example.ui.viewmodel.StreakViewModel
 
 @Composable
@@ -67,6 +66,7 @@ fun StatisticsScreen(
     isArabic: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val uiState by streakViewModel.uiState.collectAsState()
 
@@ -82,7 +82,7 @@ fun StatisticsScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .testTag("statistics_screen")
     ) {
         Box(
@@ -91,7 +91,7 @@ fun StatisticsScreen(
                 .drawBehind {
                     drawCircle(
                         brush = Brush.radialGradient(
-                            listOf(Color(0x2400F2FE), Color(0x187928CA), Color.Transparent),
+                            listOf(aura.accentCyan.copy(alpha = 0.12f), aura.accentViolet.copy(alpha = 0.08f), Color.Transparent),
                             radius = size.width * 0.95f
                         ),
                         center = Offset(size.width * 0.5f, size.height * 0.16f)
@@ -122,13 +122,13 @@ fun StatisticsScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0x22FFFFFF))
+                            .background(aura.iconButtonBg)
                             .testTag("statistics_back_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = if (isArabic) "رجوع" else "Back",
-                            tint = Color.White
+                            tint = aura.textPrimary
                         )
                     }
 
@@ -139,13 +139,13 @@ fun StatisticsScreen(
                             text = if (isArabic) "الإحصائيات" else "Statistics",
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
+                                color = aura.textPrimary
                             )
                         )
                         Text(
                             text = if (isArabic) "تحليل نشاط المشاهدة والاستماع المحلي" else "Offline watch & audio activity insights",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontSize = 11.sp
                             )
                         )
@@ -154,19 +154,19 @@ fun StatisticsScreen(
 
                 Surface(
                     shape = RoundedCornerShape(14.dp),
-                    color = Color(0x2200F2FE),
-                    border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f))
+                    color = aura.accentCyanSoft,
+                    border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.BarChart, null, tint = PulseCyan, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.BarChart, null, tint = aura.accentCyan, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "OFFLINE",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -193,14 +193,14 @@ fun StatisticsScreen(
                                 title = if (isArabic) "ساعات المشاهدة" else "Total Watch Time",
                                 value = "${String.format("%.1f", totalWatchHours)} " + (if (isArabic) "س" else "hrs"),
                                 icon = Icons.Default.PlayCircle,
-                                accentColor = PulseCyan,
+                                accentColor = aura.accentCyan,
                                 modifier = Modifier.weight(1f)
                             )
                             StatMetricCard(
                                 title = if (isArabic) "مقاطع صوتية" else "Tracks Listened",
                                 value = "$totalTracks",
                                 icon = Icons.Default.Headset,
-                                accentColor = PulseViolet,
+                                accentColor = aura.accentViolet,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -213,14 +213,14 @@ fun StatisticsScreen(
                                 title = if (isArabic) "أيام السلسلة" else "Active Streak",
                                 value = "${uiState.streakDays} " + (if (isArabic) "يوم" else "days"),
                                 icon = Icons.Default.LocalFireDepartment,
-                                accentColor = Color(0xFFFF5722),
+                                accentColor = aura.accentFlame,
                                 modifier = Modifier.weight(1f)
                             )
                             StatMetricCard(
                                 title = if (isArabic) "دروع الحماية" else "Shields Owned",
                                 value = "${uiState.shieldsCount}/${uiState.maxShields}",
                                 icon = Icons.Default.Shield,
-                                accentColor = Color(0xFF10B981),
+                                accentColor = aura.accentEmerald,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -232,9 +232,9 @@ fun StatisticsScreen(
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, Color(0x33FF5722), RoundedCornerShape(20.dp)),
+                            .border(1.dp, aura.accentFlame.copy(alpha = 0.35f), RoundedCornerShape(20.dp)),
                         shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                     ) {
                         Column(modifier = Modifier.padding(18.dp)) {
                             Row(
@@ -245,7 +245,7 @@ fun StatisticsScreen(
                                 Text(
                                     text = if (isArabic) "تقدم هدف الشعلة اليومي" else "Daily Watch Flame Progress",
                                     style = MaterialTheme.typography.titleSmall.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
@@ -256,7 +256,7 @@ fun StatisticsScreen(
                                         "$dailyWatchMins / $dailyGoalMins " + (if (isArabic) "د" else "min")
                                     },
                                     style = MaterialTheme.typography.labelMedium.copy(
-                                        color = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF8A65),
+                                        color = if (uiState.isGoalCompletedToday) aura.accentEmerald else aura.accentFlame,
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                 )
@@ -270,8 +270,8 @@ fun StatisticsScreen(
                                     .fillMaxWidth()
                                     .height(8.dp)
                                     .clip(RoundedCornerShape(4.dp)),
-                                color = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF5722),
-                                trackColor = Color(0x22FFFFFF)
+                                color = if (uiState.isGoalCompletedToday) aura.accentEmerald else aura.accentFlame,
+                                trackColor = aura.progressTrack
                             )
                         }
                     }
@@ -284,31 +284,31 @@ fun StatisticsScreen(
                             .fillMaxWidth()
                             .border(
                                 1.dp,
-                                Brush.horizontalGradient(listOf(Color(0x4400F2FE), Color(0x447928CA))),
+                                Brush.horizontalGradient(listOf(aura.accentCyan.copy(alpha = 0.35f), aura.accentViolet.copy(alpha = 0.35f))),
                                 RoundedCornerShape(22.dp)
                             ),
                         shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xE0101626))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceElevated)
                     ) {
                         Column(
                             modifier = Modifier.padding(18.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Folder, null, tint = PulseCyan, modifier = Modifier.size(18.dp))
+                                Icon(Icons.Default.Folder, null, tint = aura.accentCyan, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = if (isArabic) "أكثر المجلدات نشاطاً" else "Top Media Folders",
                                     style = MaterialTheme.typography.titleSmall.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                 )
                             }
 
-                            FolderStatBar("Movies", 0.62f, "62%", PulseCyan)
-                            FolderStatBar("Downloads", 0.24f, "24%", Color(0xFF7C3AED))
-                            FolderStatBar("Series", 0.14f, "14%", Color(0xFFFF9100))
+                            FolderStatBar("Movies", 0.62f, "62%", aura.accentCyan)
+                            FolderStatBar("Downloads", 0.24f, "24%", aura.accentViolet)
+                            FolderStatBar("Series", 0.14f, "14%", aura.accentFlame)
                         }
                     }
                 }
@@ -325,17 +325,18 @@ private fun StatMetricCard(
     accentColor: Color,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Card(
         modifier = modifier.border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(20.dp)),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Box(
                 modifier = Modifier
                     .size(38.dp)
                     .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.18f)),
+                    .background(accentColor.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(icon, null, tint = accentColor, modifier = Modifier.size(20.dp))
@@ -344,7 +345,7 @@ private fun StatMetricCard(
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge.copy(
-                    color = Color.White,
+                    color = aura.textPrimary,
                     fontWeight = FontWeight.ExtraBold
                 )
             )
@@ -352,7 +353,7 @@ private fun StatMetricCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = Color(0xFF94A3B8),
+                    color = aura.textSecondary,
                     fontSize = 11.sp
                 )
             )
@@ -367,6 +368,7 @@ private fun FolderStatBar(
     percentText: String,
     barColor: Color
 ) {
+    val aura = MaterialTheme.aura
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -375,7 +377,7 @@ private fun FolderStatBar(
             Text(
                 text = folderName,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    color = Color.White,
+                    color = aura.textPrimary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 12.sp
                 )
@@ -395,7 +397,7 @@ private fun FolderStatBar(
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp)),
             color = barColor,
-            trackColor = Color(0x22FFFFFF)
+            trackColor = aura.progressTrack
         )
     }
 }

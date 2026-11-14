@@ -68,8 +68,7 @@ import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseRed
 import com.example.ui.theme.TextDark
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.aura
 
 @Composable
 fun LiveTVScreen(
@@ -77,6 +76,7 @@ fun LiveTVScreen(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
     var selectedChannel by remember { mutableStateOf(MediaRepository.liveChannels.first()) }
     var selectedFilter by remember { mutableStateOf("All Channels") }
 
@@ -96,13 +96,13 @@ fun LiveTVScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Charcoal950)
+            .background(aura.background)
             .drawBehind {
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0x20FF3366),
-                            Color(0x1400F2FE),
+                            PulseRed.copy(alpha = if (aura.isDark) 0.12f else 0.06f),
+                            aura.accentCyan.copy(alpha = if (aura.isDark) 0.08f else 0.04f),
                             Color.Transparent
                         ),
                         startY = 0f,
@@ -137,7 +137,7 @@ fun LiveTVScreen(
                     text = "LIVE TV CHANNELS",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary,
+                        color = aura.textPrimary,
                         letterSpacing = 1.sp
                     )
                 )
@@ -145,14 +145,14 @@ fun LiveTVScreen(
 
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Charcoal850,
-                border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                color = aura.surfaceCard,
+                border = androidx.compose.foundation.BorderStroke(1.dp, aura.borderSubtle)
             ) {
                 Text(
                     text = "Ultra Low Latency",
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = PulseCyan,
+                        color = aura.accentCyan,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 10.sp
                     )
@@ -167,7 +167,7 @@ fun LiveTVScreen(
                 .padding(horizontal = 16.dp, vertical = 6.dp)
                 .aspectRatio(1.8f)
                 .clip(RoundedCornerShape(20.dp))
-                .border(1.dp, GlassBorder, RoundedCornerShape(20.dp)),
+                .border(1.dp, aura.borderSubtle, RoundedCornerShape(20.dp)),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Charcoal900)
         ) {
@@ -262,7 +262,7 @@ fun LiveTVScreen(
                             text = selectedChannel.channelName,
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = Color.White
                             )
                         )
                         Text(
@@ -308,8 +308,8 @@ fun LiveTVScreen(
                 val isSelected = filter == selectedFilter
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = if (isSelected) Color.White else Charcoal850,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) Color.White else GlassBorder),
+                    color = if (isSelected) aura.primaryCtaBg else aura.surfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSelected) aura.primaryCtaBg else aura.borderSubtle),
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
                         .clickable {
@@ -322,7 +322,7 @@ fun LiveTVScreen(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) TextDark else TextSecondary,
+                            color = if (isSelected) aura.primaryCtaContent else aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
@@ -348,10 +348,10 @@ fun LiveTVScreen(
                 val isCurrent = channel.id == selectedChannel.id
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = if (isCurrent) Color(0xFF141D2B) else Charcoal850,
+                    color = if (isCurrent) aura.surfaceElevated else aura.surfaceCard,
                     border = androidx.compose.foundation.BorderStroke(
-                        1.dp,
-                        if (isCurrent) PulseCyan.copy(alpha = 0.5f) else GlassBorder
+                        if (isCurrent) 1.5.dp else 1.dp,
+                        if (isCurrent) aura.accentCyan else aura.borderSubtle
                     ),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -376,14 +376,14 @@ fun LiveTVScreen(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isCurrent) PulseCyan else Charcoal800),
+                                    .background(if (isCurrent) aura.accentCyan else aura.surfaceSubtle),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = channel.channelNumber,
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = if (isCurrent) TextDark else Color.White
+                                        color = if (isCurrent) (if (aura.isDark) TextDark else Color.White) else aura.textPrimary
                                     )
                                 )
                             }
@@ -396,19 +396,19 @@ fun LiveTVScreen(
                                         text = channel.channelName,
                                         style = MaterialTheme.typography.titleMedium.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
+                                            color = aura.textPrimary
                                         )
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = Color(0x3300F2FE)
+                                        color = aura.accentCyanSoft
                                     ) {
                                         Text(
                                             text = "HD",
                                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(
-                                                color = PulseCyan,
+                                                color = aura.accentCyan,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 8.sp
                                             )
@@ -418,14 +418,14 @@ fun LiveTVScreen(
                                 Text(
                                     text = "Current: ${channel.currentShow}",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = TextSecondary,
+                                        color = aura.textSecondary,
                                         fontSize = 12.sp
                                     )
                                 )
                                 Text(
                                     text = "Up Next: ${channel.nextShow}",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = TextSecondary.copy(alpha = 0.7f),
+                                        color = aura.textTertiary,
                                         fontSize = 11.sp
                                     )
                                 )
@@ -440,7 +440,7 @@ fun LiveTVScreen(
                             Text(
                                 text = channel.viewersCount,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = PulseCyan,
+                                    color = aura.accentCyan,
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 10.sp
                                 )

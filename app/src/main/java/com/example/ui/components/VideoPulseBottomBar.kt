@@ -56,12 +56,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.Charcoal950
-import com.example.ui.theme.GlassBorder
-import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.PulseViolet
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.aura
 
 enum class NavDestination(
     val label: String,
@@ -80,9 +75,10 @@ fun VideoPulseBottomBar(
     onDestinationSelected: (NavDestination) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
 
-    // Requirement 5: Clean fixed bottom bar with glowing active indicators and minimal icons
+    // Clean fixed bottom bar with glowing active indicators and minimal icons
     Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -90,14 +86,14 @@ fun VideoPulseBottomBar(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        GlassBorder,
+                        aura.borderSubtle,
                         Color.Transparent
                     )
                 ),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
-        color = Color(0xF2090C12), // Deep matte charcoal with glass effect
+        color = aura.bottomBarBg,
         shadowElevation = 16.dp
     ) {
         Row(
@@ -120,13 +116,13 @@ fun VideoPulseBottomBar(
                 )
 
                 val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) PulseCyan else TextSecondary,
+                    targetValue = if (isSelected) aura.accentCyan else aura.textSecondary,
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                     label = "icon_color"
                 )
 
                 val textColor by animateColorAsState(
-                    targetValue = if (isSelected) TextPrimary else TextSecondary,
+                    targetValue = if (isSelected) aura.textPrimary else aura.textSecondary,
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
                     label = "text_color"
                 )
@@ -166,8 +162,8 @@ fun VideoPulseBottomBar(
                                             drawCircle(
                                                 brush = Brush.radialGradient(
                                                     colors = listOf(
-                                                        PulseCyan.copy(alpha = 0.45f),
-                                                        PulseViolet.copy(alpha = 0.15f),
+                                                        aura.accentCyan.copy(alpha = 0.45f),
+                                                        aura.accentViolet.copy(alpha = 0.15f),
                                                         Color.Transparent
                                                     ),
                                                     radius = size.width * 1.2f
@@ -207,7 +203,7 @@ fun VideoPulseBottomBar(
                                     .clip(CircleShape)
                                     .background(
                                         Brush.horizontalGradient(
-                                            listOf(PulseCyan, PulseViolet)
+                                            listOf(aura.accentCyan, aura.accentViolet)
                                         )
                                     )
                             )

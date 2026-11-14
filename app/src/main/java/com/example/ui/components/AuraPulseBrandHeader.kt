@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.aura
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.cos
@@ -78,6 +79,7 @@ fun AuraPulseBrandHeader(
     isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val isFrozen = streakDays == 0
 
     // Infinite transitions for living liquid aura glow (active when streakDays > 0)
@@ -214,7 +216,7 @@ fun AuraPulseBrandHeader(
                     // Normalize X to fit canvas width
                     val realX = (flake.x % canvasWidth)
                     drawCircle(
-                        color = Color(0xFFE0F7FA).copy(alpha = flake.alpha),
+                        color = (if (aura.isDark) Color(0xFFE0F7FA) else Color(0xFF0284C7)).copy(alpha = flake.alpha),
                         radius = flake.radius,
                         center = Offset(realX, flake.y)
                     )
@@ -234,13 +236,13 @@ fun AuraPulseBrandHeader(
                 }
                 drawPath(
                     path = frostPath,
-                    color = Color(0x66B2EBF2),
+                    color = if (aura.isDark) Color(0x66B2EBF2) else Color(0x8838BDF8),
                     style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
         }
 
-        // Liquid Glass M5 Text Container Card
+        // Liquid Glass Text Container Card
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
@@ -251,29 +253,42 @@ fun AuraPulseBrandHeader(
                     brush = if (isFrozen) {
                         // Frosted crystalline ice border
                         Brush.linearGradient(
-                            listOf(
-                                Color(0xFFE0F7FA).copy(alpha = 0.9f),
-                                Color(0xFF80DEEA).copy(alpha = 0.5f),
-                                Color(0xFFE0F2FE).copy(alpha = 0.8f)
-                            )
+                            if (aura.isDark) {
+                                listOf(
+                                    Color(0xFFE0F7FA).copy(alpha = 0.9f),
+                                    Color(0xFF80DEEA).copy(alpha = 0.5f),
+                                    Color(0xFFE0F2FE).copy(alpha = 0.8f)
+                                )
+                            } else {
+                                listOf(
+                                    Color(0xFF0284C7).copy(alpha = 0.65f),
+                                    Color(0xFF38BDF8).copy(alpha = 0.45f),
+                                    Color(0xFF0369A1).copy(alpha = 0.65f)
+                                )
+                            }
                         )
                     } else {
                         // Liquid iridescent glass border
                         Brush.sweepGradient(
                             listOf(
-                                Color(0xFF00F2FE).copy(alpha = 0.7f),
-                                Color(0xFF7928CA).copy(alpha = 0.5f),
-                                Color(0xFFFF007A).copy(alpha = 0.6f),
-                                Color(0xFF00F5A0).copy(alpha = 0.6f),
-                                Color(0xFF00F2FE).copy(alpha = 0.7f)
+                                aura.accentCyan.copy(alpha = 0.7f),
+                                aura.accentViolet.copy(alpha = 0.55f),
+                                Color(0xFFFF007A).copy(alpha = 0.55f),
+                                aura.accentEmerald.copy(alpha = 0.6f),
+                                aura.accentCyan.copy(alpha = 0.7f)
                             )
                         )
                     },
                     shape = RoundedCornerShape(26.dp)
                 ),
             shape = RoundedCornerShape(26.dp),
-            color = if (isFrozen) Color(0xCC081324) else Color(0xD90B0F19), // Frosty ice dark or deep matte liquid glass
-            shadowElevation = if (isFrozen) 4.dp else 12.dp
+            color = when {
+                isFrozen && aura.isDark -> Color(0xCC081324)
+                isFrozen -> Color(0xF5EBF8FF)
+                aura.isDark -> Color(0xD90B0F19)
+                else -> aura.surfaceElevated
+            },
+            shadowElevation = if (isFrozen) 4.dp else 10.dp
         ) {
             Column(
                 modifier = Modifier
@@ -289,10 +304,11 @@ fun AuraPulseBrandHeader(
                 ) {
                     if (isFrozen) {
                         // Frosted Ice Badge
+                        val iceTint = if (aura.isDark) Color(0xFF80DEEA) else Color(0xFF0369A1)
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = Color(0x3300E5FF),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x6680DEEA))
+                            color = if (aura.isDark) Color(0x3300E5FF) else Color(0x1E0284C7),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, iceTint.copy(alpha = 0.5f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -301,14 +317,14 @@ fun AuraPulseBrandHeader(
                                 Icon(
                                     imageVector = Icons.Default.AcUnit,
                                     contentDescription = "Frozen",
-                                    tint = Color(0xFF80DEEA),
+                                    tint = iceTint,
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
                                     text = if (isArabic) "السلسلة مجمدة • 0 أيام" else "STREAK FROZEN • 0 DAYS",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFFE0F7FA),
+                                        color = if (aura.isDark) Color(0xFFE0F7FA) else Color(0xFF0C4A6E),
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 10.sp,
                                         letterSpacing = 1.2.sp
@@ -320,8 +336,8 @@ fun AuraPulseBrandHeader(
                         // Active Liquid Aura Indicator
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = Color(0x2E00F2FE),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x4400F2FE))
+                            color = aura.accentCyanSoft,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.4f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -331,13 +347,13 @@ fun AuraPulseBrandHeader(
                                     modifier = Modifier
                                         .size(7.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF00F2FE))
+                                        .background(aura.accentCyan)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (isArabic) "الهالة متوهجة نشطة" else "LIVING AURA ACTIVE",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFF00F2FE),
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp,
                                         letterSpacing = 1.5.sp
@@ -357,24 +373,26 @@ fun AuraPulseBrandHeader(
                         fontWeight = FontWeight.Black,
                         fontSize = 32.sp,
                         letterSpacing = 4.sp,
-                        color = if (isFrozen) Color(0xFFE0F7FA) else Color.White
+                        color = when {
+                            isFrozen && aura.isDark -> Color(0xFFE0F7FA)
+                            isFrozen -> Color(0xFF0C4A6E)
+                            else -> aura.textPrimary
+                        }
                     ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.drawBehind {
                         if (isFrozen) {
-                            // Crystallized ice-blue soft shadow
                             drawCircle(
                                 brush = Brush.radialGradient(
-                                    listOf(Color(0x6680DEEA), Color.Transparent),
+                                    listOf(Color(0x4438BDF8), Color.Transparent),
                                     radius = size.width * 0.6f
                                 ),
                                 center = Offset(size.width / 2f, size.height / 2f)
                             )
                         } else {
-                            // Subtle liquid neon rim under text
                             drawCircle(
                                 brush = Brush.radialGradient(
-                                    listOf(Color(0x4400F2FE), Color.Transparent),
+                                    listOf(aura.accentCyan.copy(alpha = 0.25f), Color.Transparent),
                                     radius = size.width * 0.7f
                                 ),
                                 center = Offset(size.width / 2f, size.height / 2f)
@@ -395,7 +413,11 @@ fun AuraPulseBrandHeader(
                         else "AI-Powered Luxury Media Player"
                     },
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = if (isFrozen) Color(0xFF80DEEA) else Color(0xFF94A3B8),
+                        color = when {
+                            isFrozen && aura.isDark -> Color(0xFF80DEEA)
+                            isFrozen -> Color(0xFF0369A1)
+                            else -> aura.textSecondary
+                        },
                         fontSize = 11.sp,
                         letterSpacing = if (isFrozen) 0.2.sp else 0.8.sp,
                         fontWeight = if (isFrozen) FontWeight.Medium else FontWeight.Normal

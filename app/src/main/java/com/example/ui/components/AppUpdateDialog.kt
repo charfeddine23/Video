@@ -73,6 +73,7 @@ import com.example.data.update.ApkDownloadState
 import com.example.data.update.ApkInstallLaunchResult
 import com.example.data.update.AppUpdateChecker
 import com.example.data.update.AppUpdateInfo
+import com.example.ui.theme.aura
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
@@ -99,6 +100,7 @@ fun AppUpdateDialog(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val aura = MaterialTheme.aura
 
     var phase by remember { mutableStateOf(InAppUpdatePhase.PROMPT) }
     var progress by remember { mutableFloatStateOf(0f) }
@@ -271,15 +273,15 @@ fun AppUpdateDialog(
                         brush = Brush.verticalGradient(
                             colors = listOf(
                                 crimsonBright.copy(alpha = 0.5f),
-                                Color(0x28FFFFFF),
-                                Color(0x14FFFFFF)
+                                aura.borderSubtle,
+                                aura.borderMuted
                             )
                         ),
                         shape = RoundedCornerShape(28.dp)
                     )
                     .testTag("app_update_dialog_card"),
                 shape = RoundedCornerShape(28.dp),
-                color = Color(0xF5111218),
+                color = aura.dialogBg,
                 shadowElevation = 24.dp
             ) {
                 Box(
@@ -297,13 +299,13 @@ fun AppUpdateDialog(
                             .align(Alignment.TopStart)
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0x14FFFFFF))
+                            .background(aura.iconButtonBg)
                             .testTag("app_update_close_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = if (isArabic) "إغلاق" else "Close",
-                            tint = Color(0xFF9CA3AF),
+                            tint = aura.textSecondary,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -514,7 +516,7 @@ fun AppUpdateDialog(
                             },
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
+                                color = aura.textPrimary,
                                 fontSize = 21.sp
                             ),
                             textAlign = TextAlign.Center
@@ -533,8 +535,8 @@ fun AppUpdateDialog(
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = when (phase) {
-                                    InAppUpdatePhase.READY_TO_INSTALL -> Color(0xFF34D399)
-                                    InAppUpdatePhase.NEEDS_INSTALL_PERMISSION -> Color(0xFFFFB74D)
+                                    InAppUpdatePhase.READY_TO_INSTALL -> aura.accentEmerald
+                                    InAppUpdatePhase.NEEDS_INSTALL_PERMISSION -> aura.accentGold
                                     else -> crimsonBright
                                 },
                                 fontSize = 14.sp
@@ -547,8 +549,8 @@ fun AppUpdateDialog(
                         // Version Transition Pill (Current -> New) + Size
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = Color(0x18FFFFFF),
-                            border = BorderStroke(0.8.dp, Color(0x28FFFFFF))
+                            color = aura.surfaceSubtle,
+                            border = BorderStroke(0.8.dp, aura.borderSubtle)
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
@@ -558,7 +560,7 @@ fun AppUpdateDialog(
                                 Text(
                                     text = "v${BuildConfig.VERSION_NAME}",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFF94A3B8),
+                                        color = aura.textSecondary,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 11.sp
                                     )
@@ -574,7 +576,7 @@ fun AppUpdateDialog(
                                 Text(
                                     text = "v${updateInfo.versionName}",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 11.5.sp
                                     )
@@ -584,7 +586,7 @@ fun AppUpdateDialog(
                                     Text(
                                         text = "• $sizeStr",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFF94A3B8),
+                                            color = aura.textSecondary,
                                             fontSize = 10.5.sp
                                         )
                                     )
@@ -607,7 +609,7 @@ fun AppUpdateDialog(
                                 Text(
                                     text = notesText,
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = Color(0xFF9CA3AF),
+                                        color = aura.textSecondary,
                                         fontSize = 13.sp,
                                         lineHeight = 19.sp
                                     ),
@@ -645,7 +647,7 @@ fun AppUpdateDialog(
                                     Text(
                                         text = if (totalFormatted.isNotEmpty()) "$downloadedFormatted / $totalFormatted" else downloadedFormatted,
                                         style = MaterialTheme.typography.labelMedium.copy(
-                                            color = Color(0xFFCBD5E1),
+                                            color = aura.textSecondary,
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 12.sp
                                         )
@@ -673,7 +675,7 @@ fun AppUpdateDialog(
                                             .clip(RoundedCornerShape(4.dp))
                                             .testTag("app_update_download_progress"),
                                         color = crimsonBright,
-                                        trackColor = Color(0x26FFFFFF)
+                                        trackColor = aura.progressTrack
                                     )
                                 } else {
                                     LinearProgressIndicator(
@@ -683,7 +685,7 @@ fun AppUpdateDialog(
                                             .clip(RoundedCornerShape(4.dp))
                                             .testTag("app_update_download_progress"),
                                         color = crimsonBright,
-                                        trackColor = Color(0x26FFFFFF)
+                                        trackColor = aura.progressTrack
                                     )
                                 }
 
@@ -691,8 +693,8 @@ fun AppUpdateDialog(
 
                                 Surface(
                                     shape = RoundedCornerShape(50),
-                                    color = Color(0x18FFFFFF),
-                                    border = BorderStroke(1.dp, Color(0x2EFFFFFF)),
+                                    color = aura.surfaceSubtle,
+                                    border = BorderStroke(1.dp, aura.borderSubtle),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp)
@@ -707,7 +709,7 @@ fun AppUpdateDialog(
                                         Text(
                                             text = if (isArabic) "إلغاء التنزيل" else "Cancel Download",
                                             style = MaterialTheme.typography.titleSmall.copy(
-                                                color = Color(0xFFCBD5E1),
+                                                color = aura.textPrimary,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         )
@@ -723,7 +725,7 @@ fun AppUpdateDialog(
                                         "Update downloaded in-app! Allow \"Install unknown apps\" once to finish installing directly."
                                     },
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = Color(0xFFCBD5E1),
+                                        color = aura.textSecondary,
                                         fontSize = 12.5.sp,
                                         lineHeight = 18.sp
                                     ),
@@ -754,7 +756,7 @@ fun AppUpdateDialog(
                                         "Update package verified and ready to install over the existing app without data loss."
                                     },
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = Color(0xFFCBD5E1),
+                                        color = aura.textSecondary,
                                         fontSize = 12.5.sp,
                                         lineHeight = 18.sp
                                     ),
@@ -781,7 +783,7 @@ fun AppUpdateDialog(
                                 Text(
                                     text = errorMessage ?: (if (isArabic) "حدث خطأ غير متوقع أثناء التنزيل." else "Unexpected error during download."),
                                     style = MaterialTheme.typography.bodyMedium.copy(
-                                        color = Color(0xFFFCA5A5),
+                                        color = aura.accentDanger,
                                         fontSize = 12.5.sp,
                                         lineHeight = 18.sp
                                     ),

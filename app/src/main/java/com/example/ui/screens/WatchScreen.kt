@@ -105,6 +105,7 @@ import com.example.ui.components.SmartFallbackCover
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
+import com.example.ui.theme.aura
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -132,6 +133,7 @@ fun WatchScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+    val aura = MaterialTheme.aura
     val prefsRepo = remember { StreakPreferencesRepository.getInstance(context) }
     var selectedViewMode by remember {
         val savedMode = try {
@@ -286,7 +288,7 @@ fun WatchScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .testTag("watch_screen_part2")
     ) {
         // Liquid Glass M5 Ambient Glow extending into hidden status bar area
@@ -297,8 +299,8 @@ fun WatchScreen(
                     drawRect(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color(0x2200F2FE),
-                                Color(0x127928CA),
+                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.14f else 0.08f),
+                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.08f else 0.04f),
                                 Color.Transparent
                             ),
                             startY = 0f,
@@ -307,7 +309,11 @@ fun WatchScreen(
                     )
                     drawCircle(
                         brush = Brush.radialGradient(
-                            listOf(Color(0x1800F2FE), Color(0x107928CA), Color.Transparent),
+                            listOf(
+                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.10f else 0.06f),
+                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.06f else 0.03f),
+                                Color.Transparent
+                            ),
                             radius = size.width * 0.95f
                         ),
                         center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.18f)
@@ -338,12 +344,12 @@ fun WatchScreen(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x26FFFFFF))
+                                .background(aura.iconButtonBg)
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Back to folders",
-                                tint = Color.White
+                                tint = aura.textPrimary
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -353,14 +359,14 @@ fun WatchScreen(
                                 .size(42.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    Brush.linearGradient(listOf(PulseCyan, PulseViolet))
+                                    Brush.linearGradient(listOf(aura.accentCyan, aura.accentViolet))
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.VideoLibrary,
                                 contentDescription = null,
-                                tint = TextDark,
+                                tint = if (aura.isDark) TextDark else Color.White,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -376,7 +382,7 @@ fun WatchScreen(
                             },
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White
+                                color = aura.textPrimary
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -384,7 +390,7 @@ fun WatchScreen(
                         Text(
                             text = if (isArabic) "${localVideos.size} فيديو" else "${localVideos.size} videos",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontSize = 11.sp
                             )
                         )
@@ -399,17 +405,17 @@ fun WatchScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 6.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, PulseCyan.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .border(1.dp, aura.accentCyan.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                         .testTag("storage_permission_banner"),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0x3300F2FE))
+                    colors = CardDefaults.cardColors(containerColor = aura.accentCyanSoft)
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.LockOpen,
                                 contentDescription = null,
-                                tint = PulseCyan,
+                                tint = aura.accentCyan,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -417,7 +423,7 @@ fun WatchScreen(
                                 text = if (isArabic) "إذن قراءة ملفات الفيديو في الهاتف" else "Device Storage Permission Required",
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = aura.textPrimary
                                 )
                             )
                         }
@@ -429,7 +435,7 @@ fun WatchScreen(
                                 "Grant video access permission to automatically discover and list all videos on your device storage."
                             },
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFFCBD5E1),
+                                color = aura.textSecondary,
                                 fontSize = 11.5.sp,
                                 lineHeight = 16.sp
                             )
@@ -445,8 +451,8 @@ fun WatchScreen(
                                     permissionLauncher.launch(LocalMediaScanner.getRequiredPermissions())
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = PulseCyan,
-                                    contentColor = TextDark
+                                    containerColor = aura.accentCyan,
+                                    contentColor = if (aura.isDark) TextDark else Color.White
                                 ),
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.weight(1f)
@@ -464,8 +470,8 @@ fun WatchScreen(
                                     filePickerLauncher.launch(arrayOf("video/*"))
                                 },
                                 shape = RoundedCornerShape(10.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x66FFFFFF)),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, aura.borderSubtle),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = aura.textPrimary),
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(
@@ -495,10 +501,10 @@ fun WatchScreen(
                     ) {
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) Color(0x3300F2FE) else Color(0x1F121826),
+                            color = if (isSelected) aura.accentCyanSoft else aura.unselectedChipBg,
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (isSelected) PulseCyan else Color(0x22FFFFFF)
+                                if (isSelected) aura.accentCyan else aura.borderSubtle
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -545,7 +551,7 @@ fun WatchScreen(
                                     Icon(
                                         imageVector = if (isFoldersMode && isFoldersMagazineLayout) Icons.Default.GridView else mode.icon,
                                         contentDescription = null,
-                                        tint = if (isSelected) PulseCyan else Color(0xFF94A3B8),
+                                        tint = if (isSelected) aura.accentCyan else aura.textSecondary,
                                         modifier = Modifier.size(15.dp)
                                     )
                                     Spacer(modifier = Modifier.width(5.dp))
@@ -556,7 +562,7 @@ fun WatchScreen(
                                             if (isFoldersMode && isFoldersMagazineLayout) "Folders (Grid)" else mode.titleEn
                                         },
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = if (isSelected) PulseCyan else Color.White,
+                                            color = if (isSelected) aura.accentCyan else aura.textPrimary,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                             fontSize = 10.sp
                                         )
@@ -583,7 +589,7 @@ fun WatchScreen(
                     placeholder = {
                         Text(
                             text = if (isArabic) "بحث..." else "Search videos...",
-                            color = Color(0xFF64748B),
+                            color = aura.textTertiary,
                             fontSize = 11.sp
                         )
                     },
@@ -591,19 +597,19 @@ fun WatchScreen(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(16.dp)
                         )
                     },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = PulseCyan,
-                        unfocusedBorderColor = Color(0x22FFFFFF),
-                        focusedContainerColor = Color(0x1F121826),
-                        unfocusedContainerColor = Color(0x1F121826),
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedBorderColor = aura.accentCyan,
+                        unfocusedBorderColor = aura.borderSubtle,
+                        focusedContainerColor = aura.surfaceCard,
+                        unfocusedContainerColor = aura.surfaceSubtle,
+                        focusedTextColor = aura.textPrimary,
+                        unfocusedTextColor = aura.textPrimary
                     )
                 )
             }
@@ -627,14 +633,14 @@ fun WatchScreen(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(
-                            color = PulseCyan,
+                            color = aura.accentCyan,
                             strokeWidth = 2.dp,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = if (isArabic) "جاري فحص فيديوهات الهاتف..." else "Scanning device videos...",
-                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8))
+                            style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary)
                         )
                     }
                 }
@@ -652,9 +658,9 @@ fun WatchScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(22.dp))
-                            .border(1.dp, Color(0x2AFFFFFF), RoundedCornerShape(22.dp)),
+                            .border(1.dp, aura.borderSubtle, RoundedCornerShape(22.dp)),
                         shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                     ) {
                         Column(
                             modifier = Modifier
@@ -666,13 +672,13 @@ fun WatchScreen(
                                 modifier = Modifier
                                     .size(68.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0x2600F2FE)),
+                                    .background(aura.accentCyanSoft),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.FolderOpen,
                                     contentDescription = null,
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(36.dp)
                                 )
                             }
@@ -687,7 +693,7 @@ fun WatchScreen(
                                 },
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = aura.textPrimary,
                                     textAlign = TextAlign.Center
                                 )
                             )
@@ -705,7 +711,7 @@ fun WatchScreen(
                                     }
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF94A3B8),
+                                    color = aura.textSecondary,
                                     textAlign = TextAlign.Center,
                                     lineHeight = 18.sp
                                 )
@@ -719,8 +725,8 @@ fun WatchScreen(
                                     filePickerLauncher.launch(arrayOf("video/*"))
                                 },
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = PulseCyan,
-                                    contentColor = TextDark
+                                    containerColor = aura.accentCyan,
+                                    contentColor = if (aura.isDark) TextDark else Color.White
                                 ),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth(0.9f)
@@ -742,8 +748,8 @@ fun WatchScreen(
                                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.VideoOnly)
                                     )
                                 },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33FFFFFF)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = aura.textPrimary),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, aura.borderSubtle),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.fillMaxWidth(0.9f)
                             ) {
@@ -853,15 +859,16 @@ fun FolderGridCard(
     folder: VideoFolder,
     onClick: () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(18.dp))
+            .border(1.dp, aura.borderSubtle, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
             .testTag("folder_grid_card_${folder.id}"),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
     ) {
         Column {
             // Clean Smart Fallback Cover for Folder in Grid
@@ -886,7 +893,7 @@ fun FolderGridCard(
                     text = folder.name,
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = aura.textPrimary
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -901,13 +908,13 @@ fun FolderGridCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = Color(0x3300F2FE)
+                        color = aura.accentCyanSoft
                     ) {
                         Text(
                             text = "${folder.count} Videos",
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.5.sp
                             )
@@ -918,7 +925,7 @@ fun FolderGridCard(
                         Text(
                             text = folder.totalSize,
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontSize = 10.sp
                             )
                         )
@@ -934,15 +941,16 @@ fun FolderItemCard(
     folder: VideoFolder,
     onClick: () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .border(1.dp, Color(0x2EFFFFFF), RoundedCornerShape(18.dp))
+            .border(1.dp, aura.borderSubtle, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
             .testTag("folder_card_${folder.id}"),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xB3121826))
+        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
     ) {
         Row(
             modifier = Modifier
@@ -970,7 +978,7 @@ fun FolderItemCard(
                     text = folder.name,
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = aura.textPrimary
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -981,13 +989,13 @@ fun FolderItemCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = Color(0x3300F2FE)
+                        color = aura.accentCyanSoft
                     ) {
                         Text(
                             text = "${folder.count} Videos",
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -999,7 +1007,7 @@ fun FolderItemCard(
                     Text(
                         text = folder.totalSize,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF94A3B8),
+                            color = aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
@@ -1015,6 +1023,7 @@ fun FileListItemCard(
     onPlay: () -> Unit
 ) {
     val context = LocalContext.current
+    val aura = MaterialTheme.aura
     val savedProgress = remember(video.id, video.uriString) {
         StreakPreferencesRepository.getInstance(context).getVideoProgress(video.id, video.uriString)
     }
@@ -1023,11 +1032,11 @@ fun FileListItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(16.dp))
+            .border(1.dp, aura.borderSubtle, RoundedCornerShape(16.dp))
             .clickable(onClick = onPlay)
             .testTag("file_list_card_${video.id}"),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xB3121826))
+        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
     ) {
         Row(
             modifier = Modifier
@@ -1113,7 +1122,7 @@ fun FileListItemCard(
                     text = video.title,
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = aura.textPrimary
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1124,13 +1133,13 @@ fun FileListItemCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = Color(0x3300F2FE)
+                        color = aura.accentCyanSoft
                     ) {
                         Text(
                             text = video.resolutionText,
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp
                             )
@@ -1142,7 +1151,7 @@ fun FileListItemCard(
                     Text(
                         text = video.sizeText,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF94A3B8),
+                            color = aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
@@ -1155,13 +1164,13 @@ fun FileListItemCard(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color.White),
+                    .background(aura.primaryCtaBg),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Play",
-                    tint = TextDark,
+                    tint = aura.primaryCtaContent,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -1175,6 +1184,7 @@ fun MagazineGridItemCard(
     onPlay: () -> Unit
 ) {
     val context = LocalContext.current
+    val aura = MaterialTheme.aura
     val savedProgress = remember(video.id, video.uriString) {
         StreakPreferencesRepository.getInstance(context).getVideoProgress(video.id, video.uriString)
     }
@@ -1183,11 +1193,11 @@ fun MagazineGridItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(16.dp))
+            .border(1.dp, aura.borderSubtle, RoundedCornerShape(16.dp))
             .clickable(onClick = onPlay)
             .testTag("magazine_card_${video.id}"),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
     ) {
         Column {
             Box(
@@ -1281,7 +1291,7 @@ fun MagazineGridItemCard(
                     text = video.title,
                     style = MaterialTheme.typography.labelMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = aura.textPrimary
                     ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -1296,13 +1306,13 @@ fun MagazineGridItemCard(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(4.dp),
-                        color = Color(0x3300F2FE)
+                        color = aura.accentCyanSoft
                     ) {
                         Text(
                             text = video.resolutionText,
                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp
                             )
@@ -1312,7 +1322,7 @@ fun MagazineGridItemCard(
                     Text(
                         text = video.sizeText,
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF94A3B8),
+                            color = aura.textSecondary,
                             fontSize = 10.sp
                         )
                     )

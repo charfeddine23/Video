@@ -50,8 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.PulseCyan
-import com.example.ui.theme.PulseViolet
+import com.example.ui.theme.aura
 import com.example.ui.theme.stableStatusBarsPadding
 
 @Composable
@@ -60,6 +59,7 @@ fun VaultScreen(
     isArabic: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
 
     BackHandler {
@@ -80,7 +80,7 @@ fun VaultScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .testTag("vault_screen")
     ) {
         Box(
@@ -90,8 +90,8 @@ fun VaultScreen(
                     drawCircle(
                         brush = Brush.radialGradient(
                             listOf(
-                                Color(0x2800F2FE),
-                                Color(0x1E7928CA),
+                                aura.accentCyan.copy(alpha = 0.14f),
+                                aura.accentViolet.copy(alpha = 0.10f),
                                 Color.Transparent
                             ),
                             radius = size.width * 0.95f
@@ -122,13 +122,13 @@ fun VaultScreen(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(Color(0x22FFFFFF))
+                        .background(aura.iconButtonBg)
                         .testTag("vault_back_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = if (isArabic) "رجوع" else "Back",
-                        tint = Color.White
+                        tint = aura.textPrimary
                     )
                 }
 
@@ -138,7 +138,7 @@ fun VaultScreen(
                     text = "Vault",
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color.White
+                        color = aura.textPrimary
                     )
                 )
             }
@@ -152,13 +152,13 @@ fun VaultScreen(
             ) {
                 Surface(
                     shape = RoundedCornerShape(28.dp),
-                    color = Color(0xDD121826),
+                    color = aura.surfaceCard,
                     border = BorderStroke(
                         1.4.dp,
                         Brush.horizontalGradient(
                             listOf(
-                                PulseCyan.copy(alpha = pulseAlpha),
-                                PulseViolet.copy(alpha = pulseAlpha * 0.85f)
+                                aura.accentCyan.copy(alpha = pulseAlpha),
+                                aura.accentViolet.copy(alpha = pulseAlpha * 0.85f)
                             )
                         )
                     ),
@@ -175,16 +175,16 @@ fun VaultScreen(
                                 .clip(CircleShape)
                                 .background(
                                     Brush.radialGradient(
-                                        listOf(Color(0x4400F2FE), Color(0x227928CA))
+                                        listOf(aura.accentCyanSoft, aura.accentViolet.copy(alpha = 0.14f))
                                     )
                                 )
-                                .border(1.8.dp, PulseCyan.copy(alpha = pulseAlpha), CircleShape),
+                                .border(1.8.dp, aura.accentCyan.copy(alpha = pulseAlpha), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = PulseCyan,
+                                tint = aura.accentCyan,
                                 modifier = Modifier.size(40.dp)
                             )
                         }
@@ -194,7 +194,7 @@ fun VaultScreen(
                         Text(
                             text = "Vault",
                             style = MaterialTheme.typography.headlineMedium.copy(
-                                color = Color.White,
+                                color = aura.textPrimary,
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.sp
                             )
@@ -206,7 +206,7 @@ fun VaultScreen(
                             text = if (isArabic) "قريباً" else "Soon",
                             modifier = Modifier.testTag("vault_soon_label"),
                             style = MaterialTheme.typography.headlineSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         )
@@ -220,7 +220,7 @@ fun VaultScreen(
                                 "The private Vault experience is coming soon"
                             },
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontSize = 13.sp
                             ),
                             textAlign = TextAlign.Center

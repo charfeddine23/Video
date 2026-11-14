@@ -91,6 +91,7 @@ import com.example.data.preferences.LastWatchedVideoInfo
 import com.example.data.preferences.StreakPreferencesRepository
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
+import com.example.ui.theme.aura
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -122,6 +123,7 @@ fun ContinueWatchingSection(
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
+    val aura = MaterialTheme.aura
     val prefsRepo = remember { StreakPreferencesRepository.getInstance(context) }
 
     // Read stored playback history & preferences
@@ -324,14 +326,14 @@ fun ContinueWatchingSection(
                     }
                     // Liquid Glass Outer Container Styling
                     .clip(RoundedCornerShape(22.dp))
-                    .background(Color(0xE60D1424))
+                    .background(aura.surfaceCard)
                     .drawBehind {
                         // Ambient dynamic glow behind the card
                         drawCircle(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    PulseCyan.copy(alpha = 0.16f * radarPulse),
-                                    Color(0xFF007CF0).copy(alpha = 0.08f),
+                                    aura.accentCyan.copy(alpha = (if (aura.isDark) 0.16f else 0.08f) * radarPulse),
+                                    Color(0xFF007CF0).copy(alpha = if (aura.isDark) 0.08f else 0.04f),
                                     Color.Transparent
                                 ),
                                 radius = size.maxDimension * 0.75f
@@ -343,9 +345,9 @@ fun ContinueWatchingSection(
                             brush = Brush.horizontalGradient(
                                 listOf(
                                     Color.Transparent,
-                                    Color.White.copy(alpha = 0.35f),
-                                    PulseCyan.copy(alpha = 0.65f),
-                                    Color(0x337928CA),
+                                    aura.textPrimary.copy(alpha = if (aura.isDark) 0.35f else 0.15f),
+                                    aura.accentCyan.copy(alpha = 0.65f),
+                                    aura.accentViolet.copy(alpha = 0.25f),
                                     Color.Transparent
                                 )
                             ),
@@ -359,10 +361,10 @@ fun ContinueWatchingSection(
                             width = 1.2.dp,
                             brush = Brush.horizontalGradient(
                                 listOf(
-                                    PulseCyan.copy(alpha = 0.7f),
+                                    aura.accentCyan.copy(alpha = 0.65f),
                                     Color(0xFF007CF0).copy(alpha = 0.45f),
-                                    PulseViolet.copy(alpha = 0.4f),
-                                    PulseCyan.copy(alpha = 0.2f)
+                                    aura.accentViolet.copy(alpha = 0.4f),
+                                    aura.accentCyan.copy(alpha = 0.2f)
                                 )
                             )
                         ),
@@ -387,7 +389,7 @@ fun ContinueWatchingSection(
                                 modifier = Modifier
                                     .size(24.dp)
                                     .clip(CircleShape)
-                                    .background(PulseCyan.copy(alpha = 0.2f)),
+                                    .background(aura.accentCyanSoft),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Box(
@@ -395,13 +397,13 @@ fun ContinueWatchingSection(
                                         .size(12.dp)
                                         .scale(radarPulse)
                                         .clip(CircleShape)
-                                        .background(PulseCyan.copy(alpha = 0.4f))
+                                        .background(aura.accentCyan.copy(alpha = 0.4f))
                                 )
                                 Box(
                                     modifier = Modifier
                                         .size(6.dp)
                                         .clip(CircleShape)
-                                        .background(PulseCyan)
+                                        .background(aura.accentCyan)
                                 )
                             }
 
@@ -411,7 +413,7 @@ fun ContinueWatchingSection(
                                 text = if (isArabic) "متابعة المشاهدة" else "Continue Watching",
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White,
+                                    color = aura.textPrimary,
                                     fontSize = 13.5.sp
                                 )
                             )
@@ -422,14 +424,14 @@ fun ContinueWatchingSection(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(PulseCyan.copy(alpha = 0.18f))
-                                    .border(BorderStroke(0.9.dp, PulseCyan.copy(alpha = 0.5f)), RoundedCornerShape(8.dp))
+                                    .background(aura.accentCyanSoft)
+                                    .border(BorderStroke(0.9.dp, aura.accentCyan.copy(alpha = 0.5f)), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 7.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = if (isArabic) "${item.progressPercent}% تم" else "${item.progressPercent}%",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp
                                     )
@@ -442,14 +444,14 @@ fun ContinueWatchingSection(
                             modifier = Modifier
                                 .size(30.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x24FFFFFF))
+                                .background(aura.iconButtonBg)
                                 .clickable { executeDismiss() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = if (isArabic) "إخفاء مؤقت" else "Dismiss",
-                                tint = Color(0xFFCBD5E1),
+                                tint = aura.textSecondary,
                                 modifier = Modifier.size(15.dp)
                             )
                         }
@@ -556,7 +558,7 @@ fun ContinueWatchingSection(
                                 text = displayTitle,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
+                                    color = aura.textPrimary,
                                     fontSize = 13.sp
                                 ),
                                 maxLines = 1,
@@ -573,7 +575,7 @@ fun ContinueWatchingSection(
                                     "${formatTimeMs(item.positionMs)} / ${formatTimeMs(item.durationMs)} • ${formatTimeMs(item.remainingMs)} left"
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF94A3B8),
+                                    color = aura.textSecondary,
                                     fontSize = 10.5.sp
                                 ),
                                 maxLines = 1,
@@ -588,7 +590,7 @@ fun ContinueWatchingSection(
                                     .fillMaxWidth()
                                     .height(5.dp)
                                     .clip(RoundedCornerShape(3.dp))
-                                    .background(Color(0x33FFFFFF))
+                                    .background(aura.progressTrack)
                             ) {
                                 Box(
                                     modifier = Modifier
@@ -597,16 +599,9 @@ fun ContinueWatchingSection(
                                         .clip(RoundedCornerShape(3.dp))
                                         .background(
                                             Brush.horizontalGradient(
-                                                listOf(PulseCyan, Color(0xFF007CF0), PulseViolet)
+                                                listOf(aura.accentCyan, Color(0xFF007CF0), aura.accentViolet)
                                             )
                                         )
-                                        .drawBehind {
-                                            drawRect(
-                                                brush = Brush.horizontalGradient(
-                                                    listOf(PulseCyan.copy(alpha = 0.8f), Color(0x66007CF0))
-                                                )
-                                            )
-                                        }
                                 )
                             }
 
@@ -626,7 +621,7 @@ fun ContinueWatchingSection(
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(
                                             Brush.horizontalGradient(
-                                                listOf(PulseCyan, Color(0xFF007CF0))
+                                                listOf(aura.accentCyan, Color(0xFF007CF0))
                                             )
                                         )
                                         .drawBehind {
@@ -649,17 +644,18 @@ fun ContinueWatchingSection(
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
+                                        val resumeContentColor = if (aura.isDark) Color(0xFF080F1D) else Color.White
                                         Icon(
                                             imageVector = Icons.Default.PlayArrow,
                                             contentDescription = null,
-                                            tint = Color(0xFF080F1D),
+                                            tint = resumeContentColor,
                                             modifier = Modifier.size(15.dp)
                                         )
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = if (isArabic) "استئناف" else "Resume",
                                             style = MaterialTheme.typography.labelSmall.copy(
-                                                color = Color(0xFF080F1D),
+                                                color = resumeContentColor,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 fontSize = 11.sp
                                             )
@@ -670,8 +666,8 @@ fun ContinueWatchingSection(
                                 // Secondary Action: Start from Beginning (0:00)
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = Color(0x1F1E293B),
-                                    border = BorderStroke(0.8.dp, Color(0x33FFFFFF)),
+                                    color = aura.surfaceSubtle,
+                                    border = BorderStroke(0.8.dp, aura.borderSubtle),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(10.dp))
                                         .clickable {
@@ -687,14 +683,14 @@ fun ContinueWatchingSection(
                                         Icon(
                                             imageVector = Icons.Default.Replay,
                                             contentDescription = if (isArabic) "إعادة البدء" else "Start Over",
-                                            tint = Color(0xFF94A3B8),
+                                            tint = aura.textSecondary,
                                             modifier = Modifier.size(13.dp)
                                         )
                                         Spacer(modifier = Modifier.width(3.dp))
                                         Text(
                                             text = if (isArabic) "من البداية" else "From Start",
                                             style = MaterialTheme.typography.labelSmall.copy(
-                                                color = Color(0xFFCBD5E1),
+                                                color = aura.textPrimary,
                                                 fontSize = 10.sp
                                             )
                                         )
@@ -718,8 +714,8 @@ fun ContinueWatchingSection(
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 6.dp)
                     .clip(RoundedCornerShape(14.dp))
-                    .background(Color(0xF0101726))
-                    .border(BorderStroke(1.dp, PulseCyan.copy(alpha = 0.4f)), RoundedCornerShape(14.dp))
+                    .background(aura.dialogBg)
+                    .border(BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.45f)), RoundedCornerShape(14.dp))
                     .padding(horizontal = 14.dp, vertical = 9.dp)
             ) {
                 Column {
@@ -732,14 +728,14 @@ fun ContinueWatchingSection(
                             Icon(
                                 imageVector = Icons.Default.History,
                                 contentDescription = null,
-                                tint = PulseCyan,
+                                tint = aura.accentCyan,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (isArabic) "تم إخفاء متابعة المشاهدة" else "Continue Watching dismissed",
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFFCBD5E1),
+                                    color = aura.textPrimary,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -749,8 +745,8 @@ fun ContinueWatchingSection(
                         // Undo Action Button
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = PulseCyan.copy(alpha = 0.18f),
-                            border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.7f)),
+                            color = aura.accentCyanSoft,
+                            border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.7f)),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable { executeUndo() }
@@ -762,14 +758,14 @@ fun ContinueWatchingSection(
                                 Icon(
                                     imageVector = Icons.Default.Undo,
                                     contentDescription = null,
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(13.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
                                     text = if (isArabic) "تراجع" else "Undo",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp
                                     )
@@ -786,13 +782,13 @@ fun ContinueWatchingSection(
                             .fillMaxWidth()
                             .height(2.dp)
                             .clip(RoundedCornerShape(1.dp))
-                            .background(Color(0x22FFFFFF))
+                            .background(aura.progressTrack)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(undoCountdown.value)
                                 .fillMaxHeight()
-                                .background(PulseCyan.copy(alpha = 0.6f))
+                                .background(aura.accentCyan.copy(alpha = 0.7f))
                         )
                     }
                 }

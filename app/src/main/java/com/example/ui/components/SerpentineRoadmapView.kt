@@ -82,8 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.VaultLevelMilestone
 import com.example.data.model.VaultProgressionRegistry
-import com.example.ui.theme.Charcoal950
-import com.example.ui.theme.PulseCyan
+import com.example.ui.theme.aura
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.sin
@@ -314,6 +313,7 @@ private fun RoadmapHudBar(
     onJumpToLevel: (Int) -> Unit,
     onClaimAllReady: () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     val progressRatio = (currentProgressionLevel.toFloat() / 365f).coerceIn(0f, 1f)
 
     Card(
@@ -322,11 +322,17 @@ private fun RoadmapHudBar(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .border(
                 1.1.dp,
-                Brush.horizontalGradient(listOf(Color(0x6600F2FE), Color(0x66FFB74D), Color(0x66FFD700))),
+                Brush.horizontalGradient(
+                    listOf(
+                        aura.accentCyan.copy(alpha = 0.45f),
+                        aura.accentGold.copy(alpha = 0.45f),
+                        aura.accentGold.copy(alpha = 0.4f)
+                    )
+                ),
                 RoundedCornerShape(20.dp)
             ),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xE6101626))
+        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -343,15 +349,15 @@ private fun RoadmapHudBar(
                             .size(38.dp)
                             .clip(CircleShape)
                             .background(
-                                Brush.radialGradient(listOf(Color(0x5500F2FE), Color(0x220088FF)))
+                                Brush.radialGradient(listOf(aura.accentCyanSoft, aura.accentCyan.copy(alpha = 0.1f)))
                             )
-                            .border(1.2.dp, PulseCyan, CircleShape),
+                            .border(1.2.dp, aura.accentCyan, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (streakDays >= 365) Icons.Default.EmojiEvents else Icons.Default.WorkspacePremium,
                             contentDescription = null,
-                            tint = if (streakDays >= 365) Color(0xFFFFD700) else PulseCyan,
+                            tint = if (streakDays >= 365) aura.accentGold else aura.accentCyan,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -360,7 +366,7 @@ private fun RoadmapHudBar(
                         Text(
                             text = if (isArabic) "خريطة المستويات: $currentProgressionLevel / 365" else "Roadmap Progress: LVL $currentProgressionLevel / 365",
                             style = MaterialTheme.typography.titleSmall.copy(
-                                color = Color.White,
+                                color = aura.textPrimary,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 13.5.sp
                             )
@@ -372,7 +378,7 @@ private fun RoadmapHudBar(
                                 if (isArabic) "مسار الأفعى المتواصل • باقي ${365 - currentProgressionLevel} مرحلة" else "Continuous Snake Road • ${365 - currentProgressionLevel} stages left"
                             },
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (streakDays >= 365) Color(0xFFFFD700) else Color(0xFF94A3B8),
+                                color = if (streakDays >= 365) aura.accentGold else aura.textSecondary,
                                 fontSize = 10.5.sp
                             )
                         )
@@ -383,8 +389,8 @@ private fun RoadmapHudBar(
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0x38FFB74D),
-                        border = BorderStroke(1.dp, Color(0xFFFFD700)),
+                        color = aura.accentGoldBg,
+                        border = BorderStroke(1.dp, aura.accentGold),
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .clickable(onClick = onClaimAllReady)
@@ -397,14 +403,14 @@ private fun RoadmapHudBar(
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color(0xFFFFD700),
+                                tint = aura.accentGold,
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = if (isArabic) "استلام الكل ($unclaimedCount)" else "Claim ($unclaimedCount)",
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = Color(0xFFFFD700),
+                                    color = aura.accentGold,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 10.sp
                                 )
@@ -422,8 +428,8 @@ private fun RoadmapHudBar(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = if (streakDays >= 365) Color(0xFFFFD700) else PulseCyan,
-                trackColor = Color(0x26FFFFFF)
+                color = if (streakDays >= 365) aura.accentGold else aura.accentCyan,
+                trackColor = aura.progressTrack
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -438,8 +444,8 @@ private fun RoadmapHudBar(
             ) {
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0x3300F2FE),
-                    border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.75f)),
+                    color = aura.accentCyanSoft,
+                    border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.75f)),
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .clickable { onJumpToLevel(currentProgressionLevel) }
@@ -452,14 +458,14 @@ private fun RoadmapHudBar(
                         Icon(
                             imageVector = Icons.Default.MyLocation,
                             contentDescription = null,
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(13.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = if (isArabic) "موقعي ($currentProgressionLevel)" else "Me ($currentProgressionLevel)",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = PulseCyan,
+                                color = aura.accentCyan,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 10.5.sp
                             )
@@ -470,8 +476,8 @@ private fun RoadmapHudBar(
                 listOf(1, 30, 100, 200, 365).forEach { stage ->
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0x1EFFFFFF),
-                        border = BorderStroke(0.8.dp, Color(0x2EFFFFFF)),
+                        color = aura.unselectedChipBg,
+                        border = BorderStroke(0.8.dp, aura.borderSubtle),
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .clickable { onJumpToLevel(stage) }
@@ -480,7 +486,7 @@ private fun RoadmapHudBar(
                             text = if (stage == 365) "👑 365" else "LVL $stage",
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = if (stage == 365) Color(0xFFFFD700) else Color(0xFFCBD5E1),
+                                color = if (stage == 365) aura.accentGold else aura.textSecondary,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.sp
                             )
@@ -507,17 +513,19 @@ private fun SerpentineLevelNodeRow(
     isArabic: Boolean,
     onClaimClick: () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     val orbSize = if (item.isMajor || isCurrent) 58.dp else 48.dp
     val currXFraction = snakeNodeXFraction(index)
     val prevXFraction = if (index > 0) snakeNodeXFraction(index - 1) else currXFraction
     val nextXFraction = if (index < totalCount - 1) snakeNodeXFraction(index + 1) else currXFraction
 
     val tierAccent = when {
-        item.level >= 201 -> Color(0xFFFFD700)
-        item.level >= 101 -> Color(0xFFC084FC)
-        item.level >= 31 -> Color(0xFF38BDF8)
-        else -> PulseCyan
+        item.level >= 201 -> aura.accentGold
+        item.level >= 101 -> aura.accentViolet
+        item.level >= 31 -> if (aura.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+        else -> aura.accentCyan
     }
+    val lockedTrackColor = if (aura.isDark) Color(0xFF283548) else aura.borderSubtle
 
     val nodeIcon = when (item.iconType) {
         "trophy", "legend" -> Icons.Default.EmojiEvents
@@ -553,7 +561,7 @@ private fun SerpentineLevelNodeRow(
                 val prevX = prevXFraction * widthPx
                 val nextX = nextXFraction * widthPx
 
-                // Incoming upper half from previous node (De Casteljau C1-continuous split at y = 0)
+                // Incoming upper half from previous node
                 if (index > 0) {
                     val isPrevSegmentActive = currentProgressionLevel >= item.level
                     val isFrontier = currentProgressionLevel == item.level
@@ -565,11 +573,12 @@ private fun SerpentineLevelNodeRow(
                         isUnlocked = isPrevSegmentActive,
                         isFrontier = isFrontier,
                         accentColor = tierAccent,
+                        lockedColor = lockedTrackColor,
                         energyFlow = energyFlow
                     )
                 }
 
-                // Outgoing lower half toward next node (De Casteljau C1-continuous split at y = heightPx)
+                // Outgoing lower half toward next node
                 if (index < totalCount - 1) {
                     val isNextSegmentActive = currentProgressionLevel >= item.level + 1
                     val isFrontier = currentProgressionLevel == item.level
@@ -581,6 +590,7 @@ private fun SerpentineLevelNodeRow(
                         isUnlocked = isNextSegmentActive,
                         isFrontier = isFrontier,
                         accentColor = tierAccent,
+                        lockedColor = lockedTrackColor,
                         energyFlow = energyFlow
                     )
                 }
@@ -602,7 +612,7 @@ private fun SerpentineLevelNodeRow(
                             brush = Brush.sweepGradient(
                                 listOf(
                                     Color(0xFFFFD700),
-                                    PulseCyan,
+                                    aura.accentCyan,
                                     Color.Transparent,
                                     Color(0xFFFFD700)
                                 ),
@@ -619,7 +629,7 @@ private fun SerpentineLevelNodeRow(
                 }
             }
 
-            // 2. Positioned Game Level Orb on the Snake Curve (always centered vertically & within screen bounds)
+            // 2. Positioned Game Level Orb on the Snake Curve
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
@@ -631,7 +641,9 @@ private fun SerpentineLevelNodeRow(
                             isCurrent -> Brush.radialGradient(listOf(Color(0xFFFFD700), Color(0xFFFF6D00)))
                             isClaimed -> Brush.radialGradient(listOf(Color(0xFF34D399), Color(0xFF059669)))
                             isUnlocked && item.isMajor -> Brush.radialGradient(listOf(Color(0xFFFFD700), Color(0xFF00F2FE)))
-                            isUnlocked -> Brush.radialGradient(listOf(PulseCyan, Color(0xFF0284C7)))
+                            isUnlocked -> Brush.radialGradient(listOf(Color(0xFF00F2FE), Color(0xFF0284C7)))
+                            !aura.isDark && item.isMajor -> Brush.radialGradient(listOf(Color(0xFFE2E8F0), Color(0xFFCBD5E1)))
+                            !aura.isDark -> Brush.radialGradient(listOf(Color(0xFFF1F5F9), Color(0xFFE2E8F0)))
                             item.isMajor -> Brush.radialGradient(listOf(Color(0xFF334155), Color(0xFF1E293B)))
                             else -> Brush.radialGradient(listOf(Color(0xFF1E293B), Color(0xFF0F172A)))
                         }
@@ -642,8 +654,8 @@ private fun SerpentineLevelNodeRow(
                             isCurrent -> Color.White
                             isClaimed -> Color(0xFF6EE7B7)
                             isUnlocked -> tierAccent
-                            item.isMajor -> Color(0x77FFD700)
-                            else -> Color(0x5564748B)
+                            item.isMajor -> aura.accentGold.copy(alpha = 0.6f)
+                            else -> aura.borderSubtle
                         },
                         shape = CircleShape
                     )
@@ -651,33 +663,35 @@ private fun SerpentineLevelNodeRow(
                     .testTag("snake_node_orb_${item.level}"),
                 contentAlignment = Alignment.Center
             ) {
+                val unlockedOrbContent = Color(0xFF07090D)
+                val lockedOrbContent = if (aura.isDark) Color(0xFFCBD5E1) else aura.textPrimary
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     if (!isUnlocked) {
                         Icon(
                             imageVector = if (item.isMajor) Icons.Default.Star else Icons.Default.Lock,
                             contentDescription = null,
-                            tint = if (item.isMajor) Color(0xCCFFD700) else Color(0xFF94A3B8),
+                            tint = if (item.isMajor) aura.accentGold else aura.textSecondary,
                             modifier = Modifier.size(14.dp)
                         )
                     } else if (isClaimed) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = Charcoal950,
+                            tint = unlockedOrbContent,
                             modifier = Modifier.size(16.dp)
                         )
                     } else {
                         Icon(
                             imageVector = nodeIcon,
                             contentDescription = null,
-                            tint = Charcoal950,
+                            tint = unlockedOrbContent,
                             modifier = Modifier.size(if (item.isMajor) 17.dp else 15.dp)
                         )
                     }
                     Text(
                         text = "${item.level}",
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = if (isUnlocked) Charcoal950 else Color(0xFFCBD5E1),
+                            color = if (isUnlocked) unlockedOrbContent else lockedOrbContent,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = if (item.level >= 100) 10.sp else 11.5.sp
                         )
@@ -685,7 +699,7 @@ private fun SerpentineLevelNodeRow(
                 }
             }
 
-            // "YOU ARE HERE" Floating Beacon Tag anchored cleanly above current orb
+            // "YOU ARE HERE" Floating Beacon Tag
             if (isCurrent) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
@@ -702,7 +716,7 @@ private fun SerpentineLevelNodeRow(
                         text = if (isArabic) "أنت هنا 📍" else "YOU 📍",
                         modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = Charcoal950,
+                            color = Color(0xFF07090D),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 9.5.sp
                         )
@@ -710,7 +724,7 @@ private fun SerpentineLevelNodeRow(
                 }
             }
 
-            // 3. Spacious Side Milestone Info & Claim Card guaranteed strictly inside screen margins
+            // 3. Spacious Side Milestone Info & Claim Card
             val isOrbOnRight = currXFraction >= 0.50f
             val screenMargin = 14.dp
             val orbGap = 14.dp
@@ -731,20 +745,20 @@ private fun SerpentineLevelNodeRow(
                         .border(
                             width = if (isCurrent || item.isMajor || (isUnlocked && !isClaimed)) 1.4.dp else 1.dp,
                             color = when {
-                                isCurrent -> Color(0xFFFFD700)
-                                isClaimed -> Color(0x6610B981)
+                                isCurrent -> aura.accentGold
+                                isClaimed -> aura.accentEmerald.copy(alpha = 0.5f)
                                 isUnlocked -> tierAccent.copy(alpha = 0.85f)
-                                item.isMajor -> Color(0x55FFD700)
-                                else -> Color(0x36475569)
+                                item.isMajor -> aura.accentGold.copy(alpha = 0.45f)
+                                else -> aura.borderSubtle
                             },
                             shape = RoundedCornerShape(18.dp)
                         ),
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = when {
-                            isCurrent -> Color(0xF217233A)
-                            isUnlocked -> Color(0xEA121A2B)
-                            else -> Color(0xDC0E1422)
+                            isCurrent -> aura.surfaceElevated
+                            isUnlocked -> aura.surfaceCard
+                            else -> if (aura.isDark) Color(0xDC0E1422) else aura.surfaceSubtle
                         }
                     )
                 ) {
@@ -762,7 +776,7 @@ private fun SerpentineLevelNodeRow(
                             Text(
                                 text = if (isArabic) item.titleAr else item.titleEn,
                                 style = MaterialTheme.typography.titleSmall.copy(
-                                    color = if (isUnlocked) Color.White else Color(0xFFE2E8F0),
+                                    color = if (isUnlocked) aura.textPrimary else aura.textSecondary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 12.sp
                                 ),
@@ -773,17 +787,17 @@ private fun SerpentineLevelNodeRow(
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isUnlocked) Color(0x3000F2FE) else Color(0x28334155),
+                                color = if (isUnlocked) aura.accentCyanSoft else aura.unselectedChipBg,
                                 border = BorderStroke(
                                     0.8.dp,
-                                    if (isUnlocked) PulseCyan.copy(alpha = 0.6f) else Color(0x4464748B)
+                                    if (isUnlocked) aura.accentCyan.copy(alpha = 0.6f) else aura.borderSubtle
                                 )
                             ) {
                                 Text(
                                     text = "+${item.shieldsReward} 🛡️",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = if (isUnlocked) PulseCyan else Color(0xFF94A3B8),
+                                        color = if (isUnlocked) aura.accentCyan else aura.textSecondary,
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 10.sp
                                     )
@@ -794,7 +808,7 @@ private fun SerpentineLevelNodeRow(
                         Text(
                             text = if (isArabic) item.descriptionAr else item.descriptionEn,
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (isUnlocked) Color(0xFFCBD5E1) else Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontSize = 10.5.sp,
                                 lineHeight = 14.5.sp
                             ),
@@ -811,8 +825,8 @@ private fun SerpentineLevelNodeRow(
                                 isUnlocked && !isClaimed -> {
                                     Surface(
                                         shape = RoundedCornerShape(9.dp),
-                                        color = Color(0x3800FFCC),
-                                        border = BorderStroke(1.dp, PulseCyan),
+                                        color = aura.accentCyanSoft,
+                                        border = BorderStroke(1.dp, aura.accentCyan),
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(9.dp))
                                             .clickable(onClick = onClaimClick)
@@ -822,7 +836,7 @@ private fun SerpentineLevelNodeRow(
                                             text = if (isArabic) "🎁 استلام" else "🎁 Claim",
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(
-                                                color = PulseCyan,
+                                                color = aura.accentCyan,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 fontSize = 10.5.sp
                                             )
@@ -833,7 +847,7 @@ private fun SerpentineLevelNodeRow(
                                     Text(
                                         text = if (isArabic) "تم الاستلام ✓" else "Claimed ✓",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFF34D399),
+                                            color = aura.accentEmerald,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 10.5.sp
                                         )
@@ -843,7 +857,7 @@ private fun SerpentineLevelNodeRow(
                                     Text(
                                         text = if (isArabic) "🔒 المستوى ${item.level}" else "🔒 LVL ${item.level}",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFF94A3B8),
+                                            color = aura.textSecondary,
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 10.sp
                                         )
@@ -855,7 +869,7 @@ private fun SerpentineLevelNodeRow(
                                 Text(
                                     text = if (isArabic) "★ محطة كبرى" else "★ MAJOR",
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFFFFD700),
+                                        color = aura.accentGold,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 9.5.sp
                                     )
@@ -878,6 +892,7 @@ private fun DrawScope.drawSnakeHalfCurve(
     isUnlocked: Boolean,
     isFrontier: Boolean,
     accentColor: Color,
+    lockedColor: Color,
     energyFlow: Float
 ) {
     val path = Path().apply {
@@ -887,7 +902,7 @@ private fun DrawScope.drawSnakeHalfCurve(
 
     if (isUnlocked || isFrontier) {
         val primaryColor = if (isFrontier) Color(0xFFFFD700) else accentColor
-        val secondaryColor = if (isUnlocked) Color(0xFF10B981) else PulseCyan
+        val secondaryColor = if (isUnlocked) Color(0xFF10B981) else Color(0xFF00F2FE)
 
         // 1. Wide outer ambient plasma bloom
         drawPath(
@@ -929,10 +944,10 @@ private fun DrawScope.drawSnakeHalfCurve(
             center = orb2
         )
     } else {
-        // Locked dashed dark sci-fi track
+        // Locked dashed track
         drawPath(
             path = path,
-            color = Color(0xFF283548),
+            color = lockedColor,
             style = Stroke(
                 width = 4.dp.toPx(),
                 cap = StrokeCap.Round,

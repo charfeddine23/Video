@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.aura
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -73,6 +74,7 @@ fun FlameParticleComponent(
     isArabic: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
 
@@ -213,11 +215,11 @@ fun FlameParticleComponent(
     val flameIconSize = (76.dp + (progression * 24).dp)
 
     val flamePrimaryTint = when {
-        isFrozen -> Color(0xFF80DEEA)
-        streakDays < 10 -> Color(0xFFFFB74D) // Thawing Warm Gold
-        streakDays < 60 -> Color(0xFFFF6D00) // Deep Orange
-        streakDays < 180 -> Color(0xFFFF3D00) // Fierce Blaze
-        else -> Color(0xFFFF1744) // Raging White-Hot Crimson
+        isFrozen -> if (aura.isDark) Color(0xFF80DEEA) else Color(0xFF0284C7)
+        streakDays < 10 -> if (aura.isDark) Color(0xFFFFB74D) else Color(0xFFD97706)
+        streakDays < 60 -> if (aura.isDark) Color(0xFFFF6D00) else Color(0xFFEA580C)
+        streakDays < 180 -> if (aura.isDark) Color(0xFFFF3D00) else Color(0xFFDC2626)
+        else -> if (aura.isDark) Color(0xFFFF1744) else Color(0xFFB91C1C)
     }
 
     Column(
@@ -363,22 +365,18 @@ fun FlameParticleComponent(
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            when {
-                                isFrozen -> listOf(
-                                    Color(0x3300E5FF),
-                                    Color(0x1A081324),
-                                    Color(0x800B0F19)
-                                )
-                                streakDays < 20 -> listOf(
-                                    Color(0x33FF9800),
-                                    Color(0x1A121826),
-                                    Color(0x800B0F19)
-                                )
-                                else -> listOf(
-                                    Color(0x4DFF3D00),
-                                    Color(0x2B1E1026),
-                                    Color(0x900B0F19)
-                                )
+                            if (aura.isDark) {
+                                when {
+                                    isFrozen -> listOf(Color(0x3300E5FF), Color(0x1A081324), Color(0x800B0F19))
+                                    streakDays < 20 -> listOf(Color(0x33FF9800), Color(0x1A121826), Color(0x800B0F19))
+                                    else -> listOf(Color(0x4DFF3D00), Color(0x2B1E1026), Color(0x900B0F19))
+                                }
+                            } else {
+                                when {
+                                    isFrozen -> listOf(Color(0x3838BDF8), Color(0xFFE0F2FE), Color(0xFFFFFFFF))
+                                    streakDays < 20 -> listOf(Color(0x38F59E0B), Color(0xFFFFFBEB), Color(0xFFFFFFFF))
+                                    else -> listOf(Color(0x38EA580C), Color(0xFFFFF7ED), Color(0xFFFFFFFF))
+                                }
                             }
                         )
                     )
@@ -386,9 +384,9 @@ fun FlameParticleComponent(
                         width = (1.dp + (progression * 1.5).dp),
                         brush = Brush.linearGradient(
                             if (isFrozen) {
-                                listOf(Color(0x6600E5FF), Color(0x2280DEEA))
+                                listOf(aura.accentCyan.copy(alpha = 0.55f), Color(0x3380DEEA))
                             } else {
-                                listOf(flamePrimaryTint.copy(alpha = 0.8f), Color(0x33FFA000))
+                                listOf(flamePrimaryTint.copy(alpha = 0.8f), Color(0x44FFA000))
                             }
                         ),
                         shape = CircleShape
@@ -460,7 +458,7 @@ fun FlameParticleComponent(
         Text(
             text = if (isArabic) "اضغط مطولاً (1 ثانية) لفتح صفحة Vault" else "Hold 1s on flame to open Vault",
             style = MaterialTheme.typography.labelSmall.copy(
-                color = if (isFrozen) Color(0xFFB2EBF2) else Color(0xFF00F2FE).copy(alpha = 0.85f),
+                color = if (isFrozen && aura.isDark) Color(0xFFB2EBF2) else aura.accentCyan,
                 fontSize = 10.sp,
                 letterSpacing = 0.3.sp
             )

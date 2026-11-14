@@ -71,6 +71,7 @@ import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
 import com.example.ui.theme.ThemeMode
+import com.example.ui.theme.aura
 import com.example.ui.viewmodel.StreakViewModel
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -90,6 +91,7 @@ fun MySpaceScreen(
     isCheckingForUpdates: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val uiState by streakViewModel.uiState.collectAsState()
     val streakDays = uiState.streakDays
@@ -113,15 +115,15 @@ fun MySpaceScreen(
         else -> if (isArabic) "الحساب القياسي" else "Standard Account"
     }
     val accountBadgeColor = when {
-        isPremiumActivated || streakDays >= 365 -> Color(0xFFFFD700)
-        streakDays >= 100 -> PulseCyan
-        else -> Color(0xFFA78BFA)
+        isPremiumActivated || streakDays >= 365 -> aura.accentGold
+        streakDays >= 100 -> aura.accentCyan
+        else -> aura.accentViolet
     }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .testTag("my_space_screen")
     ) {
         // Ambient background glow
@@ -132,8 +134,8 @@ fun MySpaceScreen(
                     drawCircle(
                         brush = Brush.radialGradient(
                             listOf(
-                                Color(0x1800F2FE),
-                                Color(0x10FF5722),
+                                aura.accentCyan.copy(alpha = 0.10f),
+                                aura.accentFlame.copy(alpha = 0.06f),
                                 Color.Transparent
                             ),
                             radius = size.width * 0.95f
@@ -160,7 +162,7 @@ fun MySpaceScreen(
                         text = if (isArabic) "مساحتي الخاصة" else "My Space",
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
+                            color = aura.textPrimary
                         )
                     )
                 }
@@ -178,15 +180,15 @@ fun MySpaceScreen(
                             width = 1.2.dp,
                             brush = Brush.verticalGradient(
                                 listOf(
-                                    if (isPremiumActivated) Color(0x99FFD700) else PulseCyan.copy(alpha = 0.65f),
-                                    Color(0x447928CA),
-                                    Color(0x33FF5722)
+                                    if (isPremiumActivated) aura.accentGold.copy(alpha = 0.65f) else aura.accentCyan.copy(alpha = 0.6f),
+                                    aura.accentViolet.copy(alpha = 0.35f),
+                                    aura.accentFlame.copy(alpha = 0.25f)
                                 )
                             ),
                             shape = RoundedCornerShape(28.dp)
                         ),
                     shape = RoundedCornerShape(28.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xE0111726))
+                    colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                 ) {
                     Column(
                         modifier = Modifier
@@ -195,7 +197,7 @@ fun MySpaceScreen(
                                 drawCircle(
                                     brush = Brush.radialGradient(
                                         colors = listOf(
-                                            if (isPremiumActivated) Color(0x22FFD700) else Color(0x2000F2FE),
+                                            if (isPremiumActivated) aura.accentGold.copy(alpha = 0.14f) else aura.accentCyan.copy(alpha = 0.12f),
                                             Color.Transparent
                                         ),
                                         radius = size.width * 0.55f
@@ -209,7 +211,7 @@ fun MySpaceScreen(
                         val preset = defaultAvatarPresets.find { it.id == userAvatarPreset }
                             ?: defaultAvatarPresets[0]
 
-                        // Centered Luxury Halo Avatar (No edit pencil or edit button)
+                        // Centered Luxury Halo Avatar
                         Box(
                             modifier = Modifier
                                 .size(92.dp)
@@ -217,9 +219,9 @@ fun MySpaceScreen(
                                 .background(
                                     Brush.sweepGradient(
                                         if (isPremiumActivated) {
-                                            listOf(Color(0xFFFFD700), PulseCyan, Color(0xFFFF9100), Color(0xFFFFD700))
+                                            listOf(Color(0xFFFFD700), aura.accentCyan, Color(0xFFFF9100), Color(0xFFFFD700))
                                         } else {
-                                            listOf(PulseCyan, PulseViolet, Color(0xFFFF5722), PulseCyan)
+                                            listOf(aura.accentCyan, aura.accentViolet, Color(0xFFFF5722), aura.accentCyan)
                                         }
                                     )
                                 )
@@ -235,7 +237,7 @@ fun MySpaceScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(CircleShape)
-                                    .background(Color(0xFF0B0F19))
+                                    .background(aura.background)
                                     .padding(3.dp)
                                     .clip(CircleShape)
                                     .background(Brush.linearGradient(preset.gradient)),
@@ -252,12 +254,11 @@ fun MySpaceScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Centered User Name (Clean, no edit pencil or edit button)
                         Text(
                             text = userName,
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color.White,
+                                color = aura.textPrimary,
                                 fontSize = 20.sp
                             ),
                             textAlign = TextAlign.Center
@@ -273,10 +274,10 @@ fun MySpaceScreen(
                             // Level Pill
                             Surface(
                                 shape = RoundedCornerShape(50),
-                                color = Color(0x2200F2FE),
+                                color = aura.accentCyanSoft,
                                 border = BorderStroke(
                                     1.dp,
-                                    Brush.horizontalGradient(listOf(PulseCyan, Color(0xFF38BDF8)))
+                                    Brush.horizontalGradient(listOf(aura.accentCyan, Color(0xFF38BDF8)))
                                 )
                             ) {
                                 Row(
@@ -286,14 +287,14 @@ fun MySpaceScreen(
                                     Icon(
                                         imageVector = Icons.Default.AutoAwesome,
                                         contentDescription = null,
-                                        tint = PulseCyan,
+                                        tint = aura.accentCyan,
                                         modifier = Modifier.size(13.dp)
                                     )
                                     Spacer(modifier = Modifier.width(5.dp))
                                     Text(
                                         text = if (isArabic) "المستوى $currentLevel" else "Level $currentLevel",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color.White,
+                                            color = aura.textPrimary,
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 11.5.sp
                                         )
@@ -343,8 +344,8 @@ fun MySpaceScreen(
                             Spacer(modifier = Modifier.height(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(50),
-                                color = Color(0x28FFD700),
-                                border = BorderStroke(1.dp, Color(0xFFFFD700))
+                                color = aura.accentGoldBg,
+                                border = BorderStroke(1.dp, aura.accentGold)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
@@ -353,13 +354,13 @@ fun MySpaceScreen(
                                     Icon(
                                         imageVector = Icons.Default.EmojiEvents,
                                         contentDescription = null,
-                                        tint = Color(0xFFFFD700),
+                                        tint = aura.accentGold,
                                         modifier = Modifier.size(13.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "Yearly Aura Legend 👑",
-                                        color = Color(0xFFFFD700),
+                                        color = aura.accentGold,
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.ExtraBold
                                     )
@@ -382,8 +383,8 @@ fun MySpaceScreen(
                                     .weight(1f)
                                     .fillMaxHeight(),
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color(0x40162030),
-                                border = BorderStroke(1.dp, Color(0x33FF5722))
+                                color = aura.surfaceSubtle,
+                                border = BorderStroke(1.dp, aura.accentFlame.copy(alpha = 0.35f))
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -395,13 +396,13 @@ fun MySpaceScreen(
                                         modifier = Modifier
                                             .size(36.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0x33FF5722)),
+                                            .background(aura.accentFlameSoft),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.LocalFireDepartment,
                                             contentDescription = null,
-                                            tint = Color(0xFFFF5722),
+                                            tint = aura.accentFlame,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -411,13 +412,13 @@ fun MySpaceScreen(
                                             text = "${uiState.streakDays}d",
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = Color.White
+                                                color = aura.textPrimary
                                             )
                                         )
                                         Text(
                                             text = if (isArabic) "سلسلة المشاهدة" else "Active Streak",
                                             style = MaterialTheme.typography.bodySmall.copy(
-                                                color = Color(0xFF94A3B8),
+                                                color = aura.textSecondary,
                                                 fontSize = 10.sp
                                             )
                                         )
@@ -437,8 +438,8 @@ fun MySpaceScreen(
                                     }
                                     .testTag("profile_shields_tile"),
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color(0x40162030),
-                                border = BorderStroke(1.dp, Color(0x4400F2FE))
+                                color = aura.surfaceSubtle,
+                                border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.35f))
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -455,13 +456,13 @@ fun MySpaceScreen(
                                             modifier = Modifier
                                                 .size(36.dp)
                                                 .clip(CircleShape)
-                                                .background(Color(0x3300F2FE)),
+                                                .background(aura.accentCyanSoft),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Shield,
                                                 contentDescription = null,
-                                                tint = PulseCyan,
+                                                tint = aura.accentCyan,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
@@ -471,13 +472,13 @@ fun MySpaceScreen(
                                                 text = "${uiState.shieldsCount}/${uiState.maxShields}",
                                                 style = MaterialTheme.typography.titleLarge.copy(
                                                     fontWeight = FontWeight.ExtraBold,
-                                                    color = Color.White
+                                                    color = aura.textPrimary
                                                 )
                                             )
                                             Text(
                                                 text = if (isArabic) "دروع الحماية" else "Shields",
                                                 style = MaterialTheme.typography.bodySmall.copy(
-                                                    color = Color(0xFF94A3B8),
+                                                    color = aura.textSecondary,
                                                     fontSize = 10.sp
                                                 )
                                             )
@@ -486,7 +487,7 @@ fun MySpaceScreen(
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                         contentDescription = if (isArabic) "زراعة الدروع" else "Shield Farming",
-                                        tint = PulseCyan,
+                                        tint = aura.accentCyan,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -495,7 +496,7 @@ fun MySpaceScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Aura Pulse Premium Container (Moved from System Settings into Profile below User)
+                        // Aura Pulse Premium Container
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -506,14 +507,14 @@ fun MySpaceScreen(
                                 }
                                 .testTag("aura_premium_activation_banner"),
                             shape = RoundedCornerShape(18.dp),
-                            color = Color(0xCC161426),
+                            color = if (aura.isDark) Color(0xCC161426) else Color(0xFFFFFBEB),
                             border = BorderStroke(
                                 1.2.dp,
                                 Brush.horizontalGradient(
                                     if (isPremiumActivated) {
-                                        listOf(Color(0xFF10B981), Color(0xFFFFD700))
+                                        listOf(aura.accentEmerald, aura.accentGold)
                                     } else {
-                                        listOf(Color(0xFFFFD700), Color(0xFFFF9100), PulseCyan)
+                                        listOf(aura.accentGold, Color(0xFFFF9100), aura.accentCyan)
                                     }
                                 )
                             )
@@ -533,13 +534,13 @@ fun MySpaceScreen(
                                         modifier = Modifier
                                             .size(38.dp)
                                             .clip(CircleShape)
-                                            .background(Color(0x33FFD700)),
+                                            .background(aura.accentGoldBg),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.WorkspacePremium,
                                             contentDescription = null,
-                                            tint = Color(0xFFFFD700),
+                                            tint = aura.accentGold,
                                             modifier = Modifier.size(21.dp)
                                         )
                                     }
@@ -548,7 +549,7 @@ fun MySpaceScreen(
                                         Text(
                                             text = "Aura Pulse Premium 👑",
                                             style = MaterialTheme.typography.titleSmall.copy(
-                                                color = Color(0xFFFFD700),
+                                                color = aura.accentGold,
                                                 fontWeight = FontWeight.ExtraBold,
                                                 fontSize = 14.sp
                                             )
@@ -560,7 +561,7 @@ fun MySpaceScreen(
                                                 if (isArabic) "تفعيل الإعدادات المقفلة والمزايا الحصرية" else "Unlock advanced settings & exclusive features"
                                             },
                                             style = MaterialTheme.typography.bodySmall.copy(
-                                                color = Color(0xFFE2E8F0),
+                                                color = aura.textSecondary,
                                                 fontSize = 10.5.sp
                                             )
                                         )
@@ -571,8 +572,8 @@ fun MySpaceScreen(
 
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = if (isPremiumActivated) Color(0x3310B981) else Color(0xFFFFD700),
-                                    border = if (isPremiumActivated) BorderStroke(1.dp, Color(0xFF10B981)) else null
+                                    color = if (isPremiumActivated) aura.accentEmeraldSoft else Color(0xFFFFD700),
+                                    border = if (isPremiumActivated) BorderStroke(1.dp, aura.accentEmerald) else null
                                 ) {
                                     Text(
                                         text = if (isPremiumActivated) {
@@ -582,7 +583,7 @@ fun MySpaceScreen(
                                         },
                                         modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = if (isPremiumActivated) Color(0xFF34D399) else Color(0xFF0F172A),
+                                            color = if (isPremiumActivated) aura.accentEmerald else Color(0xFF0F172A),
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 11.sp
                                         )
@@ -596,7 +597,7 @@ fun MySpaceScreen(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            // 2. Statistics Card (Moved OUTSIDE & BELOW the Profile Container)
+            // 2. Statistics Card
             item(key = "statistics_card_below_profile") {
                 Card(
                     modifier = Modifier
@@ -605,7 +606,7 @@ fun MySpaceScreen(
                         .border(
                             1.2.dp,
                             Brush.horizontalGradient(
-                                listOf(PulseCyan.copy(alpha = 0.55f), PulseViolet.copy(alpha = 0.55f))
+                                listOf(aura.accentCyan.copy(alpha = 0.55f), aura.accentViolet.copy(alpha = 0.55f))
                             ),
                             RoundedCornerShape(22.dp)
                         )
@@ -616,7 +617,7 @@ fun MySpaceScreen(
                         }
                         .testTag("profile_statistics_tile"),
                     shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xE0101626))
+                    colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                 ) {
                     Row(
                         modifier = Modifier
@@ -635,16 +636,16 @@ fun MySpaceScreen(
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(
                                         Brush.linearGradient(
-                                            listOf(Color(0x3300F2FE), Color(0x337928CA))
+                                            listOf(aura.accentCyanSoft, aura.accentViolet.copy(alpha = 0.14f))
                                         )
                                     )
-                                    .border(1.dp, PulseCyan.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
+                                    .border(1.dp, aura.accentCyan.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.BarChart,
                                     contentDescription = if (isArabic) "الإحصائيات" else "Statistics",
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -655,7 +656,7 @@ fun MySpaceScreen(
                                 Text(
                                     text = if (isArabic) "الإحصائيات" else "Statistics",
                                     style = MaterialTheme.typography.titleMedium.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                 )
@@ -667,7 +668,7 @@ fun MySpaceScreen(
                                         "${String.format("%.1f", totalWatchHours)} hrs watched • $totalTracks audio tracks"
                                     },
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = Color(0xFF94A3B8),
+                                        color = aura.textSecondary,
                                         fontSize = 11.sp
                                     )
                                 )
@@ -680,13 +681,13 @@ fun MySpaceScreen(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x2200F2FE)),
+                                .background(aura.accentCyanSoft),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = null,
-                                tint = PulseCyan,
+                                tint = aura.accentCyan,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -704,7 +705,7 @@ fun MySpaceScreen(
                         .padding(horizontal = 20.dp)
                         .border(
                             1.2.dp,
-                            Brush.horizontalGradient(listOf(PulseCyan.copy(alpha = 0.6f), PulseViolet.copy(alpha = 0.5f))),
+                            Brush.horizontalGradient(listOf(aura.accentCyan.copy(alpha = 0.6f), aura.accentViolet.copy(alpha = 0.5f))),
                             RoundedCornerShape(22.dp)
                         )
                         .clip(RoundedCornerShape(22.dp))
@@ -714,7 +715,7 @@ fun MySpaceScreen(
                         }
                         .testTag("system_settings_entry_card"),
                     shape = RoundedCornerShape(22.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xE0101626))
+                    colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                 ) {
                     Row(
                         modifier = Modifier
@@ -733,16 +734,16 @@ fun MySpaceScreen(
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(
                                         Brush.linearGradient(
-                                            listOf(Color(0x3300F2FE), Color(0x337928CA))
+                                            listOf(aura.accentCyanSoft, aura.accentViolet.copy(alpha = 0.14f))
                                         )
                                     )
-                                    .border(1.dp, PulseCyan.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
+                                    .border(1.dp, aura.accentCyan.copy(alpha = 0.5f), RoundedCornerShape(14.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Settings,
                                     contentDescription = if (isArabic) "إعدادات النظام" else "System Settings",
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(23.dp)
                                 )
                             }
@@ -753,7 +754,7 @@ fun MySpaceScreen(
                                 Text(
                                     text = if (isArabic) "إعدادات النظام" else "System Settings",
                                     style = MaterialTheme.typography.titleMedium.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                 )
@@ -765,7 +766,7 @@ fun MySpaceScreen(
                                         "Appearance, language, PIN vault, playback & backup"
                                     },
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = Color(0xFF94A3B8),
+                                        color = aura.textSecondary,
                                         fontSize = 11.sp
                                     )
                                 )
@@ -778,13 +779,13 @@ fun MySpaceScreen(
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x2200F2FE)),
+                                .background(aura.accentCyanSoft),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                 contentDescription = null,
-                                tint = PulseCyan,
+                                tint = aura.accentCyan,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -802,11 +803,11 @@ fun MySpaceScreen(
                         .padding(horizontal = 20.dp)
                         .border(
                             1.dp,
-                            Brush.horizontalGradient(listOf(Color(0x3300F2FE), Color(0x33FF5722))),
+                            Brush.horizontalGradient(listOf(aura.accentCyan.copy(alpha = 0.25f), aura.accentFlame.copy(alpha = 0.25f))),
                             RoundedCornerShape(20.dp)
                         ),
                     shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+                    colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
                         Row(
@@ -819,16 +820,16 @@ fun MySpaceScreen(
                                     .clip(CircleShape)
                                     .background(
                                         Brush.linearGradient(
-                                            listOf(Color(0x3300F2FE), Color(0x337928CA))
+                                            listOf(aura.accentCyanSoft, aura.accentViolet.copy(alpha = 0.14f))
                                         )
                                     )
-                                    .border(1.dp, PulseCyan.copy(alpha = 0.5f), CircleShape),
+                                    .border(1.dp, aura.accentCyan.copy(alpha = 0.5f), CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Code,
                                     contentDescription = null,
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -838,7 +839,7 @@ fun MySpaceScreen(
                                     text = "Charfeddine Kahlessenane",
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontSize = 15.sp
                                     ),
                                     maxLines = 1
@@ -847,7 +848,7 @@ fun MySpaceScreen(
                                 Text(
                                     text = if (isArabic) "المطور الرئيسي ومصمم التطبيق" else "Lead Android Engineer & Designer",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 11.5.sp
                                     )
@@ -856,14 +857,14 @@ fun MySpaceScreen(
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = Color(0x3300F2FE),
-                                border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f))
+                                color = aura.accentCyanSoft,
+                                border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.6f))
                             ) {
                                 Text(
                                     text = "v${BuildConfig.VERSION_NAME}",
                                     modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp
                                     )
@@ -877,7 +878,7 @@ fun MySpaceScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(1.dp)
-                                .background(Color(0x1FFFFFFF))
+                                .background(aura.borderMuted)
                         )
 
                         Spacer(modifier = Modifier.height(10.dp))
@@ -888,11 +889,11 @@ fun MySpaceScreen(
                         ) {
                             Text(
                                 text = if (isArabic) "تاريخ آخر تحديث" else "Last Updated",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF64748B), fontSize = 11.sp)
+                                style = MaterialTheme.typography.bodySmall.copy(color = aura.textTertiary, fontSize = 11.sp)
                             )
                             Text(
                                 text = "November 5, 2026",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                style = MaterialTheme.typography.bodySmall.copy(color = aura.textPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             )
                         }
 
@@ -904,11 +905,11 @@ fun MySpaceScreen(
                         ) {
                             Text(
                                 text = if (isArabic) "رقم البناء (Build Code)" else "Build Code",
-                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF64748B), fontSize = 11.sp)
+                                style = MaterialTheme.typography.bodySmall.copy(color = aura.textTertiary, fontSize = 11.sp)
                             )
                             Text(
                                 text = "${BuildConfig.VERSION_CODE}",
-                                style = MaterialTheme.typography.bodySmall.copy(color = PulseCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.bodySmall.copy(color = aura.accentCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             )
                         }
 
@@ -916,8 +917,8 @@ fun MySpaceScreen(
 
                         Surface(
                             shape = RoundedCornerShape(14.dp),
-                            color = Color(0x22E50914),
-                            border = BorderStroke(1.dp, Color(0x66FF2438)),
+                            color = aura.accentDanger.copy(alpha = if (aura.isDark) 0.14f else 0.10f),
+                            border = BorderStroke(1.dp, aura.accentDanger.copy(alpha = 0.55f)),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(48.dp)
@@ -938,14 +939,14 @@ fun MySpaceScreen(
                                 if (isCheckingForUpdates) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(18.dp),
-                                        color = Color(0xFFFF2438),
+                                        color = aura.accentDanger,
                                         strokeWidth = 2.dp
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
                                         text = if (isArabic) "جاري التحقق من التحديثات..." else "Checking for updates...",
                                         style = MaterialTheme.typography.labelLarge.copy(
-                                            color = Color.White,
+                                            color = aura.textPrimary,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp
                                         )
@@ -954,14 +955,14 @@ fun MySpaceScreen(
                                     Icon(
                                         imageVector = Icons.Default.SystemUpdate,
                                         contentDescription = null,
-                                        tint = Color(0xFFFF4D5A),
+                                        tint = aura.accentDanger,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = if (isArabic) "التحقق من التحديثات" else "Check for Updates",
                                         style = MaterialTheme.typography.labelLarge.copy(
-                                            color = Color.White,
+                                            color = aura.textPrimary,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 13.sp
                                         )
@@ -978,12 +979,12 @@ fun MySpaceScreen(
         if (showPremiumDialog) {
             AlertDialog(
                 onDismissRequest = { showPremiumDialog = false },
-                containerColor = Color(0xF2121826),
+                containerColor = aura.dialogBg,
                 icon = {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        tint = Color(0xFFFFD700),
+                        tint = aura.accentGold,
                         modifier = Modifier.size(34.dp)
                     )
                 },
@@ -992,7 +993,7 @@ fun MySpaceScreen(
                         text = "Aura Pulse Premium",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFFFD700)
+                            color = aura.accentGold
                         )
                     )
                 },
@@ -1008,7 +1009,7 @@ fun MySpaceScreen(
                             }
                         },
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color.White,
+                            color = aura.textPrimary,
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.fillMaxWidth()
@@ -1028,7 +1029,7 @@ fun MySpaceScreen(
                             } else {
                                 if (isArabic) "تفعيل الآن 👑" else "Activate Now 👑"
                             },
-                            color = if (isPremiumActivated) Color(0xFFFF8A65) else Color(0xFFFFD700),
+                            color = if (isPremiumActivated) aura.accentFlame else aura.accentGold,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
@@ -1037,7 +1038,7 @@ fun MySpaceScreen(
                     TextButton(onClick = { showPremiumDialog = false }) {
                         Text(
                             text = if (isArabic) "إغلاق" else "Close",
-                            color = PulseCyan,
+                            color = aura.accentCyan,
                             fontWeight = FontWeight.Bold
                         )
                     }

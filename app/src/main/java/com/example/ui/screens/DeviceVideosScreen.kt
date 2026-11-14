@@ -71,6 +71,7 @@ import com.example.data.model.MediaRepository
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
+import com.example.ui.theme.aura
 
 @Composable
 fun DeviceVideosScreen(
@@ -80,6 +81,7 @@ fun DeviceVideosScreen(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
 
     var searchQuery by remember { mutableStateOf("") }
 
@@ -116,13 +118,13 @@ fun DeviceVideosScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .drawBehind {
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color(0x2200F2FE),
-                            Color(0x127928CA),
+                            aura.accentCyan.copy(alpha = if (aura.isDark) 0.14f else 0.08f),
+                            aura.accentViolet.copy(alpha = if (aura.isDark) 0.08f else 0.04f),
                             Color.Transparent
                         ),
                         startY = 0f,
@@ -151,14 +153,14 @@ fun DeviceVideosScreen(
                             .size(42.dp)
                             .clip(CircleShape)
                             .background(
-                                Brush.linearGradient(listOf(PulseCyan, PulseViolet))
+                                Brush.linearGradient(listOf(aura.accentCyan, aura.accentViolet))
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.VideoLibrary,
                             contentDescription = null,
-                            tint = TextDark,
+                            tint = if (aura.isDark) TextDark else Color.White,
                             modifier = Modifier.size(22.dp)
                         )
                     }
@@ -171,19 +173,19 @@ fun DeviceVideosScreen(
                                 text = if (isArabic) "فيديوهات الجهاز" else "Device Videos",
                                 style = MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = aura.textPrimary
                                 )
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = Color(0x3300F2FE)
+                                color = aura.accentCyanSoft
                             ) {
                                 Text(
                                     text = "${localVideos.size}",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
@@ -193,7 +195,7 @@ fun DeviceVideosScreen(
                         Text(
                             text = if (isArabic) "تشغيل الفيديوهات المخزنة محلياً في هاتفك" else "Play locally stored offline videos in 120fps",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontSize = 11.sp
                             )
                         )
@@ -215,8 +217,8 @@ fun DeviceVideosScreen(
                     }
                     .testTag("import_device_video_button"),
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0x33121826),
-                border = androidx.compose.foundation.BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f))
+                color = aura.surfaceCard,
+                border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f))
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -228,13 +230,13 @@ fun DeviceVideosScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(PulseCyan),
+                                .background(aura.accentCyan),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = TextDark,
+                                tint = if (aura.isDark) TextDark else Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -244,13 +246,13 @@ fun DeviceVideosScreen(
                                 text = if (isArabic) "استيراد فيديو من ذاكرة الهاتف" else "Import Video from Phone Storage",
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    color = aura.textPrimary
                                 )
                             )
                             Text(
                                 text = if (isArabic) "اختر ملف فيديو من الاستوديو لتشغيله عبر ExoPlayer" else "Select local video file to play via ExoPlayer",
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF94A3B8),
+                                    color = aura.textSecondary,
                                     fontSize = 11.sp
                                 )
                             )
@@ -260,7 +262,7 @@ fun DeviceVideosScreen(
                     Icon(
                         imageVector = Icons.Default.PhoneAndroid,
                         contentDescription = null,
-                        tint = PulseCyan,
+                        tint = aura.accentCyan,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -278,7 +280,7 @@ fun DeviceVideosScreen(
                 placeholder = {
                     Text(
                         text = if (isArabic) "ابحث عن ملف فيديو محلي..." else "Search local video files...",
-                        color = Color(0xFF64748B),
+                        color = aura.textTertiary,
                         fontSize = 13.sp
                     )
                 },
@@ -286,19 +288,19 @@ fun DeviceVideosScreen(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
-                        tint = PulseCyan,
+                        tint = aura.accentCyan,
                         modifier = Modifier.size(20.dp)
                     )
                 },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = PulseCyan,
-                    unfocusedBorderColor = Color(0x33FFFFFF),
-                    focusedContainerColor = Color(0x22121826),
-                    unfocusedContainerColor = Color(0x22121826),
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White
+                    focusedBorderColor = aura.accentCyan,
+                    unfocusedBorderColor = aura.borderSubtle,
+                    focusedContainerColor = aura.surfaceCard,
+                    unfocusedContainerColor = aura.surfaceSubtle,
+                    focusedTextColor = aura.textPrimary,
+                    unfocusedTextColor = aura.textPrimary
                 )
             )
 
@@ -317,7 +319,7 @@ fun DeviceVideosScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(16.dp))
-                            .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(16.dp))
+                            .border(1.dp, aura.borderSubtle, RoundedCornerShape(16.dp))
                             .clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 onPlayVideo(
@@ -341,7 +343,7 @@ fun DeviceVideosScreen(
                             }
                             .testTag("device_video_item_${video.id}"),
                         shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xB3121826))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                     ) {
                         Row(
                             modifier = Modifier
@@ -417,7 +419,7 @@ fun DeviceVideosScreen(
                                     text = video.title,
                                     style = MaterialTheme.typography.labelLarge.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.White
+                                        color = aura.textPrimary
                                     ),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -428,13 +430,13 @@ fun DeviceVideosScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = Color(0x3300F2FE)
+                                        color = aura.accentCyanSoft
                                     ) {
                                         Text(
                                             text = video.resolutionText,
                                             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(
-                                                color = PulseCyan,
+                                                color = aura.accentCyan,
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 9.sp
                                             )
@@ -446,7 +448,7 @@ fun DeviceVideosScreen(
                                     Text(
                                         text = video.sizeText,
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF94A3B8),
+                                            color = aura.textSecondary,
                                             fontSize = 11.sp
                                         )
                                     )
@@ -455,7 +457,7 @@ fun DeviceVideosScreen(
                                     Text(
                                         text = "•",
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF64748B)
+                                            color = aura.textTertiary
                                         )
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -463,7 +465,7 @@ fun DeviceVideosScreen(
                                     Text(
                                         text = video.dateAddedText,
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF94A3B8),
+                                            color = aura.textSecondary,
                                             fontSize = 10.sp
                                         )
                                     )
@@ -476,13 +478,13 @@ fun DeviceVideosScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(Color.White),
+                                    .background(aura.primaryCtaBg),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.PlayArrow,
                                     contentDescription = "Play",
-                                    tint = TextDark,
+                                    tint = aura.primaryCtaContent,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }

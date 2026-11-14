@@ -74,7 +74,7 @@ import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.TranslucentDark
+import com.example.ui.theme.aura
 
 @Composable
 fun HeroSpotlightCard(
@@ -86,6 +86,7 @@ fun HeroSpotlightCard(
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val aura = MaterialTheme.aura
     var isInList by remember(isSavedInMyList) { mutableStateOf(isSavedInMyList) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "ambient_glow")
@@ -368,8 +369,8 @@ fun HeroSpotlightCard(
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
-                    .background(Color(0xB3141B26))
-                    .border(1.dp, GlassBorder, CircleShape)
+                    .background(aura.surfaceCard)
+                    .border(1.dp, aura.borderSubtle, CircleShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         isInList = !isInList
@@ -382,14 +383,14 @@ fun HeroSpotlightCard(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "In My List",
-                        tint = PulseCyan,
+                        tint = aura.accentCyan,
                         modifier = Modifier.size(22.dp)
                     )
                 } else {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add to My List",
-                        tint = TextPrimary,
+                        tint = aura.textPrimary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -397,7 +398,7 @@ fun HeroSpotlightCard(
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Primary Call to Action: "Watch Now" rounded pill shape, solid white background, black text, play icon
+            // Primary Call to Action: "Watch Now" rounded pill shape
             Surface(
                 modifier = Modifier
                     .weight(1f)
@@ -409,7 +410,7 @@ fun HeroSpotlightCard(
                     }
                     .testTag("hero_watch_now_button"),
                 shape = RoundedCornerShape(25.dp),
-                color = Color.White,
+                color = aura.primaryCtaBg,
                 shadowElevation = 8.dp
             ) {
                 Row(
@@ -420,7 +421,7 @@ fun HeroSpotlightCard(
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Play Icon",
-                        tint = TextDark,
+                        tint = aura.primaryCtaContent,
                         modifier = Modifier.size(26.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -428,7 +429,7 @@ fun HeroSpotlightCard(
                         text = "Watch Now",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = TextDark,
+                            color = aura.primaryCtaContent,
                             fontSize = 16.sp,
                             letterSpacing = 0.3.sp
                         )
@@ -438,13 +439,13 @@ fun HeroSpotlightCard(
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Right Secondary Button: "..." with translucent dark backdrop
+            // Right Secondary Button: "..."
             Box(
                 modifier = Modifier
                     .size(50.dp)
                     .clip(CircleShape)
-                    .background(Color(0xB3141B26))
-                    .border(1.dp, GlassBorder, CircleShape)
+                    .background(aura.surfaceCard)
+                    .border(1.dp, aura.borderSubtle, CircleShape)
                     .clickable {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         onMoreInfoClick(mediaItem)
@@ -455,7 +456,7 @@ fun HeroSpotlightCard(
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
                     contentDescription = "More Info",
-                    tint = TextPrimary,
+                    tint = aura.textPrimary,
                     modifier = Modifier.size(24.dp)
                 )
             }

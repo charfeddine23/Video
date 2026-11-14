@@ -95,6 +95,7 @@ import com.example.data.model.ForgeKeyTier
 import com.example.data.model.ForgeSlotState
 import com.example.data.model.ForgeUiState
 import com.example.ui.theme.PulseCyan
+import com.example.ui.theme.aura
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -109,37 +110,37 @@ private data class ForgeTierPalette(
     val icon: ImageVector
 )
 
-private fun paletteForTier(tier: ForgeKeyTier): ForgeTierPalette = when (tier) {
+private fun paletteForTier(tier: ForgeKeyTier, isDark: Boolean = true): ForgeTierPalette = when (tier) {
     ForgeKeyTier.BRONZE -> ForgeTierPalette(
-        primary = Color(0xFFE59A54),
+        primary = if (isDark) Color(0xFFE59A54) else Color(0xFFB45309),
         secondary = Color(0xFFB45309),
         glow = Color(0x44CD7F32),
-        cardBgTop = Color(0xFF1A1412),
-        cardBgBottom = Color(0xFF0E131F),
+        cardBgTop = if (isDark) Color(0xFF1A1412) else Color(0xFFFFF7ED),
+        cardBgBottom = if (isDark) Color(0xFF0E131F) else Color(0xFFFFFBF7),
         icon = Icons.Default.VpnKey
     )
     ForgeKeyTier.SILVER -> ForgeTierPalette(
-        primary = Color(0xFFE2E8F0),
+        primary = if (isDark) Color(0xFFE2E8F0) else Color(0xFF475569),
         secondary = Color(0xFF64748B),
         glow = Color(0x44CBD5E1),
-        cardBgTop = Color(0xFF151C28),
-        cardBgBottom = Color(0xFF0D121E),
+        cardBgTop = if (isDark) Color(0xFF151C28) else Color(0xFFF1F5F9),
+        cardBgBottom = if (isDark) Color(0xFF0D121E) else Color(0xFFFFFFFF),
         icon = Icons.Default.VpnKey
     )
     ForgeKeyTier.GOLD -> ForgeTierPalette(
-        primary = Color(0xFFFFD700),
+        primary = if (isDark) Color(0xFFFFD700) else Color(0xFFA16207),
         secondary = Color(0xFFD97706),
         glow = Color(0x44FFD700),
-        cardBgTop = Color(0xFF1E1910),
-        cardBgBottom = Color(0xFF0F131F),
+        cardBgTop = if (isDark) Color(0xFF1E1910) else Color(0xFFFEFCE8),
+        cardBgBottom = if (isDark) Color(0xFF0F131F) else Color(0xFFFFFFFF),
         icon = Icons.Default.VpnKey
     )
     ForgeKeyTier.DIAMOND -> ForgeTierPalette(
-        primary = Color(0xFF00F2FE),
-        secondary = Color(0xFFA855F7),
+        primary = if (isDark) Color(0xFF00F2FE) else Color(0xFF0284C7),
+        secondary = if (isDark) Color(0xFFA855F7) else Color(0xFF6D28D9),
         glow = Color(0x4400F2FE),
-        cardBgTop = Color(0xFF101C2A),
-        cardBgBottom = Color(0xFF121024),
+        cardBgTop = if (isDark) Color(0xFF101C2A) else Color(0xFFF0F9FF),
+        cardBgBottom = if (isDark) Color(0xFF121024) else Color(0xFFFFFFFF),
         icon = Icons.Default.Diamond
     )
 }
@@ -162,8 +163,11 @@ fun ForgeSectionView(
     onCancelForge: (ForgeKeyTier) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
-    var pendingCancelTier by remember { mutableStateOf<ForgeKeyTier?>(null) }
+    var hammerInfoTier by remember { mutableStateOf<ForgeKeyTier?>(null) }
+    @Suppress("UNUSED_VARIABLE")
+    val unusedCancelHandler = onCancelForge
 
     val infiniteTransition = rememberInfiniteTransition(label = "forge_ambient")
     val emberPhase by infiniteTransition.animateFloat(
@@ -202,14 +206,14 @@ fun ForgeSectionView(
     ) { destination ->
         when (destination) {
             ForgeTabDestination.HUB -> {
-                // THE FORGE HUB: THE FORGE Portal + Clickable Shop Portal
+                // THE FORGE HUB: THE FORGE Portal + Realistic Storefront Shop Portal
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp)
                         .testTag("shop_hub_list"),
                     contentPadding = PaddingValues(top = 8.dp, bottom = 36.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Clickable THE FORGE Entrance Card
                     item(key = "forge_portal_card") {
@@ -227,102 +231,37 @@ fun ForgeSectionView(
                         )
                     }
 
-                    // Clickable Shop Card
+                    // High-Precision Storefront Shop Card
                     item(key = "shop_portal_card_item") {
-                        Surface(
-                            shape = RoundedCornerShape(18.dp),
-                            color = Color(0xAA0F1626),
-                            border = BorderStroke(1.dp, Color(0x44FFD700)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(18.dp))
-                                .clickable {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onNavigateView(ForgeTabDestination.INSIDE_SHOP)
-                                }
-                                .testTag("shop_portal_card")
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0x22FFD700))
-                                        .border(1.dp, Color(0x66FFD700), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Storefront,
-                                        contentDescription = "Shop",
-                                        tint = Color(0xFFFFD700),
-                                        modifier = Modifier.size(23.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Shop",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            color = Color(0xFFFFD700),
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 15.sp
-                                        )
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = if (isArabic) {
-                                            "اضغط للدخول إلى المتجر وعرض رصيدك من المفاتيح"
-                                        } else {
-                                            "Tap to open Shop and view your keys balance"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF94A3B8),
-                                            fontSize = 11.5.sp,
-                                            lineHeight = 16.sp
-                                        )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0x22FFD700))
-                                        .border(1.dp, Color(0x55FFD700), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFFD700),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
+                        ShopStorefrontPortalCard(
+                            forgeState = forgeState,
+                            furnacePulse = furnacePulse,
+                            isArabic = isArabic,
+                            onEnterShop = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onNavigateView(ForgeTabDestination.INSIDE_SHOP)
                             }
-                        }
+                        )
                     }
                 }
             }
 
             ForgeTabDestination.INSIDE_FORGE -> {
-                // INSIDE THE FORGE CHAMBER: Back Bar + Molten Furnace + Royal Smelting Recipes
+                // INSIDE THE FORGE: Compact Back Header + 4 Workshops ONLY
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp)
                         .testTag("inside_forge_chamber")
                 ) {
-                    // Chamber Header Navigation Bar
+                    // Compact Workshop Navigation Bar
                     Surface(
                         shape = RoundedCornerShape(16.dp),
-                        color = Color(0xCC161013),
+                        color = if (aura.isDark) Color(0xCC161013) else aura.surfaceElevated,
                         border = BorderStroke(
                             1.dp,
                             Brush.horizontalGradient(
-                                listOf(Color(0x88FF7A1A), Color(0x88FFD700))
+                                listOf(aura.accentFlame.copy(alpha = 0.5f), aura.accentGold.copy(alpha = 0.5f))
                             )
                         ),
                         modifier = Modifier
@@ -345,30 +284,29 @@ fun ForgeSectionView(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0x22FFFFFF))
+                                        .background(aura.iconButtonBg)
                                         .testTag("forge_exit_button")
                                 ) {
                                     Icon(
                                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                         contentDescription = if (isArabic) "العودة إلى The Forge" else "Back to The Forge",
-                                        tint = Color.White
+                                        tint = aura.textPrimary
                                     )
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        text = "THE FORGE",
+                                        text = if (isArabic) "الورشات" else "Workshops",
                                         style = MaterialTheme.typography.titleMedium.copy(
-                                            color = Color(0xFFFFD700),
+                                            color = aura.accentGold,
                                             fontWeight = FontWeight.Black,
-                                            letterSpacing = 1.4.sp,
                                             fontSize = 15.sp
                                         )
                                     )
                                     Text(
-                                        text = if (isArabic) "داخل المصهر • وصفات الصهر الملكية" else "Inside Chamber • Royal Smelting Recipes",
+                                        text = if (isArabic) "تعمل أثناء استعمال التطبيق" else "Ticks on active app usage",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFFCBD5E1),
+                                            color = aura.textSecondary,
                                             fontSize = 10.5.sp
                                         )
                                     )
@@ -377,24 +315,24 @@ fun ForgeSectionView(
 
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = Color(0x28FF7A1A),
-                                border = BorderStroke(1.dp, Color(0x66FF7A1A))
+                                color = aura.accentFlameSoft,
+                                border = BorderStroke(1.dp, aura.accentFlame.copy(alpha = 0.5f))
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.LocalFireDepartment,
+                                        imageVector = Icons.Default.Whatshot,
                                         contentDescription = null,
-                                        tint = Color(0xFFFF7A1A),
+                                        tint = aura.accentFlame,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = if (isArabic) "المصهر" else "Forge",
+                                        text = if (isArabic) "4 ورشات" else "4 Bays",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFFFFB074),
+                                            color = aura.accentFlame,
                                             fontWeight = FontWeight.ExtraBold,
                                             fontSize = 10.5.sp
                                         )
@@ -404,7 +342,7 @@ fun ForgeSectionView(
                         }
                     }
 
-                    // Unified Interior Forge Container holding Furnace Wallet + Royal Smelting Recipes
+                    // Four RPG Workshop Bays ONLY (No Hero Furnace Container inside)
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
@@ -412,57 +350,6 @@ fun ForgeSectionView(
                         contentPadding = PaddingValues(top = 4.dp, bottom = 36.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // 1. Luxury Pro-Game Forge Hero Furnace & Wallet Bar
-                        item(key = "forge_hero_header") {
-                            ForgeHeroFurnaceCard(
-                                shieldsCount = shieldsCount,
-                                forgeState = forgeState,
-                                emberPhase = emberPhase,
-                                furnacePulse = furnacePulse,
-                                isArabic = isArabic,
-                                showEnterCta = false,
-                                onEnterClick = {}
-                            )
-                        }
-
-                        // 2. Royal Smelting Recipes Section Label inside The Forge
-                        item(key = "forge_recipes_title") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Default.Whatshot,
-                                        contentDescription = null,
-                                        tint = Color(0xFFFF7A1A),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = if (isArabic) "وصفات الصهر الملكية" else "Royal Smelting Recipes",
-                                        style = MaterialTheme.typography.titleMedium.copy(
-                                            color = Color.White,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            fontSize = 15.sp
-                                        )
-                                    )
-                                }
-
-                                Text(
-                                    text = if (isArabic) "تعمل أثناء استعمال التطبيق" else "Ticks on active app usage",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFF94A3B8),
-                                        fontSize = 10.5.sp
-                                    )
-                                )
-                            }
-                        }
-
-                        // 3. Four RPG Workshop Bays (Bronze, Silver, Gold, Diamond) inside The Forge
                         items(ForgeKeyTier.entries, key = { it.id }) { tier ->
                             val slot = forgeState.getSlot(tier)
                             ForgeRecipeCard(
@@ -482,9 +369,9 @@ fun ForgeSectionView(
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onClaimForgeKey(tier)
                                 },
-                                onRequestCancel = {
+                                onHammerClick = {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    pendingCancelTier = tier
+                                    hammerInfoTier = tier
                                 }
                             )
                         }
@@ -505,65 +392,427 @@ fun ForgeSectionView(
         }
     }
 
-    // Cancel & Refund Confirmation Dialog
-    val cancelTier = pendingCancelTier
-    if (cancelTier != null) {
-        val slot = forgeState.getSlot(cancelTier)
-        val tierLabel = if (isArabic) cancelTier.nameAr else cancelTier.nameEn
-        val refundLabel = if (cancelTier.usesShields) {
-            if (isArabic) "${slot.refundShields} درعاً" else "${slot.refundShields} Shields"
-        } else {
-            val totalKeys = slot.refundBronzeKeys + slot.refundSilverKeys + slot.refundGoldKeys
-            if (isArabic) "$totalKeys مفتاحاً" else "$totalKeys Keys"
+    // Hammer Click Explanation Dialog
+    val infoTier = hammerInfoTier
+    if (infoTier != null) {
+        val infoPalette = paletteForTier(infoTier, aura.isDark)
+        val infoWorkshopTitle = when (infoTier) {
+            ForgeKeyTier.BRONZE -> if (isArabic) "ورشة صهر البرونز" else "Bronze Smelting Bay"
+            ForgeKeyTier.SILVER -> if (isArabic) "ورشة صهر الفضة" else "Silver Crucible Bay"
+            ForgeKeyTier.GOLD -> if (isArabic) "ورشة السبيكة الذهبية" else "Royal Gold Foundry"
+            ForgeKeyTier.DIAMOND -> if (isArabic) "ورشة الجوهر الماسي" else "Diamond Core Reactor"
         }
 
         AlertDialog(
-            onDismissRequest = { pendingCancelTier = null },
-            containerColor = Color(0xFF121826),
-            title = {
-                Text(
-                    text = if (isArabic) "إلغاء صهر $tierLabel؟" else "Cancel $tierLabel Smelting?",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            },
-            text = {
-                Text(
-                    text = if (isArabic) {
-                        "سيتم إيقاف مؤقت الصهر الحالي واسترداد $refundLabel بالكامل إلى رصيدك."
-                    } else {
-                        "Current smelting timer will stop and $refundLabel will be fully refunded to your balance."
-                    },
-                    style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFFCBD5E1))
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onCancelForge(cancelTier)
-                        pendingCancelTier = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+            onDismissRequest = { hammerInfoTier = null },
+            containerColor = aura.dialogBg,
+            modifier = Modifier.testTag("forge_hammer_explanation_dialog"),
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(aura.accentFlameSoft)
+                        .border(1.2.dp, infoPalette.primary.copy(alpha = 0.7f), CircleShape),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (isArabic) "نعم، استرداد" else "Refund",
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                    Icon(
+                        imageVector = Icons.Default.Hardware,
+                        contentDescription = null,
+                        tint = infoPalette.primary,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             },
-            dismissButton = {
-                TextButton(onClick = { pendingCancelTier = null }) {
+            title = {
+                Text(
+                    text = infoWorkshopTitle,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = aura.textPrimary,
+                        fontWeight = FontWeight.ExtraBold
+                    ),
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = aura.accentFlameSoft,
+                        border = BorderStroke(1.dp, aura.accentFlame.copy(alpha = 0.45f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Furnace active • Ticks on app usage",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                color = aura.accentFlame,
+                                fontWeight = FontWeight.ExtraBold
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                    if (isArabic) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "الفرن يعمل الآن • يتقدم مؤقت الصهر تلقائياً أثناء استخدامك النشط للتطبيق.",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = aura.textSecondary,
+                                lineHeight = 20.sp
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "This workshop furnace advances smelting progress automatically while you actively use the app.",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = aura.textSecondary,
+                                lineHeight = 20.sp
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { hammerInfoTier = null }) {
                     Text(
-                        text = if (isArabic) "متابعة الصهر" else "Keep Forging",
-                        color = PulseCyan,
+                        text = if (isArabic) "فهمت" else "Got it",
+                        color = aura.accentCyan,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun ShopStorefrontPortalCard(
+    forgeState: ForgeUiState,
+    furnacePulse: Float,
+    isArabic: Boolean,
+    onEnterShop: () -> Unit
+) {
+    val aura = MaterialTheme.aura
+    val totalKeys = forgeState.bronzeKeys + forgeState.silverKeys + forgeState.goldenKeys + forgeState.diamondKeys
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = if (aura.isDark) {
+                        listOf(Color(0xFF171D2E), Color(0xFF101624), Color(0xFF0A0E18))
+                    } else {
+                        listOf(Color(0xFFFFFBF0), Color(0xFFFFFFFF), Color(0xFFF3F6FB))
+                    }
+                )
+            )
+            .border(
+                width = 1.4.dp,
+                brush = Brush.linearGradient(
+                    listOf(
+                        aura.accentGold.copy(alpha = 0.72f),
+                        aura.accentCyan.copy(alpha = 0.55f),
+                        aura.accentGold.copy(alpha = 0.65f)
+                    )
+                ),
+                shape = RoundedCornerShape(24.dp)
+            )
+            .clickable { onEnterShop() }
+            .testTag("shop_portal_card")
+    ) {
+        // Boutique Storefront Awning & Spotlight Glow
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        aura.accentGold.copy(alpha = if (aura.isDark) 0.14f else 0.10f),
+                        Color.Transparent
+                    ),
+                    radius = size.width * 0.62f
+                ),
+                center = Offset(size.width * 0.5f, size.height * 0.08f)
+            )
+            // Architectural glass display divider lines
+            val awningY = 6.dp.toPx()
+            val stripeCount = 9
+            val segW = size.width / stripeCount
+            for (s in 0 until stripeCount) {
+                if (s % 2 == 0) {
+                    drawRect(
+                        color = aura.accentGold.copy(alpha = if (aura.isDark) 0.14f else 0.12f),
+                        topLeft = Offset(s * segW, 0f),
+                        size = Size(segW, awningY)
+                    )
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            // 1. Storefront Marquee Header (Emblem + Brand + Currency Balance Counter)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(RoundedCornerShape(15.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        aura.accentGoldBg,
+                                        aura.accentCyanSoft
+                                    )
+                                )
+                            )
+                            .border(
+                                1.3.dp,
+                                Brush.linearGradient(listOf(aura.accentGold, aura.accentCyan)),
+                                RoundedCornerShape(15.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Storefront,
+                            contentDescription = "Shop",
+                            tint = aura.accentGold,
+                            modifier = Modifier.size(25.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "SHOP",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    color = aura.accentGold,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = 1.8.sp,
+                                    fontSize = 18.sp
+                                )
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = aura.accentCyanSoft,
+                                border = BorderStroke(0.8.dp, aura.accentCyan.copy(alpha = 0.5f))
+                            ) {
+                                Text(
+                                    text = if (isArabic) "البوتيك" else "BOUTIQUE",
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = aura.accentCyan,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                            }
+                        }
+                        Text(
+                            text = if (isArabic) "عرض الجوائز واستبدال المفاتيح" else "Rewards Showcase & Key Exchange",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = aura.textSecondary,
+                                fontSize = 11.5.sp
+                            )
+                        )
+                    }
+                }
+
+                // Live Storefront Wallet Pill
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = aura.accentGoldBg,
+                    border = BorderStroke(1.dp, aura.accentGold.copy(alpha = 0.55f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VpnKey,
+                            contentDescription = null,
+                            tint = aura.accentGold,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = "$totalKeys",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = aura.textPrimary,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 2. Boutique Glass Display Window (3 Showcase Pedestals mimicking a real storefront)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = if (aura.isDark) Color(0x99080C14) else aura.surfaceSubtle,
+                border = BorderStroke(1.dp, aura.borderSubtle),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    val showcaseSlots = listOf(
+                        Triple(
+                            if (isArabic) "صناديق" else "Crates",
+                            if (isArabic) "برونز / فضة" else "Bronze / Silver",
+                            if (aura.isDark) Color(0xFFE59A54) else Color(0xFFB45309)
+                        ),
+                        Triple(
+                            if (isArabic) "عروض ملكية" else "Royal Drops",
+                            if (isArabic) "ذهبي" else "Gold Tier",
+                            aura.accentGold
+                        ),
+                        Triple(
+                            if (isArabic) "حزم حصرية" else "Vault Packs",
+                            if (isArabic) "ماسي" else "Diamond",
+                            aura.accentCyan
+                        )
+                    )
+                    showcaseSlots.forEachIndexed { idx, (slotTitle, tierHint, tint) ->
+                        val iconVec = when (idx) {
+                            0 -> Icons.Default.VpnKey
+                            1 -> Icons.Default.AutoAwesome
+                            else -> Icons.Default.Diamond
+                        }
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (aura.isDark) Color(0xCC111827) else aura.surfaceElevated,
+                            border = BorderStroke(0.9.dp, tint.copy(alpha = 0.42f))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(tint.copy(alpha = 0.14f))
+                                        .border(1.dp, tint.copy(alpha = 0.4f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = iconVec,
+                                        contentDescription = slotTitle,
+                                        tint = tint,
+                                        modifier = Modifier.size(17.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = slotTitle,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = aura.textPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                                Text(
+                                    text = tierHint,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = tint,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 9.5.sp
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 3. Boutique Storefront Entry Action Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                if (aura.isDark) Color(0xFF1F2937) else Color(0xFF0F172A),
+                                if (aura.isDark) Color(0xFF2B2214) else Color(0xFF1E293B)
+                            )
+                        )
+                    )
+                    .border(
+                        1.dp,
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color(0xFFFFD700).copy(alpha = 0.7f * furnacePulse),
+                                PulseCyan.copy(alpha = 0.6f)
+                            )
+                        ),
+                        RoundedCornerShape(14.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Storefront,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isArabic) "فتح المتجر" else "Open Shop",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            color = Color.White,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 13.5.sp
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFFFFD700),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -577,6 +826,7 @@ private fun ForgeHeroFurnaceCard(
     showEnterCta: Boolean,
     onEnterClick: () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     val activeCount = forgeState.activeSlotsCount
     val readyCount = forgeState.readySlotsCount
     val hasLiveFire = activeCount > 0 || readyCount > 0
@@ -587,20 +837,20 @@ private fun ForgeHeroFurnaceCard(
             .clip(RoundedCornerShape(24.dp))
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1B1312),
-                        Color(0xFF101626),
-                        Color(0xFF0A0E18)
-                    )
+                    colors = if (aura.isDark) {
+                        listOf(Color(0xFF1B1312), Color(0xFF101626), Color(0xFF0A0E18))
+                    } else {
+                        listOf(Color(0xFFFFF8EE), Color(0xFFFDFDFD), Color(0xFFF2F6FC))
+                    }
                 )
             )
             .border(
                 width = 1.4.dp,
                 brush = Brush.linearGradient(
                     colors = listOf(
-                        Color(0xFFFF7A1A).copy(alpha = if (hasLiveFire) furnacePulse else 0.65f),
-                        Color(0xFFFFD700).copy(alpha = 0.75f),
-                        PulseCyan.copy(alpha = 0.60f)
+                        aura.accentFlame.copy(alpha = if (hasLiveFire) furnacePulse else 0.65f),
+                        aura.accentGold.copy(alpha = 0.75f),
+                        aura.accentCyan.copy(alpha = 0.60f)
                     )
                 ),
                 shape = RoundedCornerShape(24.dp)
@@ -615,7 +865,7 @@ private fun ForgeHeroFurnaceCard(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0x45FF5722).copy(alpha = 0.25f * furnacePulse),
+                        Color(0x45FF5722).copy(alpha = (if (aura.isDark) 0.25f else 0.14f) * furnacePulse),
                         Color(0x22FFD700),
                         Color.Transparent
                     ),
@@ -635,8 +885,8 @@ private fun ForgeHeroFurnaceCard(
                 val radius = (1.8f + (i % 3) * 1.1f).dp.toPx()
                 val sparkColor = when (i % 3) {
                     0 -> Color(0xFFFF7A1A)
-                    1 -> Color(0xFFFFD700)
-                    else -> PulseCyan
+                    1 -> aura.accentGold
+                    else -> aura.accentCyan
                 }
                 drawCircle(
                     color = sparkColor.copy(alpha = alpha.coerceIn(0f, 1f)),
@@ -677,17 +927,17 @@ private fun ForgeHeroFurnaceCard(
                             .clip(RoundedCornerShape(16.dp))
                             .background(
                                 Brush.radialGradient(
-                                    colors = listOf(
-                                        Color(0x55FF5722),
-                                        Color(0x33FFD700),
-                                        Color(0xFF141925)
-                                    )
+                                    colors = if (aura.isDark) {
+                                        listOf(Color(0x55FF5722), Color(0x33FFD700), Color(0xFF141925))
+                                    } else {
+                                        listOf(Color(0x44FF7A1A), Color(0x33F59E0B), Color(0xFFFFF3E0))
+                                    }
                                 )
                             )
                             .border(
                                 1.4.dp,
                                 Brush.linearGradient(
-                                    listOf(Color(0xFFFF7A1A), Color(0xFFFFD700))
+                                    listOf(aura.accentFlame, aura.accentGold)
                                 ),
                                 RoundedCornerShape(16.dp)
                             ),
@@ -696,7 +946,7 @@ private fun ForgeHeroFurnaceCard(
                         Icon(
                             imageVector = Icons.Default.Hardware,
                             contentDescription = "The Forge",
-                            tint = Color(0xFFFFD700),
+                            tint = aura.accentGold,
                             modifier = Modifier.size(26.dp)
                         )
                     }
@@ -708,7 +958,7 @@ private fun ForgeHeroFurnaceCard(
                             Text(
                                 text = "THE FORGE",
                                 style = MaterialTheme.typography.titleLarge.copy(
-                                    color = Color(0xFFFFD700),
+                                    color = aura.accentGold,
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 1.6.sp,
                                     fontSize = 18.sp
@@ -718,14 +968,14 @@ private fun ForgeHeroFurnaceCard(
                             Icon(
                                 imageVector = Icons.Default.LocalFireDepartment,
                                 contentDescription = null,
-                                tint = Color(0xFFFF6D00),
+                                tint = aura.accentFlame,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
                         Text(
                             text = if (isArabic) "مصهر الدروع والمفاتيح الملكي" else "Royal Shield & Key Crucible",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFFCBD5E1),
+                                color = aura.textSecondary,
                                 fontSize = 11.5.sp
                             )
                         )
@@ -739,9 +989,9 @@ private fun ForgeHeroFurnaceCard(
                     else -> if (isArabic) "جاهز للصهر" else "Standby"
                 }
                 val statusAccent = when {
-                    readyCount > 0 -> Color(0xFF34D399)
-                    activeCount > 0 -> Color(0xFFFF7A1A)
-                    else -> PulseCyan
+                    readyCount > 0 -> aura.accentEmerald
+                    activeCount > 0 -> aura.accentFlame
+                    else -> aura.accentCyan
                 }
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -770,35 +1020,35 @@ private fun ForgeHeroFurnaceCard(
                 WalletCurrencyChip(
                     label = if (isArabic) "الدروع" else "Shields",
                     count = shieldsCount,
-                    accent = PulseCyan,
+                    accent = aura.accentCyan,
                     icon = Icons.Default.Shield,
                     modifier = Modifier.weight(1.1f)
                 )
                 WalletCurrencyChip(
                     label = if (isArabic) "برونزي" else "Bronze",
                     count = forgeState.bronzeKeys,
-                    accent = Color(0xFFE59A54),
+                    accent = if (aura.isDark) Color(0xFFE59A54) else Color(0xFFB45309),
                     icon = Icons.Default.VpnKey,
                     modifier = Modifier.weight(1f)
                 )
                 WalletCurrencyChip(
                     label = if (isArabic) "فضي" else "Silver",
                     count = forgeState.silverKeys,
-                    accent = Color(0xFFE2E8F0),
+                    accent = if (aura.isDark) Color(0xFFE2E8F0) else Color(0xFF475569),
                     icon = Icons.Default.VpnKey,
                     modifier = Modifier.weight(1f)
                 )
                 WalletCurrencyChip(
                     label = if (isArabic) "ذهبي" else "Gold",
                     count = forgeState.goldenKeys,
-                    accent = Color(0xFFFFD700),
+                    accent = aura.accentGold,
                     icon = Icons.Default.VpnKey,
                     modifier = Modifier.weight(1f)
                 )
                 WalletCurrencyChip(
                     label = if (isArabic) "ماسي" else "Diamond",
                     count = forgeState.diamondKeys,
-                    accent = Color(0xFF38BDF8),
+                    accent = if (aura.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
                     icon = Icons.Default.Diamond,
                     modifier = Modifier.weight(1f)
                 )
@@ -829,11 +1079,11 @@ private fun ForgeHeroFurnaceCard(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (isArabic) "دخول إلى المصهر (وصفات الصهر الملكية)" else "Enter The Forge (Royal Recipes)",
+                            text = if (isArabic) "دخول" else "Enter",
                             style = MaterialTheme.typography.labelLarge.copy(
                                 color = Color(0xFF07090D),
                                 fontWeight = FontWeight.Black,
-                                fontSize = 13.sp
+                                fontSize = 14.sp
                             )
                         )
                     }
@@ -851,10 +1101,11 @@ private fun WalletCurrencyChip(
     icon: ImageVector,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xAA0B0F19),
+        color = if (aura.isDark) Color(0xAA0B0F19) else aura.surfaceElevated,
         border = BorderStroke(0.9.dp, accent.copy(alpha = 0.45f))
     ) {
         Column(
@@ -871,7 +1122,7 @@ private fun WalletCurrencyChip(
             Text(
                 text = "$count",
                 style = MaterialTheme.typography.labelLarge.copy(
-                    color = Color.White,
+                    color = aura.textPrimary,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 13.sp
                 ),
@@ -903,9 +1154,10 @@ private fun ForgeRecipeCard(
     isArabic: Boolean,
     onStart: () -> Unit,
     onClaim: () -> Unit,
-    onRequestCancel: () -> Unit
+    onHammerClick: () -> Unit
 ) {
-    val palette = remember(tier) { paletteForTier(tier) }
+    val aura = MaterialTheme.aura
+    val palette = remember(tier, aura.isDark) { paletteForTier(tier, aura.isDark) }
     val ownedTierCount = forgeState.getKeyCount(tier)
     val availableInput = if (tier.usesShields) shieldsCount else forgeState.availableKeysFor(tier)
     val requiredInput = if (tier.usesShields) tier.requiredShields else tier.requiredKeys
@@ -932,22 +1184,26 @@ private fun ForgeRecipeCard(
 
     val bayBrush = when {
         isComplete -> Brush.verticalGradient(
-            listOf(Color(0xFF0E251F), Color(0xFF0A141E), Color(0xFF070B12))
+            if (aura.isDark) listOf(Color(0xFF0E251F), Color(0xFF0A141E), Color(0xFF070B12))
+            else listOf(Color(0xFFECFDF5), Color(0xFFF6FEF9), Color(0xFFFFFFFF))
         )
         isActive -> Brush.verticalGradient(
-            listOf(Color(0xFF28150E), palette.cardBgTop, Color(0xFF0A0E17))
+            if (aura.isDark) listOf(Color(0xFF28150E), palette.cardBgTop, Color(0xFF0A0E17))
+            else listOf(Color(0xFFFFF4E6), palette.cardBgTop, Color(0xFFFFFFFF))
         )
         canStart -> Brush.verticalGradient(
-            listOf(Color(0xFF121824), Color(0xFF0B1019), Color(0xFF070A11))
+            if (aura.isDark) listOf(Color(0xFF121824), Color(0xFF0B1019), Color(0xFF070A11))
+            else listOf(palette.cardBgTop, Color(0xFFF9FBFE), Color(0xFFFFFFFF))
         )
         else -> Brush.verticalGradient(
-            listOf(Color(0xFF0E121B), Color(0xFF090C14), Color(0xFF06080E))
+            if (aura.isDark) listOf(Color(0xFF0E121B), Color(0xFF090C14), Color(0xFF06080E))
+            else listOf(Color(0xFFF1F5F9), Color(0xFFF8FAFC), Color(0xFFFFFFFF))
         )
     }
 
     val borderBrush = when {
         isComplete -> Brush.horizontalGradient(
-            listOf(Color(0xFF34D399), palette.primary, Color(0xFF34D399))
+            listOf(aura.accentEmerald, palette.primary, aura.accentEmerald)
         )
         isActive -> Brush.horizontalGradient(
             listOf(
@@ -958,13 +1214,13 @@ private fun ForgeRecipeCard(
         )
         canStart -> Brush.horizontalGradient(
             listOf(
-                palette.primary.copy(alpha = 0.50f),
-                Color(0x44334155),
-                palette.primary.copy(alpha = 0.45f)
+                palette.primary.copy(alpha = 0.55f),
+                aura.borderSubtle,
+                palette.primary.copy(alpha = 0.50f)
             )
         )
         else -> Brush.horizontalGradient(
-            listOf(Color(0x28475569), Color(0x181E293B), Color(0x28475569))
+            listOf(aura.borderSubtle, aura.borderMuted, aura.borderSubtle)
         )
     }
 
@@ -1084,17 +1340,17 @@ private fun ForgeRecipeCard(
                     Surface(
                         shape = RoundedCornerShape(10.dp),
                         color = when {
-                            isComplete -> Color(0x3310B981)
-                            isActive -> Color(0x33FF6D00)
-                            else -> Color(0x22334155)
+                            isComplete -> aura.accentEmeraldSoft
+                            isActive -> aura.accentFlameSoft
+                            else -> aura.surfaceSubtle
                         },
                         border = BorderStroke(
                             1.dp,
                             when {
-                                isComplete -> Color(0xFF34D399)
-                                isActive -> Color(0xFFFF7A1A)
+                                isComplete -> aura.accentEmerald
+                                isActive -> aura.accentFlame
                                 canStart -> palette.primary.copy(alpha = 0.55f)
-                                else -> Color(0x44475569)
+                                else -> aura.borderSubtle
                             }
                         )
                     ) {
@@ -1103,10 +1359,10 @@ private fun ForgeRecipeCard(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = when {
-                                    isComplete -> Color(0xFF34D399)
-                                    isActive -> Color(0xFFFFB074)
+                                    isComplete -> aura.accentEmerald
+                                    isActive -> aura.accentFlame
                                     canStart -> palette.primary
-                                    else -> Color(0xFF94A3B8)
+                                    else -> aura.textSecondary
                                 },
                                 fontWeight = FontWeight.Black,
                                 fontSize = 11.sp
@@ -1121,7 +1377,7 @@ private fun ForgeRecipeCard(
                             Text(
                                 text = workshopName,
                                 style = MaterialTheme.typography.titleSmall.copy(
-                                    color = if (isIdle && !canStart) Color(0xFFCBD5E1) else Color.White,
+                                    color = if (isIdle && !canStart) aura.textSecondary else aura.textPrimary,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontSize = 14.sp
                                 ),
@@ -1133,20 +1389,20 @@ private fun ForgeRecipeCard(
                             Text(
                                 text = if (isArabic) tier.rarityAr else tier.rarityEn,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = if (isIdle && !canStart) Color(0xFF64748B) else palette.primary,
+                                    color = if (isIdle && !canStart) aura.textTertiary else palette.primary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 10.sp
                                 )
                             )
                             Text(
                                 text = " • ",
-                                color = Color(0xFF475569),
+                                color = aura.textTertiary,
                                 fontSize = 10.sp
                             )
                             Text(
                                 text = if (isArabic) "في الخزينة: $ownedTierCount" else "Vault: $ownedTierCount",
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = Color(0xFF94A3B8),
+                                    color = aura.textSecondary,
                                     fontSize = 10.sp
                                 )
                             )
@@ -1162,14 +1418,14 @@ private fun ForgeRecipeCard(
                     else -> if (isArabic) "خاملة 💤" else "IDLE 💤"
                 }
                 val statusColor = when {
-                    isComplete -> Color(0xFF34D399)
-                    isActive -> Color(0xFFFF7A1A)
+                    isComplete -> aura.accentEmerald
+                    isActive -> aura.accentFlame
                     canStart -> palette.primary
-                    else -> Color(0xFF64748B)
+                    else -> aura.textTertiary
                 }
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = statusColor.copy(alpha = if (isActive || isComplete) 0.22f else 0.12f),
+                    color = statusColor.copy(alpha = if (isActive || isComplete) 0.18f else 0.12f),
                     border = BorderStroke(
                         1.dp,
                         statusColor.copy(alpha = if (isActive) furnacePulse else 0.55f)
@@ -1210,14 +1466,19 @@ private fun ForgeRecipeCard(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .background(
-                        if (isActive) Color(0xB3090C14) else Color(0x99060910)
+                        when {
+                            aura.isDark && isActive -> Color(0xB3090C14)
+                            aura.isDark -> Color(0x99060910)
+                            isActive -> Color(0xFFFFF7ED)
+                            else -> aura.surfaceSubtle
+                        }
                     )
                     .border(
                         1.dp,
                         when {
-                            isComplete -> Color(0x4434D399)
-                            isActive -> Color(0x55FF7A1A)
-                            else -> Color(0x1EFFFFFF)
+                            isComplete -> aura.accentEmerald.copy(alpha = 0.45f)
+                            isActive -> aura.accentFlame.copy(alpha = 0.45f)
+                            else -> aura.borderSubtle
                         },
                         RoundedCornerShape(18.dp)
                     )
@@ -1327,11 +1588,11 @@ private fun ForgeRecipeCard(
                     val inputStockText = "$availableInput / $requiredInput"
                     WorkshopStationPod(
                         icon = if (tier.usesShields) Icons.Default.Shield else Icons.Default.VpnKey,
-                        iconTint = if (tier.usesShields) PulseCyan else Color(0xFFFFD700),
+                        iconTint = if (tier.usesShields) aura.accentCyan else aura.accentGold,
                         title = inputQtyText,
                         subtitle = inputStockText,
-                        subtitleColor = if (availableInput >= requiredInput) Color(0xFF34D399) else Color(0xFF94A3B8),
-                        borderColor = if (isActive) Color(0x6600F2FE) else Color(0x28475569),
+                        subtitleColor = if (availableInput >= requiredInput) aura.accentEmerald else aura.textSecondary,
+                        borderColor = if (isActive) aura.accentCyan.copy(alpha = 0.5f) else aura.borderSubtle,
                         isDimmed = isIdle && !canStart,
                         modifier = Modifier.weight(1f)
                     )
@@ -1434,60 +1695,64 @@ private fun ForgeRecipeCard(
                             }
                         }
 
-                        // Center Core Emblem (Animated striking hammer vs cooled resting anvil)
+                        // Center Core Emblem (Clickable 48dp Hammer -> Explains Furnace active • Ticks on app usage)
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(48.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    when {
-                                        isComplete -> Color(0x3310B981)
-                                        isActive -> Color(0x44FF5722)
-                                        else -> Color(0x660F172A)
-                                    }
-                                )
-                                .graphicsLayer {
-                                    if (isActive) {
-                                        val beat = sin(emberPhase * 4f * PI.toFloat())
-                                        rotationZ = beat * 11f
-                                        scaleX = 1f + (beat * 0.06f)
-                                        scaleY = 1f + (beat * 0.06f)
-                                    }
-                                },
+                                .clickable { onHammerClick() }
+                                .testTag("forge_hammer_${tier.id}"),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = when {
-                                    isComplete -> Icons.Default.AutoAwesome
-                                    isActive -> Icons.Default.Hardware
-                                    canStart -> Icons.Default.Hardware
-                                    else -> Icons.Default.Hardware
-                                },
-                                contentDescription = null,
-                                tint = when {
-                                    isComplete -> Color(0xFF34D399)
-                                    isActive -> Color(0xFFFFD700)
-                                    canStart -> palette.primary.copy(alpha = 0.72f)
-                                    else -> Color(0xFF475569)
-                                },
+                            Box(
                                 modifier = Modifier
-                                    .size(21.dp)
-                                    .alpha(if (isIdle && !canStart) 0.5f else 1f)
-                            )
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        when {
+                                            isComplete -> aura.accentEmeraldSoft
+                                            isActive -> aura.accentFlameSoft
+                                            else -> aura.surfaceSubtle
+                                        }
+                                    )
+                                    .graphicsLayer {
+                                        if (isActive) {
+                                            val beat = sin(emberPhase * 4f * PI.toFloat())
+                                            rotationZ = beat * 11f
+                                            scaleX = 1f + (beat * 0.06f)
+                                            scaleY = 1f + (beat * 0.06f)
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isComplete) Icons.Default.AutoAwesome else Icons.Default.Hardware,
+                                    contentDescription = if (isArabic) "شرح عمل الفرن" else "Furnace active • Ticks on app usage",
+                                    tint = when {
+                                        isComplete -> aura.accentEmerald
+                                        isActive -> if (aura.isDark) Color(0xFFFFD700) else aura.accentFlame
+                                        canStart -> palette.primary.copy(alpha = 0.8f)
+                                        else -> aura.textTertiary
+                                    },
+                                    modifier = Modifier
+                                        .size(21.dp)
+                                        .alpha(if (isIdle && !canStart) 0.55f else 1f)
+                                )
+                            }
                         }
                     }
 
                     // RIGHT CHAMBER: Output Key Mold
                     WorkshopStationPod(
                         icon = palette.icon,
-                        iconTint = if (isIdle && !canStart) Color(0xFF64748B) else palette.primary,
+                        iconTint = if (isIdle && !canStart) aura.textTertiary else palette.primary,
                         title = if (isArabic) "1× ${tier.nameAr}" else "1× ${tier.nameEn}",
                         subtitle = if (isArabic) "${tier.durationHours} ساعة عمل" else "${tier.durationHours}h Craft",
-                        subtitleColor = if (isActive) Color(0xFFFFB074) else Color(0xFF94A3B8),
+                        subtitleColor = if (isActive) aura.accentFlame else aura.textSecondary,
                         borderColor = when {
-                            isComplete -> Color(0xFF34D399)
+                            isComplete -> aura.accentEmerald
                             isActive -> palette.primary.copy(alpha = 0.75f)
-                            else -> Color(0x28475569)
+                            else -> aura.borderSubtle
                         },
                         isDimmed = isIdle && !canStart,
                         modifier = Modifier.weight(1f)
@@ -1548,14 +1813,14 @@ private fun ForgeRecipeCard(
                                 Icon(
                                     imageVector = Icons.Default.LocalFireDepartment,
                                     contentDescription = null,
-                                    tint = Color(0xFFFF7A1A),
+                                    tint = aura.accentFlame,
                                     modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
                                     text = if (isArabic) "متبقي $remainingFormatted" else "$remainingFormatted remaining",
                                     style = MaterialTheme.typography.labelMedium.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 12.sp
                                     )
@@ -1564,7 +1829,7 @@ private fun ForgeRecipeCard(
 
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = Color(0x28FF7A1A),
+                                color = aura.accentFlameSoft,
                                 border = BorderStroke(0.8.dp, palette.primary.copy(alpha = 0.55f))
                             ) {
                                 Text(
@@ -1591,54 +1856,6 @@ private fun ForgeRecipeCard(
                                 .height(14.dp)
                                 .testTag("forge_progress_${tier.id}")
                         )
-
-                        Spacer(modifier = Modifier.height(9.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = if (isArabic) {
-                                    "الفرن يعمل الآن • يتقدم مع استعمال التطبيق"
-                                } else {
-                                    "Furnace active • Ticks on app usage"
-                                },
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFFFFB074),
-                                    fontSize = 10.5.sp
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            OutlinedButton(
-                                onClick = onRequestCancel,
-                                shape = RoundedCornerShape(10.dp),
-                                border = BorderStroke(1.dp, Color(0x55EF4444)),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier
-                                    .height(48.dp)
-                                    .testTag("forge_cancel_${tier.id}")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = if (isArabic) "إلغاء الصهر" else "Cancel",
-                                    tint = Color(0xFFFCA5A5),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (isArabic) "إلغاء واسترداد" else "Cancel",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFFFCA5A5),
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            }
-                        }
                     }
                 }
 
@@ -1651,7 +1868,7 @@ private fun ForgeRecipeCard(
                             .clip(RoundedCornerShape(14.dp))
                             .background(
                                 Brush.horizontalGradient(
-                                    listOf(Color(0xFFFF7A1A), palette.primary)
+                                    listOf(Color(0xFFFF7A1A), if (aura.isDark) palette.primary else Color(0xFFFFB703))
                                 )
                             )
                             .clickable { onStart() }
@@ -1686,8 +1903,8 @@ private fun ForgeRecipeCard(
                     // Dormant Idle Workshop with insufficient materials
                     Surface(
                         shape = RoundedCornerShape(14.dp),
-                        color = Color(0x440F172A),
-                        border = BorderStroke(1.dp, Color(0x28475569)),
+                        color = aura.surfaceSubtle,
+                        border = BorderStroke(1.dp, aura.borderSubtle),
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(48.dp)
@@ -1701,7 +1918,7 @@ private fun ForgeRecipeCard(
                             Icon(
                                 imageVector = Icons.Default.Lock,
                                 contentDescription = null,
-                                tint = Color(0xFF64748B),
+                                tint = aura.textTertiary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -1720,7 +1937,7 @@ private fun ForgeRecipeCard(
                                     }
                                 },
                                 style = MaterialTheme.typography.labelMedium.copy(
-                                    color = Color(0xFF94A3B8),
+                                    color = aura.textSecondary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.5.sp
                                 ),
@@ -1746,10 +1963,11 @@ private fun WorkshopStationPod(
     isDimmed: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Surface(
         modifier = modifier.alpha(if (isDimmed) 0.72f else 1f),
         shape = RoundedCornerShape(14.dp),
-        color = Color(0xCC0D1320),
+        color = if (aura.isDark) Color(0xCC0D1320) else aura.surfaceElevated,
         border = BorderStroke(1.dp, borderColor)
     ) {
         Column(
@@ -1774,7 +1992,7 @@ private fun WorkshopStationPod(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium.copy(
-                    color = Color.White,
+                    color = aura.textPrimary,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 11.sp
                 ),
@@ -1805,12 +2023,13 @@ private fun WorkshopMoltenProgressBar(
     furnacePulse: Float,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val clamped = progress.coerceIn(0f, 1f)
     Canvas(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF0A0E17))
-            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(8.dp))
+            .background(if (aura.isDark) Color(0xFF0A0E17) else aura.progressTrack)
+            .border(1.dp, aura.borderSubtle, RoundedCornerShape(8.dp))
     ) {
         val barWidth = size.width * clamped
         if (barWidth > 2f) {
@@ -2088,6 +2307,7 @@ private fun EmptyKeyShopPage(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val totalKeys = forgeState.bronzeKeys + forgeState.silverKeys + forgeState.goldenKeys + forgeState.diamondKeys
 
     Column(
@@ -2099,11 +2319,11 @@ private fun EmptyKeyShopPage(
         // Top Navigation Bar
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xCC0F1626),
+            color = if (aura.isDark) Color(0xCC0F1626) else aura.surfaceElevated,
             border = BorderStroke(
                 1.dp,
                 Brush.horizontalGradient(
-                    listOf(Color(0x66FFD700), PulseCyan.copy(alpha = 0.5f))
+                    listOf(aura.accentGold.copy(alpha = 0.45f), aura.accentCyan.copy(alpha = 0.5f))
                 )
             ),
             modifier = Modifier
@@ -2123,13 +2343,13 @@ private fun EmptyKeyShopPage(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0x22FFFFFF))
+                            .background(aura.iconButtonBg)
                             .testTag("shop_exit_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = if (isArabic) "العودة إلى The Forge" else "Back to The Forge",
-                            tint = Color.White
+                            tint = aura.textPrimary
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
@@ -2137,7 +2357,7 @@ private fun EmptyKeyShopPage(
                         Text(
                             text = "Shop",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                color = Color(0xFFFFD700),
+                                color = aura.accentGold,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 1.2.sp,
                                 fontSize = 16.sp
@@ -2146,7 +2366,7 @@ private fun EmptyKeyShopPage(
                         Text(
                             text = if (isArabic) "متجر المفاتيح" else "Key Shop",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF94A3B8),
+                                color = aura.textSecondary,
                                 fontSize = 10.5.sp
                             )
                         )
@@ -2155,8 +2375,8 @@ private fun EmptyKeyShopPage(
 
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0x22FFD700),
-                    border = BorderStroke(1.dp, Color(0x55FFD700))
+                    color = aura.accentGoldBg,
+                    border = BorderStroke(1.dp, aura.accentGold.copy(alpha = 0.45f))
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
@@ -2165,14 +2385,14 @@ private fun EmptyKeyShopPage(
                         Icon(
                             imageVector = Icons.Default.Storefront,
                             contentDescription = null,
-                            tint = Color(0xFFFFD700),
+                            tint = aura.accentGold,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Shop",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFFFFD700),
+                                color = aura.accentGold,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 10.5.sp
                             )
@@ -2185,11 +2405,11 @@ private fun EmptyKeyShopPage(
         // Top Keys Balance Card (رصيدي من المفاتيح)
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xDD111726),
+            color = if (aura.isDark) Color(0xDD111726) else aura.surfaceElevated,
             border = BorderStroke(
                 1.2.dp,
                 Brush.linearGradient(
-                    listOf(Color(0x88FFD700), PulseCyan.copy(alpha = 0.45f))
+                    listOf(aura.accentGold.copy(alpha = 0.55f), aura.accentCyan.copy(alpha = 0.45f))
                 )
             ),
             modifier = Modifier
@@ -2210,14 +2430,14 @@ private fun EmptyKeyShopPage(
                         Icon(
                             imageVector = Icons.Default.VpnKey,
                             contentDescription = null,
-                            tint = Color(0xFFFFD700),
+                            tint = aura.accentGold,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isArabic) "رصيدي من المفاتيح" else "My Keys Balance",
                             style = MaterialTheme.typography.titleSmall.copy(
-                                color = Color.White,
+                                color = aura.textPrimary,
                                 fontWeight = FontWeight.ExtraBold,
                                 fontSize = 14.sp
                             )
@@ -2226,14 +2446,14 @@ private fun EmptyKeyShopPage(
 
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0x22FFD700),
-                        border = BorderStroke(1.dp, Color(0x44FFD700))
+                        color = aura.accentGoldBg,
+                        border = BorderStroke(1.dp, aura.accentGold.copy(alpha = 0.35f))
                     ) {
                         Text(
                             text = if (isArabic) "الإجمالي: $totalKeys" else "Total: $totalKeys",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFFFFD700),
+                                color = aura.accentGold,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 10.5.sp
                             )
@@ -2250,28 +2470,28 @@ private fun EmptyKeyShopPage(
                     WalletCurrencyChip(
                         label = if (isArabic) "برونزي" else "Bronze",
                         count = forgeState.bronzeKeys,
-                        accent = Color(0xFFE59A54),
+                        accent = if (aura.isDark) Color(0xFFE59A54) else Color(0xFFB45309),
                         icon = Icons.Default.VpnKey,
                         modifier = Modifier.weight(1f)
                     )
                     WalletCurrencyChip(
                         label = if (isArabic) "فضي" else "Silver",
                         count = forgeState.silverKeys,
-                        accent = Color(0xFFE2E8F0),
+                        accent = if (aura.isDark) Color(0xFFE2E8F0) else Color(0xFF475569),
                         icon = Icons.Default.VpnKey,
                         modifier = Modifier.weight(1f)
                     )
                     WalletCurrencyChip(
                         label = if (isArabic) "ذهبي" else "Gold",
                         count = forgeState.goldenKeys,
-                        accent = Color(0xFFFFD700),
+                        accent = aura.accentGold,
                         icon = Icons.Default.VpnKey,
                         modifier = Modifier.weight(1f)
                     )
                     WalletCurrencyChip(
                         label = if (isArabic) "ماسي" else "Diamond",
                         count = forgeState.diamondKeys,
-                        accent = Color(0xFF38BDF8),
+                        accent = if (aura.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
                         icon = Icons.Default.Diamond,
                         modifier = Modifier.weight(1f)
                     )
@@ -2297,14 +2517,14 @@ private fun EmptyKeyShopPage(
                     modifier = Modifier
                         .size(74.dp)
                         .clip(CircleShape)
-                        .background(Color(0x18FFFFFF))
-                        .border(1.dp, Color(0x28FFD700), CircleShape),
+                        .background(aura.surfaceGlass)
+                        .border(1.dp, aura.accentGold.copy(alpha = 0.25f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Storefront,
                         contentDescription = null,
-                        tint = Color(0xFF64748B),
+                        tint = aura.textTertiary,
                         modifier = Modifier.size(34.dp)
                     )
                 }
@@ -2312,7 +2532,7 @@ private fun EmptyKeyShopPage(
                 Text(
                     text = if (isArabic) "المتجر فارغ" else "Shop is empty",
                     style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color(0xFF94A3B8),
+                        color = aura.textSecondary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     ),

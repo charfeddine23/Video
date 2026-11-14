@@ -83,6 +83,7 @@ import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.ThemeMode
+import com.example.ui.theme.aura
 import com.example.ui.viewmodel.StreakViewModel
 
 @Composable
@@ -96,11 +97,17 @@ fun SystemSettingsScreen(
     isArabic: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val isPremiumActivated by streakViewModel.isPremiumActivated.collectAsState()
+    var isMultiThemeEngineOpen by remember { mutableStateOf(false) }
 
     BackHandler {
-        onBack()
+        if (isMultiThemeEngineOpen) {
+            isMultiThemeEngineOpen = false
+        } else {
+            onBack()
+        }
     }
 
     // Core System Settings States
@@ -132,7 +139,7 @@ fun SystemSettingsScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .testTag("system_settings_screen")
     ) {
         Box(
@@ -141,7 +148,11 @@ fun SystemSettingsScreen(
                 .drawBehind {
                     drawCircle(
                         brush = Brush.radialGradient(
-                            listOf(Color(0x2200F2FE), Color(0x167928CA), Color.Transparent),
+                            listOf(
+                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.14f else 0.08f),
+                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.09f else 0.05f),
+                                Color.Transparent
+                            ),
                             radius = size.width * 0.95f
                         ),
                         center = Offset(size.width * 0.5f, size.height * 0.14f)
@@ -170,13 +181,13 @@ fun SystemSettingsScreen(
                     modifier = Modifier
                         .size(48.dp)
                         .clip(CircleShape)
-                        .background(Color(0x22FFFFFF))
+                        .background(aura.iconButtonBg)
                         .testTag("system_settings_back_button")
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = if (isArabic) "رجوع" else "Back",
-                        tint = Color.White
+                        tint = aura.textPrimary
                     )
                 }
 
@@ -187,13 +198,13 @@ fun SystemSettingsScreen(
                         text = if (isArabic) "إعدادات النظام" else "System Settings",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
+                            color = aura.textPrimary
                         )
                     )
                     Text(
                         text = if (isArabic) "مركز التحكم الكامل والنسخ الاحتياطي و Premium" else "Appearance, playback, backup & Aura Pulse Premium",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF94A3B8),
+                            color = aura.textSecondary,
                             fontSize = 11.sp
                         )
                     )
@@ -207,6 +218,96 @@ fun SystemSettingsScreen(
                 contentPadding = PaddingValues(top = 8.dp, bottom = 40.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
+                // 0. Multi-Theme Engine Card (Interactive -> Soon Sub-page)
+                item(key = "multi_theme_engine_item") {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                1.dp,
+                                Brush.horizontalGradient(
+                                    listOf(aura.accentViolet.copy(alpha = 0.55f), aura.accentCyan.copy(alpha = 0.55f))
+                                ),
+                                RoundedCornerShape(22.dp)
+                            )
+                            .clip(RoundedCornerShape(22.dp))
+                            .clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                isMultiThemeEngineOpen = true
+                            }
+                            .testTag("multi_theme_engine_entry"),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 18.dp, vertical = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(aura.accentViolet.copy(alpha = 0.22f), aura.accentCyanSoft)
+                                            )
+                                        )
+                                        .border(1.dp, aura.accentViolet.copy(alpha = 0.45f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Palette,
+                                        contentDescription = "Multi-Theme Engine",
+                                        tint = aura.accentViolet,
+                                        modifier = Modifier.size(21.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "Multi-Theme Engine",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            color = aura.textPrimary,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 15.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = if (isArabic) "محرك الثيمات المتعددة وتخصيص الواجهة" else "Dynamic visual themes & engine presets",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = aura.textSecondary,
+                                            fontSize = 11.5.sp
+                                        )
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = aura.accentViolet.copy(alpha = 0.16f),
+                                border = BorderStroke(1.dp, aura.accentViolet.copy(alpha = 0.45f))
+                            ) {
+                                Text(
+                                    text = if (isArabic) "قريباً" else "Soon",
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = aura.accentViolet,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // 1. Standard Appearance, Media, Playback & Backup Card
                 item(key = "core_system_settings") {
                     Card(
@@ -214,11 +315,11 @@ fun SystemSettingsScreen(
                             .fillMaxWidth()
                             .border(
                                 1.dp,
-                                Brush.horizontalGradient(listOf(PulseCyan.copy(alpha = 0.5f), Color(0x337928CA))),
+                                Brush.horizontalGradient(listOf(aura.accentCyan.copy(alpha = 0.5f), aura.accentViolet.copy(alpha = 0.3f))),
                                 RoundedCornerShape(22.dp)
                             ),
                         shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xD9101626))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                     ) {
                         Column(modifier = Modifier.padding(18.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -226,16 +327,16 @@ fun SystemSettingsScreen(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0x3300F2FE)),
+                                        .background(aura.accentCyanSoft),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.Settings, null, tint = PulseCyan, modifier = Modifier.size(19.dp))
+                                    Icon(Icons.Default.Settings, null, tint = aura.accentCyan, modifier = Modifier.size(19.dp))
                                 }
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = if (isArabic) "الإعدادات الأساسية" else "Core System Settings",
                                     style = MaterialTheme.typography.titleMedium.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                 )
@@ -246,7 +347,7 @@ fun SystemSettingsScreen(
                             // RGB Accent Picker
                             Text(
                                 text = if (isArabic) "لون النيون الرئيسي (RGB Accent)" else "RGB ACCENT COLOR",
-                                style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.labelSmall.copy(color = aura.accentCyan, fontWeight = FontWeight.Bold)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
@@ -298,11 +399,11 @@ fun SystemSettingsScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = if (isArabic) "وضع السواد المطلق (OLED Black)" else "OLED Deep Black Mode",
-                                        style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = aura.textPrimary, fontWeight = FontWeight.Bold)
                                     )
                                     Text(
                                         text = if (isArabic) "خلفيات سوداء نقية لتوفير طاقة شاشات OLED" else "True #000000 pixel shutoff for battery savings",
-                                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                        style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary, fontSize = 11.sp)
                                     )
                                 }
                                 Switch(
@@ -312,7 +413,11 @@ fun SystemSettingsScreen(
                                         isOledBlackMode = it
                                         streakViewModel.saveOledBlackEnabled(it)
                                     },
-                                    colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = aura.accentCyan,
+                                        checkedThumbColor = Color.White,
+                                        uncheckedTrackColor = aura.progressTrack
+                                    )
                                 )
                             }
 
@@ -345,18 +450,18 @@ fun SystemSettingsScreen(
                                     Icon(
                                         imageVector = Icons.Default.Fullscreen,
                                         contentDescription = null,
-                                        tint = if (isFullScreenMode) PulseCyan else Color(0xFF94A3B8),
+                                        tint = if (isFullScreenMode) aura.accentCyan else aura.textSecondary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
                                         Text(
                                             text = if (isArabic) "وضع ملء الشاشة (Full Screen)" else "Full Screen Mode",
-                                            style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                                            style = MaterialTheme.typography.bodyMedium.copy(color = aura.textPrimary, fontWeight = FontWeight.Bold)
                                         )
                                         Text(
                                             text = if (isArabic) "إخفاء الشريط العلوي للهاتف (الساعة والبطارية)" else "Hide the phone's top status bar",
-                                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                            style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary, fontSize = 11.sp)
                                         )
                                     }
                                 }
@@ -373,7 +478,11 @@ fun SystemSettingsScreen(
                                         }
                                     },
                                     modifier = Modifier.testTag("full_screen_mode_switch"),
-                                    colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = aura.accentCyan,
+                                        checkedThumbColor = Color.White,
+                                        uncheckedTrackColor = aura.progressTrack
+                                    )
                                 )
                             }
 
@@ -388,17 +497,17 @@ fun SystemSettingsScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = if (isArabic) "تنظيف الذاكرة المؤقتة (Cache Cleaner)" else "Thumbnail Cache Cleaner",
-                                        style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = aura.textPrimary, fontWeight = FontWeight.Bold)
                                     )
                                     Text(
                                         text = if (isArabic) "حذف الصور المصغرة المؤقتة واسترجاع المساحة" else "Clear cached preview thumbnails (free 48MB)",
-                                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                        style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary, fontSize = 11.sp)
                                     )
                                 }
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
-                                    color = Color(0x3300FFCC),
-                                    border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f)),
+                                    color = aura.accentCyanSoft,
+                                    border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f)),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(10.dp))
                                         .clickable {
@@ -411,11 +520,11 @@ fun SystemSettingsScreen(
                                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.CleaningServices, null, tint = PulseCyan, modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Default.CleaningServices, null, tint = aura.accentCyan, modifier = Modifier.size(14.dp))
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = if (isArabic) "تنظيف" else "Clean",
-                                            style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                                            style = MaterialTheme.typography.labelSmall.copy(color = aura.accentCyan, fontWeight = FontWeight.Bold)
                                         )
                                     }
                                 }
@@ -432,11 +541,11 @@ fun SystemSettingsScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = if (isArabic) "الاستئناف التلقائي (Auto-Resume)" else "Auto-Resume Playback",
-                                        style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold)
+                                        style = MaterialTheme.typography.bodyMedium.copy(color = aura.textPrimary, fontWeight = FontWeight.Bold)
                                     )
                                     Text(
                                         text = if (isArabic) "استكمال الفيديو من آخر نقطة توقف تلقائياً" else "Pick up right where you left off",
-                                        style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF94A3B8), fontSize = 11.sp)
+                                        style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary, fontSize = 11.sp)
                                     )
                                 }
                                 Switch(
@@ -446,7 +555,11 @@ fun SystemSettingsScreen(
                                         isAutoResumeEnabled = it
                                         streakViewModel.saveAutoResume(it)
                                     },
-                                    colors = SwitchDefaults.colors(checkedTrackColor = PulseCyan, checkedThumbColor = Color.White)
+                                    colors = SwitchDefaults.colors(
+                                        checkedTrackColor = aura.accentCyan,
+                                        checkedThumbColor = Color.White,
+                                        uncheckedTrackColor = aura.progressTrack
+                                    )
                                 )
                             }
 
@@ -460,14 +573,14 @@ fun SystemSettingsScreen(
                             ) {
                                 Text(
                                     text = if (isArabic) "سرعة التشغيل الافتراضية" else "Default Playback Speed",
-                                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Medium)
+                                    style = MaterialTheme.typography.bodyMedium.copy(color = aura.textPrimary, fontWeight = FontWeight.Medium)
                                 )
                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     listOf(1.0f, 1.25f, 1.5f).forEach { spd ->
                                         val isSpdSelected = defaultPlaybackSpeed == spd
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
-                                            color = if (isSpdSelected) PulseCyan else Color(0x22FFFFFF),
+                                            color = if (isSpdSelected) aura.accentCyan else aura.unselectedChipBg,
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .clickable {
@@ -480,7 +593,7 @@ fun SystemSettingsScreen(
                                                 text = "${spd}x",
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                                                 style = MaterialTheme.typography.labelSmall.copy(
-                                                    color = if (isSpdSelected) Color(0xFF0F172A) else Color.White,
+                                                    color = if (isSpdSelected) Color.White else aura.textPrimary,
                                                     fontWeight = FontWeight.Bold
                                                 )
                                             )
@@ -494,7 +607,7 @@ fun SystemSettingsScreen(
                             // Offline JSON Backup & Restore
                             Text(
                                 text = if (isArabic) "النسخ الاحتياطي المحلي (JSON Backup & Restore)" else "OFFLINE LOCAL BACKUP & RESTORE",
-                                style = MaterialTheme.typography.labelSmall.copy(color = PulseCyan, fontWeight = FontWeight.Bold)
+                                style = MaterialTheme.typography.labelSmall.copy(color = aura.accentCyan, fontWeight = FontWeight.Bold)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(
@@ -511,14 +624,14 @@ fun SystemSettingsScreen(
                                             feedbackMessage = if (isArabic) "تم إنشاء نسخة JSON الاحتياطية بنجاح 💾" else "Exported local JSON backup 💾"
                                         },
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color(0x2600F2FE),
-                                    border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.5f))
+                                    color = aura.accentCyanSoft,
+                                    border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.5f))
                                 ) {
                                     Text(
                                         text = if (isArabic) "تصدير JSON 📤" else "Export JSON 📤",
                                         modifier = Modifier.padding(vertical = 10.dp),
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = PulseCyan,
+                                            color = aura.accentCyan,
                                             fontWeight = FontWeight.Bold,
                                             textAlign = TextAlign.Center
                                         )
@@ -540,14 +653,14 @@ fun SystemSettingsScreen(
                                             }
                                         },
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color(0x26FF9100),
-                                    border = BorderStroke(1.dp, Color(0xFFFF9100).copy(alpha = 0.5f))
+                                    color = aura.accentFlameSoft,
+                                    border = BorderStroke(1.dp, aura.accentFlame.copy(alpha = 0.5f))
                                 ) {
                                     Text(
                                         text = if (isArabic) "استعادة JSON 📥" else "Restore JSON 📥",
                                         modifier = Modifier.padding(vertical = 10.dp),
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = Color(0xFFFF9100),
+                                            color = aura.accentFlame,
                                             fontWeight = FontWeight.Bold,
                                             textAlign = TextAlign.Center
                                         )
@@ -565,11 +678,11 @@ fun SystemSettingsScreen(
                             .fillMaxWidth()
                             .border(
                                 1.dp,
-                                if (isPremiumActivated) Color(0x44FFD700) else Color(0x28FFFFFF),
+                                if (isPremiumActivated) aura.accentGold.copy(alpha = 0.45f) else aura.borderSubtle,
                                 RoundedCornerShape(22.dp)
                             ),
                         shape = RoundedCornerShape(22.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xD9101626))
+                        colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                     ) {
                         Column(
                             modifier = Modifier.padding(18.dp),
@@ -583,13 +696,13 @@ fun SystemSettingsScreen(
                                 Text(
                                     text = if (isArabic) "إعدادات متقدمة (Aura Pulse Premium)" else "Premium System Controls",
                                     style = MaterialTheme.typography.titleSmall.copy(
-                                        color = Color(0xFFFFD700),
+                                        color = aura.accentGold,
                                         fontWeight = FontWeight.ExtraBold
                                     )
                                 )
                                 Surface(
                                     shape = RoundedCornerShape(8.dp),
-                                    color = if (isPremiumActivated) Color(0x2610B981) else Color(0x26FFD700)
+                                    color = if (isPremiumActivated) aura.accentEmeraldSoft else aura.accentGoldBg
                                 ) {
                                     Text(
                                         text = if (isPremiumActivated) {
@@ -599,7 +712,7 @@ fun SystemSettingsScreen(
                                         },
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = if (isPremiumActivated) Color(0xFF34D399) else Color(0xFFFFD700),
+                                            color = if (isPremiumActivated) aura.accentEmerald else aura.accentGold,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 10.sp
                                         )
@@ -681,8 +794,8 @@ fun SystemSettingsScreen(
                                 ) {
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = if (currentLanguage == AppLanguage.ARABIC) Color(0x3300F2FE) else Color(0x1F121826),
-                                        border = BorderStroke(1.dp, if (currentLanguage == AppLanguage.ARABIC) PulseCyan else Color(0x22FFFFFF)),
+                                        color = if (currentLanguage == AppLanguage.ARABIC) aura.accentCyanSoft else aura.unselectedChipBg,
+                                        border = BorderStroke(1.dp, if (currentLanguage == AppLanguage.ARABIC) aura.accentCyan else aura.borderSubtle),
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(42.dp)
@@ -697,13 +810,13 @@ fun SystemSettingsScreen(
                                             }
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text("العربية", color = if (currentLanguage == AppLanguage.ARABIC) PulseCyan else Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("العربية", color = if (currentLanguage == AppLanguage.ARABIC) aura.accentCyan else aura.textPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                         }
                                     }
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = if (currentLanguage == AppLanguage.ENGLISH) Color(0x3300F2FE) else Color(0x1F121826),
-                                        border = BorderStroke(1.dp, if (currentLanguage == AppLanguage.ENGLISH) PulseCyan else Color(0x22FFFFFF)),
+                                        color = if (currentLanguage == AppLanguage.ENGLISH) aura.accentCyanSoft else aura.unselectedChipBg,
+                                        border = BorderStroke(1.dp, if (currentLanguage == AppLanguage.ENGLISH) aura.accentCyan else aura.borderSubtle),
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(42.dp)
@@ -718,7 +831,7 @@ fun SystemSettingsScreen(
                                             }
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
-                                            Text("English", color = if (currentLanguage == AppLanguage.ENGLISH) PulseCyan else Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text("English", color = if (currentLanguage == AppLanguage.ENGLISH) aura.accentCyan else aura.textPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                         }
                                     }
                                 }
@@ -744,14 +857,14 @@ fun SystemSettingsScreen(
                                             if (isArabic) "محمية برمز PIN (الافتراضي: 1234)" else "Protected by PIN (Default: 1234)"
                                         },
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = if (isVaultUnlocked) Color(0xFF34D399) else Color(0xFF94A3B8),
+                                            color = if (isVaultUnlocked) aura.accentEmerald else aura.textSecondary,
                                             fontSize = 11.5.sp
                                         )
                                     )
                                     Surface(
                                         shape = RoundedCornerShape(10.dp),
-                                        color = Color(0x3300FFCC),
-                                        border = BorderStroke(1.dp, PulseCyan.copy(alpha = 0.6f)),
+                                        color = aura.accentCyanSoft,
+                                        border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.6f)),
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(10.dp))
                                             .clickable {
@@ -774,7 +887,7 @@ fun SystemSettingsScreen(
                                             },
                                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                             style = MaterialTheme.typography.labelSmall.copy(
-                                                color = PulseCyan,
+                                                color = aura.accentCyan,
                                                 fontWeight = FontWeight.Bold
                                             )
                                         )
@@ -927,12 +1040,12 @@ fun SystemSettingsScreen(
         if (showPremiumDialog) {
             AlertDialog(
                 onDismissRequest = { showPremiumDialog = false },
-                containerColor = Color(0xF2121826),
+                containerColor = aura.dialogBg,
                 icon = {
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = null,
-                        tint = Color(0xFFFFD700),
+                        tint = aura.accentGold,
                         modifier = Modifier.size(34.dp)
                     )
                 },
@@ -941,7 +1054,7 @@ fun SystemSettingsScreen(
                         text = "Aura Pulse Premium",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFFFFD700)
+                            color = aura.accentGold
                         )
                     )
                 },
@@ -957,7 +1070,7 @@ fun SystemSettingsScreen(
                             }
                         },
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = Color.White,
+                            color = aura.textPrimary,
                             textAlign = TextAlign.Center
                         ),
                         modifier = Modifier.fillMaxWidth()
@@ -983,7 +1096,7 @@ fun SystemSettingsScreen(
                             } else {
                                 if (isArabic) "تفعيل الآن 👑" else "Activate Now 👑"
                             },
-                            color = if (isPremiumActivated) Color(0xFFFF8A65) else Color(0xFFFFD700),
+                            color = if (isPremiumActivated) aura.accentFlame else aura.accentGold,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
@@ -992,7 +1105,7 @@ fun SystemSettingsScreen(
                     TextButton(onClick = { showPremiumDialog = false }) {
                         Text(
                             text = if (isArabic) "إغلاق" else "Close",
-                            color = PulseCyan,
+                            color = aura.accentCyan,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -1004,14 +1117,14 @@ fun SystemSettingsScreen(
         if (showVaultAuthDialog) {
             AlertDialog(
                 onDismissRequest = { showVaultAuthDialog = false },
-                containerColor = Color(0xF2121826),
+                containerColor = aura.dialogBg,
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Lock, null, tint = PulseCyan, modifier = Modifier.size(20.dp))
+                        Icon(Icons.Default.Lock, null, tint = aura.accentCyan, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = if (isArabic) "رمز PIN لخزنة الوسائط السرية" else "Secret Vault PIN",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = Color.White)
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = aura.textPrimary)
                         )
                     }
                 },
@@ -1019,7 +1132,7 @@ fun SystemSettingsScreen(
                     Column {
                         Text(
                             text = if (isArabic) "أدخل رمز PIN المكون من 4 أرقام لفتح الخزنة السرية (الافتراضي: 1234)" else "Enter your 4-digit PIN (Default: 1234)",
-                            style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFFCBD5E1), fontSize = 12.sp)
+                            style = MaterialTheme.typography.bodySmall.copy(color = aura.textSecondary, fontSize = 12.sp)
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         OutlinedTextField(
@@ -1035,14 +1148,14 @@ fun SystemSettingsScreen(
                             isError = vaultPinError != null,
                             supportingText = {
                                 if (vaultPinError != null) {
-                                    Text(vaultPinError!!, color = Color(0xFFFF5252))
+                                    Text(vaultPinError!!, color = aura.accentDanger)
                                 }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PulseCyan,
-                                unfocusedBorderColor = Color(0x44FFFFFF),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedBorderColor = aura.accentCyan,
+                                unfocusedBorderColor = aura.borderSubtle,
+                                focusedTextColor = aura.textPrimary,
+                                unfocusedTextColor = aura.textPrimary
                             ),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -1061,12 +1174,12 @@ fun SystemSettingsScreen(
                             }
                         }
                     ) {
-                        Text(text = if (isArabic) "تأكيد 🔓" else "Unlock 🔓", color = PulseCyan, fontWeight = FontWeight.Bold)
+                        Text(text = if (isArabic) "تأكيد 🔓" else "Unlock 🔓", color = aura.accentCyan, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showVaultAuthDialog = false }) {
-                        Text(text = if (isArabic) "إلغاء" else "Cancel", color = Color(0xFF94A3B8))
+                        Text(text = if (isArabic) "إلغاء" else "Cancel", color = aura.textSecondary)
                     }
                 }
             )
@@ -1081,8 +1194,8 @@ fun SystemSettingsScreen(
         ) {
             Surface(
                 shape = RoundedCornerShape(16.dp),
-                color = Color(0xF2101626),
-                border = BorderStroke(1.dp, PulseCyan),
+                color = aura.dialogBg,
+                border = BorderStroke(1.dp, aura.accentCyan),
                 shadowElevation = 12.dp
             ) {
                 Text(
@@ -1091,11 +1204,164 @@ fun SystemSettingsScreen(
                         .clickable { feedbackMessage = null }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = Color.White,
+                        color = aura.textPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.5.sp
                     )
                 )
+            }
+        }
+
+        // Multi-Theme Engine Soon Page
+        if (isMultiThemeEngineOpen) {
+            MultiThemeEngineSoonScreen(
+                isArabic = isArabic,
+                onBack = { isMultiThemeEngineOpen = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MultiThemeEngineSoonScreen(
+    isArabic: Boolean,
+    onBack: () -> Unit
+) {
+    val aura = MaterialTheme.aura
+    val haptic = LocalHapticFeedback.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(aura.background)
+            .clickable(enabled = false) {}
+            .testTag("multi_theme_engine_screen")
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.18f else 0.11f),
+                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.12f else 0.07f),
+                                Color.Transparent
+                            ),
+                            radius = size.width * 0.85f
+                        ),
+                        center = Offset(size.width * 0.5f, size.height * 0.35f)
+                    )
+                }
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .stableStatusBarsPadding()
+                .windowInsetsPadding(WindowInsets.navigationBars)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onBack()
+                    },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(aura.iconButtonBg)
+                        .testTag("multi_theme_engine_back_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = if (isArabic) "رجوع" else "Back",
+                        tint = aura.textPrimary
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Multi-Theme Engine",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        color = aura.textPrimary,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 28.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(92.dp)
+                            .clip(CircleShape)
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        aura.accentViolet.copy(alpha = 0.22f),
+                                        aura.accentCyanSoft
+                                    )
+                                )
+                            )
+                            .border(
+                                1.5.dp,
+                                Brush.linearGradient(listOf(aura.accentViolet, aura.accentCyan)),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Multi-Theme Engine",
+                            tint = aura.accentViolet,
+                            modifier = Modifier.size(44.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    Text(
+                        text = "Multi-Theme Engine",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            color = aura.textPrimary,
+                            fontWeight = FontWeight.Black
+                        ),
+                        textAlign = TextAlign.Center
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = aura.accentViolet.copy(alpha = 0.14f),
+                        border = BorderStroke(1.dp, aura.accentViolet.copy(alpha = 0.45f))
+                    ) {
+                        Text(
+                            text = if (isArabic) "قريباً" else "Soon",
+                            modifier = Modifier
+                                .padding(horizontal = 24.dp, vertical = 10.dp)
+                                .testTag("multi_theme_soon_label"),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = aura.accentViolet,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -1110,11 +1376,12 @@ private fun PremiumLockedSettingBlock(
     onLockedClick: () -> Unit,
     content: @Composable () -> Unit
 ) {
+    val aura = MaterialTheme.aura
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0x14FFFFFF))
+            .background(aura.surfaceSubtle)
             .clickable(enabled = !isUnlocked) { onLockedClick() }
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -1131,14 +1398,14 @@ private fun PremiumLockedSettingBlock(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isUnlocked) PulseCyan else Color(0xFF94A3B8),
+                    tint = if (isUnlocked) aura.accentCyan else aura.textSecondary,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isUnlocked) Color.White else Color(0xFFCBD5E1),
+                        color = if (isUnlocked) aura.textPrimary else aura.textSecondary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -1147,13 +1414,13 @@ private fun PremiumLockedSettingBlock(
             if (!isUnlocked) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color(0x28FFD700)
+                    color = aura.accentGoldBg
                 ) {
                     Text(
                         text = if (isArabic) "👑 مقفل" else "👑 Premium",
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall.copy(
-                            color = Color(0xFFFFD700),
+                            color = aura.accentGold,
                             fontWeight = FontWeight.Bold,
                             fontSize = 9.5.sp
                         )
@@ -1175,11 +1442,12 @@ private fun PremiumLockedToggleRow(
     isArabic: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val aura = MaterialTheme.aura
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(Color(0x14FFFFFF))
+            .background(aura.surfaceSubtle)
             .clickable { onCheckedChange(!checked) }
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1192,7 +1460,7 @@ private fun PremiumLockedToggleRow(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isUnlocked) PulseCyan else Color(0xFF94A3B8),
+                tint = if (isUnlocked) aura.accentCyan else aura.textSecondary,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
@@ -1201,7 +1469,7 @@ private fun PremiumLockedToggleRow(
                     Text(
                         text = title,
                         style = MaterialTheme.typography.bodyMedium.copy(
-                            color = if (isUnlocked) Color.White else Color(0xFFCBD5E1),
+                            color = if (isUnlocked) aura.textPrimary else aura.textSecondary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
@@ -1217,7 +1485,7 @@ private fun PremiumLockedToggleRow(
                 Text(
                     text = if (isUnlocked) subtitle else (if (isArabic) "يتطلب تفعيل Aura Pulse Premium" else "Requires Aura Pulse Premium"),
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color(0xFF94A3B8),
+                        color = aura.textSecondary,
                         fontSize = 10.5.sp
                     )
                 )
@@ -1227,9 +1495,9 @@ private fun PremiumLockedToggleRow(
             checked = checked && isUnlocked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedTrackColor = PulseCyan,
+                checkedTrackColor = aura.accentCyan,
                 checkedThumbColor = Color.White,
-                uncheckedTrackColor = Color(0x28FFFFFF)
+                uncheckedTrackColor = aura.progressTrack
             )
         )
     }
@@ -1244,12 +1512,13 @@ private fun ThemeModeChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     Surface(
         shape = RoundedCornerShape(10.dp),
-        color = if (isSelected && enabled) Color(0x3300F2FE) else Color(0x1F1E293B),
+        color = if (isSelected && enabled) aura.accentCyanSoft else aura.unselectedChipBg,
         border = BorderStroke(
             1.dp,
-            if (isSelected && enabled) PulseCyan else Color(0x22FFFFFF)
+            if (isSelected && enabled) aura.accentCyan else aura.borderSubtle
         ),
         modifier = modifier
             .height(42.dp)
@@ -1264,14 +1533,14 @@ private fun ThemeModeChip(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected && enabled) PulseCyan else Color(0xFF94A3B8),
+                tint = if (isSelected && enabled) aura.accentCyan else aura.textSecondary,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall.copy(
-                    color = if (isSelected && enabled) PulseCyan else Color.White,
+                    color = if (isSelected && enabled) aura.accentCyan else aura.textPrimary,
                     fontWeight = if (isSelected && enabled) FontWeight.Bold else FontWeight.Medium,
                     fontSize = 11.sp
                 )

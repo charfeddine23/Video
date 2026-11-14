@@ -79,8 +79,8 @@ import com.example.ui.theme.PulseAmber
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
-import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.aura
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +92,7 @@ fun VideoPlayerSheet(
 ) {
     if (mediaItem == null) return
 
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -116,7 +117,7 @@ fun VideoPlayerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Charcoal950,
+        containerColor = aura.dialogBg,
         dragHandle = null,
         modifier = modifier.testTag("video_player_modal_sheet")
     ) {
@@ -361,7 +362,7 @@ fun VideoPlayerSheet(
                     fontFamily = CairoFontFamily,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = aura.textPrimary,
                         fontSize = 20.sp
                     )
                 )
@@ -369,7 +370,7 @@ fun VideoPlayerSheet(
                 Text(
                     text = "${mediaItem.year} • ${mediaItem.seasonsOrDuration} • ${mediaItem.genresText}",
                     style = MaterialTheme.typography.bodySmall.copy(
-                        color = TextSecondary,
+                        color = aura.textSecondary,
                         fontSize = 12.sp
                     )
                 )
@@ -379,7 +380,7 @@ fun VideoPlayerSheet(
                 Text(
                     text = mediaItem.description,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = TextPrimary.copy(alpha = 0.85f),
+                        color = aura.textPrimary.copy(alpha = 0.85f),
                         lineHeight = 19.sp,
                         fontSize = 13.sp
                     ),
@@ -396,8 +397,8 @@ fun VideoPlayerSheet(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Charcoal850,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
+                        color = aura.surfaceSubtle,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, aura.borderSubtle),
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
@@ -409,12 +410,12 @@ fun VideoPlayerSheet(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.VolumeUp, "Audio", tint = PulseCyan, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.VolumeUp, "Audio", tint = aura.accentCyan, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = selectedAudio,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TextPrimary,
+                                    color = aura.textPrimary,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold
                                 ),
@@ -426,8 +427,8 @@ fun VideoPlayerSheet(
 
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = Charcoal850,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
+                        color = aura.surfaceSubtle,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, aura.borderSubtle),
                         modifier = Modifier
                             .weight(1f)
                             .clickable {
@@ -439,12 +440,12 @@ fun VideoPlayerSheet(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.HighQuality, "Quality", tint = PulseAmber, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.HighQuality, "Quality", tint = aura.accentGold, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = selectedQuality,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TextPrimary,
+                                    color = aura.textPrimary,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.SemiBold
                                 ),
@@ -463,7 +464,7 @@ fun VideoPlayerSheet(
                         text = "Season 1 Episodes",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = aura.textPrimary
                         )
                     )
 
@@ -473,10 +474,10 @@ fun VideoPlayerSheet(
                         val isCurrentEpisode = index == selectedEpisodeIndex
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isCurrentEpisode) Color(0xFF162030) else Charcoal900,
+                            color = if (isCurrentEpisode) aura.accentCyanSoft else aura.surfaceCard,
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (isCurrentEpisode) PulseCyan.copy(alpha = 0.5f) else GlassBorder
+                                if (isCurrentEpisode) aura.accentCyan.copy(alpha = 0.55f) else aura.borderSubtle
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -503,13 +504,13 @@ fun VideoPlayerSheet(
                                         modifier = Modifier
                                             .size(32.dp)
                                             .clip(CircleShape)
-                                            .background(if (isCurrentEpisode) PulseCyan else Color(0x33FFFFFF)),
+                                            .background(if (isCurrentEpisode) aura.accentCyan else aura.iconButtonBg),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.PlayArrow,
                                             contentDescription = "Play Episode",
-                                            tint = if (isCurrentEpisode) TextDark else Color.White,
+                                            tint = if (isCurrentEpisode) Color.White else aura.textPrimary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -520,14 +521,14 @@ fun VideoPlayerSheet(
                                         Text(
                                             text = episode.title,
                                             style = MaterialTheme.typography.labelLarge.copy(
-                                                color = if (isCurrentEpisode) PulseCyan else TextPrimary,
+                                                color = if (isCurrentEpisode) aura.accentCyan else aura.textPrimary,
                                                 fontWeight = FontWeight.SemiBold
                                             )
                                         )
                                         Text(
                                             text = "${episode.duration} • ${if (episode.isFree) "Free Episode" else "VIP Exclusive"}",
                                             style = MaterialTheme.typography.bodySmall.copy(
-                                                color = if (episode.isFree) PulseCyan else PulseAmber,
+                                                color = if (episode.isFree) aura.accentCyan else aura.accentGold,
                                                 fontSize = 11.sp
                                             )
                                         )

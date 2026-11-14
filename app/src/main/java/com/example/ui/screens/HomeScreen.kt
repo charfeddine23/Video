@@ -57,6 +57,7 @@ import com.example.ui.components.AuraPulseBrandHeader
 import com.example.ui.components.FlameParticleComponent
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
+import com.example.ui.theme.aura
 import com.example.ui.viewmodel.StreakViewModel
 
 @Composable
@@ -67,14 +68,14 @@ fun HomeScreen(
     isArabic: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val uiState by streakViewModel.uiState.collectAsState()
 
-    // Pure minimalist dark liquid glass aesthetic (#0B0F19 / #121826)
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF0B0F19))
+            .background(aura.background)
             .testTag("home_screen_minimal")
     ) {
         // Ambient liquid neon glow behind the central flame and extending cleanly to top edge
@@ -163,12 +164,12 @@ fun HomeScreen(
                         .border(
                             width = 1.dp,
                             brush = Brush.horizontalGradient(
-                                listOf(Color(0x80FF5722), Color(0x33FF9800), Color(0x6600F2FE))
+                                listOf(aura.accentFlame.copy(alpha = 0.55f), Color(0x44FF9800), aura.accentCyan.copy(alpha = 0.45f))
                             ),
                             shape = RoundedCornerShape(24.dp)
                         ),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+                    colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                 ) {
                     Row(
                         modifier = Modifier
@@ -209,13 +210,13 @@ fun HomeScreen(
                                     text = if (isArabic) formattedStreakDays else "$streakDaysCount Days Streak",
                                     style = MaterialTheme.typography.titleLarge.copy(
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = Color.White
+                                        color = aura.textPrimary
                                     )
                                 )
                                 Text(
                                     text = if (isArabic) "سلسلة الحماسة" else "Current Active Streak",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = Color(0xFF94A3B8),
+                                        color = aura.textSecondary,
                                         fontSize = 11.5.sp
                                     )
                                 )
@@ -225,8 +226,8 @@ fun HomeScreen(
                         // Shield Inventory Badge
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0x2600F2FE),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x5500F2FE))
+                            color = aura.accentCyanSoft,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.45f))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -235,14 +236,14 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.Security,
                                     contentDescription = null,
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "${uiState.shieldsCount}/${uiState.maxShields} 🛡️",
                                     style = MaterialTheme.typography.labelMedium.copy(
-                                        color = PulseCyan,
+                                        color = aura.accentCyan,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 12.sp
                                     )
@@ -273,7 +274,7 @@ fun HomeScreen(
                             shape = RoundedCornerShape(18.dp)
                         ),
                     shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xD9121826))
+                    colors = CardDefaults.cardColors(containerColor = aura.surfaceCard)
                 ) {
                     Column(
                         modifier = Modifier
@@ -296,21 +297,21 @@ fun HomeScreen(
                                     CircularProgressIndicator(
                                         progress = { 1f },
                                         modifier = Modifier.fillMaxSize(),
-                                        color = Color(0x1AFFFFFF),
+                                        color = aura.progressTrack,
                                         strokeWidth = 3.dp,
                                         strokeCap = StrokeCap.Round
                                     )
                                     CircularProgressIndicator(
                                         progress = { uiState.dailyProgress },
                                         modifier = Modifier.fillMaxSize(),
-                                        color = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF9800),
+                                        color = if (uiState.isGoalCompletedToday) aura.accentEmerald else Color(0xFFFF9800),
                                         strokeWidth = 3.dp,
                                         strokeCap = StrokeCap.Round
                                     )
                                     Icon(
                                         imageVector = if (uiState.isGoalCompletedToday) Icons.Default.CheckCircle else Icons.Default.LocalFireDepartment,
                                         contentDescription = null,
-                                        tint = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF9800),
+                                        tint = if (uiState.isGoalCompletedToday) aura.accentEmerald else Color(0xFFFF9800),
                                         modifier = Modifier.size(17.dp)
                                     )
                                 }
@@ -322,7 +323,7 @@ fun HomeScreen(
                                         text = if (isArabic) "شاهد 5 دقائق يوميا لتغذية الشعلة" else "Watch 5 mins daily to feed flame",
                                         style = MaterialTheme.typography.titleSmall.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = Color.White,
+                                            color = aura.textPrimary,
                                             fontSize = 12.5.sp
                                         )
                                     )
@@ -331,7 +332,7 @@ fun HomeScreen(
                                     Text(
                                         text = String.format("%02d:%02d / 05:00", curMin, curSec),
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            color = PulseCyan,
+                                            color = aura.accentCyan,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 11.sp
                                         )
@@ -342,10 +343,10 @@ fun HomeScreen(
                             // Compact status badge
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (uiState.isGoalCompletedToday) Color(0x2E10B981) else Color(0x2600F2FE),
+                                color = if (uiState.isGoalCompletedToday) aura.accentEmeraldSoft else aura.accentCyanSoft,
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
-                                    if (uiState.isGoalCompletedToday) Color(0x5510B981) else Color(0x3300F2FE)
+                                    if (uiState.isGoalCompletedToday) aura.accentEmerald.copy(alpha = 0.45f) else aura.accentCyan.copy(alpha = 0.35f)
                                 )
                             ) {
                                 Text(
@@ -356,7 +357,7 @@ fun HomeScreen(
                                     },
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = if (uiState.isGoalCompletedToday) Color(0xFF34D399) else PulseCyan,
+                                        color = if (uiState.isGoalCompletedToday) aura.accentEmerald else aura.accentCyan,
                                         fontWeight = FontWeight.ExtraBold,
                                         fontSize = 10.sp
                                     )
@@ -373,8 +374,8 @@ fun HomeScreen(
                                 .fillMaxWidth()
                                 .height(4.dp)
                                 .clip(RoundedCornerShape(2.dp)),
-                            color = if (uiState.isGoalCompletedToday) Color(0xFF10B981) else Color(0xFFFF9800),
-                            trackColor = Color(0x1AFFFFFF)
+                            color = if (uiState.isGoalCompletedToday) aura.accentEmerald else Color(0xFFFF9800),
+                            trackColor = aura.progressTrack
                         )
                     }
                 }
@@ -394,8 +395,8 @@ fun HomeScreen(
                             onNavigateToRoadmap()
                         },
                     shape = RoundedCornerShape(18.dp),
-                    color = Color(0x59162030),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x3300F2FE))
+                    color = aura.surfaceCard,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.35f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -404,18 +405,21 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0x2600F2FE)),
+                                    .background(aura.accentCyanSoft),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Security,
                                     contentDescription = null,
-                                    tint = PulseCyan,
+                                    tint = aura.accentCyan,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -426,14 +430,14 @@ fun HomeScreen(
                                 Text(
                                     text = if (isArabic) "الإنجازات, الدروع والمكافآت" else "Achievements, Shields & Rewards",
                                     style = MaterialTheme.typography.labelLarge.copy(
-                                        color = Color.White,
+                                        color = aura.textPrimary,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
                                 Text(
                                     text = if (isArabic) "عرض أنواع الدروع وكمياتها وسجل المكافآت المفتوحة" else "View all shield types, counts & unlocked perks",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = Color(0xFF94A3B8),
+                                        color = aura.textSecondary,
                                         fontSize = 11.sp
                                     )
                                 )
@@ -443,7 +447,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = "Open Roadmap",
-                            tint = PulseCyan,
+                            tint = aura.accentCyan,
                             modifier = Modifier.size(18.dp)
                         )
                     }
