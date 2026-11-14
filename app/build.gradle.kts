@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.videopulse.vstrm"
     minSdk = 24
     targetSdk = 36
-    versionCode = 31
-    versionName = "1.1.20"
+    versionCode = 32
+    versionName = "1.1.21"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
