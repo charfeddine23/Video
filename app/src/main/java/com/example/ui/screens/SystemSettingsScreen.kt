@@ -101,6 +101,8 @@ fun SystemSettingsScreen(
     val aura = MaterialTheme.aura
     val haptic = LocalHapticFeedback.current
     val isPremiumActivated by streakViewModel.isPremiumActivated.collectAsState()
+    val purchasedThemeIds by streakViewModel.purchasedThemeIds.collectAsState()
+    val activeStoreTheme by streakViewModel.activeStoreTheme.collectAsState()
     var isMultiThemeEngineOpen by remember { mutableStateOf(false) }
 
     BackHandler {
@@ -265,22 +267,27 @@ fun SystemSettingsScreen(
                                         )
                                     )
                                     Text(
-                                        text = if (isArabic) "محرك الثيمات المتعددة وتخصيص الواجهة" else "Dynamic visual themes & engine presets",
+                                        text = if (isArabic) "النشط: ${activeStoreTheme.displayName}" else "Active: ${activeStoreTheme.displayName}",
                                         style = MaterialTheme.typography.bodySmall.copy(
                                             color = aura.textSecondary,
                                             fontSize = 11.5.sp
-                                        )
+                                        ),
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
                             }
                             Spacer(modifier = Modifier.width(8.dp))
+                            val ownedThemeCount = com.example.ui.theme.StoreTheme.entries.count {
+                                it.isUnlockedByDefault || purchasedThemeIds.contains(it.id)
+                            }
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
                                 color = aura.accentViolet.copy(alpha = 0.16f),
                                 border = BorderStroke(1.dp, aura.accentViolet.copy(alpha = 0.45f))
                             ) {
                                 Text(
-                                    text = if (isArabic) "قريباً" else "Soon",
+                                    text = if (isArabic) "$ownedThemeCount ثيم" else "$ownedThemeCount Owned",
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = aura.accentViolet,
@@ -1197,157 +1204,13 @@ fun SystemSettingsScreen(
             }
         }
 
-        // Multi-Theme Engine Soon Page
+        // Multi-Theme Engine (Default + Purchased Themes Manager)
         if (isMultiThemeEngineOpen) {
-            MultiThemeEngineSoonScreen(
+            MultiThemeEngineScreen(
+                streakViewModel = streakViewModel,
                 isArabic = isArabic,
                 onBack = { isMultiThemeEngineOpen = false }
             )
-        }
-    }
-}
-
-@Composable
-private fun MultiThemeEngineSoonScreen(
-    isArabic: Boolean,
-    onBack: () -> Unit
-) {
-    val aura = MaterialTheme.aura
-    val haptic = LocalHapticFeedback.current
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(aura.background)
-            .clickable(enabled = false) {}
-            .testTag("multi_theme_engine_screen")
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.18f else 0.11f),
-                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.12f else 0.07f),
-                                Color.Transparent
-                            ),
-                            radius = size.width * 0.85f
-                        ),
-                        center = Offset(size.width * 0.5f, size.height * 0.35f)
-                    )
-                }
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .stableStatusBarsPadding()
-                .windowInsetsPadding(WindowInsets.navigationBars)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        onBack()
-                    },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(aura.iconButtonBg)
-                        .testTag("multi_theme_engine_back_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = if (isArabic) "رجوع" else "Back",
-                        tint = aura.textPrimary
-                    )
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Multi-Theme Engine",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        color = aura.textPrimary,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 28.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(92.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        aura.accentViolet.copy(alpha = 0.22f),
-                                        aura.accentCyanSoft
-                                    )
-                                )
-                            )
-                            .border(
-                                1.5.dp,
-                                Brush.linearGradient(listOf(aura.accentViolet, aura.accentCyan)),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = "Multi-Theme Engine",
-                            tint = aura.accentViolet,
-                            modifier = Modifier.size(44.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(22.dp))
-
-                    Text(
-                        text = "Multi-Theme Engine",
-                        style = MaterialTheme.typography.headlineSmall.copy(
-                            color = aura.textPrimary,
-                            fontWeight = FontWeight.Black
-                        ),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = aura.accentViolet.copy(alpha = 0.14f),
-                        border = BorderStroke(1.dp, aura.accentViolet.copy(alpha = 0.45f))
-                    ) {
-                        Text(
-                            text = if (isArabic) "قريباً" else "Soon",
-                            modifier = Modifier
-                                .padding(horizontal = 24.dp, vertical = 10.dp)
-                                .testTag("multi_theme_soon_label"),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = aura.accentViolet,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 18.sp
-                            )
-                        )
-                    }
-                }
-            }
         }
     }
 }

@@ -473,9 +473,9 @@ class StreakViewModel(
             _uiState.update {
                 it.copy(
                     feedbackMessage = if (isArabic) {
-                        "🗝️ تم شراء وتفعيل ثيم ${theme.displayName} بنجاح!"
+                        "🗝️ تم شراء ثيم ${theme.displayName} وتفعيله! تمت إضافته إلى Multi-Theme Engine"
                     } else {
-                        "🗝️ Unlocked and applied ${theme.displayName}!"
+                        "🗝️ Purchased ${theme.displayName}! Added to Multi-Theme Engine & applied"
                     }
                 )
             }
