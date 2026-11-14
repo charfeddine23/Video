@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Card
@@ -76,10 +75,12 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.VaultProgressionRegistry
 import com.example.ui.components.ForgeSectionView
+import com.example.ui.components.ForgeTabDestination
 import com.example.ui.components.SerpentineRoadmapView
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.PulseCyan
@@ -126,8 +127,13 @@ fun MilestoneRoadmapScreen(
         onBack()
     }
 
-    // Section switcher: "Roadmap" (365-Level Serpentine Game Road) vs "Inventory" (Owned Shields Vault & Badges)
+    // Section switcher: "Roadmap" (365-Level Serpentine Game Road) vs "Inventory" vs "The Forge"
     var activeSectionTab by remember { mutableStateOf(RoadmapSectionTab.ROADMAP) }
+    var forgeDestination by remember { mutableStateOf(ForgeTabDestination.HUB) }
+
+    BackHandler(enabled = activeSectionTab == RoadmapSectionTab.SHOP && forgeDestination != ForgeTabDestination.HUB) {
+        forgeDestination = ForgeTabDestination.HUB
+    }
 
     var claimedLevels by remember { mutableStateOf(streakViewModel.getClaimedVaultLevels()) }
     val currentProgressionLevel = streakDays.coerceAtLeast(1).coerceAtMost(365)
@@ -291,7 +297,7 @@ fun MilestoneRoadmapScreen(
                             )
                         )
                         Text(
-                            text = if (isArabic) "خريطة Roadmap (365)، المخزون والمتجر" else "365-Level Roadmap, Inventory & Shop",
+                            text = if (isArabic) "خريطة Roadmap (365)، المخزون و The Forge" else "365-Level Roadmap, Inventory & The Forge",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF94A3B8),
                                 fontSize = 11.sp
@@ -436,29 +442,33 @@ fun MilestoneRoadmapScreen(
                         .clip(RoundedCornerShape(14.dp))
                         .clickable {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            forgeDestination = ForgeTabDestination.HUB
                             activeSectionTab = RoadmapSectionTab.SHOP
                         }
                         .testTag("roadmap_tab_shop")
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Storefront,
+                            imageVector = Icons.Default.LocalFireDepartment,
                             contentDescription = null,
                             tint = if (isShopSelected) shopAccent else Color(0xFF94A3B8),
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(5.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Shop",
+                            text = "The Forge",
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.labelMedium.copy(
                                 color = if (isShopSelected) shopAccent else Color.White,
                                 fontWeight = if (isShopSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                                fontSize = 12.sp
+                                fontSize = 11.5.sp
                             )
                         )
                     }
@@ -864,6 +874,7 @@ fun MilestoneRoadmapScreen(
                                                     .clickable {
                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                         activeSectionTab = RoadmapSectionTab.SHOP
+                                                        forgeDestination = ForgeTabDestination.INSIDE_FORGE
                                                     }
                                             ) {
                                                 Text(
@@ -1032,6 +1043,8 @@ fun MilestoneRoadmapScreen(
                             shieldsCount = shieldsCount,
                             forgeState = forgeState,
                             isArabic = isArabic,
+                            activeView = forgeDestination,
+                            onNavigateView = { forgeDestination = it },
                             onStartForge = { tier ->
                                 streakViewModel.startForge(tier, isArabic = isArabic)
                             },

@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -7,6 +8,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -29,14 +33,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Hardware
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.VpnKey
@@ -45,7 +52,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -58,12 +65,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -77,6 +89,8 @@ import com.example.data.model.ForgeKeyTier
 import com.example.data.model.ForgeSlotState
 import com.example.data.model.ForgeUiState
 import com.example.ui.theme.PulseCyan
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.sin
 
 private data class ForgeTierPalette(
@@ -123,11 +137,19 @@ private fun paletteForTier(tier: ForgeKeyTier): ForgeTierPalette = when (tier) {
     )
 }
 
+enum class ForgeTabDestination {
+    HUB,
+    INSIDE_FORGE,
+    INSIDE_SHOP
+}
+
 @Composable
 fun ForgeSectionView(
     shieldsCount: Int,
     forgeState: ForgeUiState,
     isArabic: Boolean,
+    activeView: ForgeTabDestination,
+    onNavigateView: (ForgeTabDestination) -> Unit,
     onStartForge: (ForgeKeyTier) -> Unit,
     onClaimForgeKey: (ForgeKeyTier) -> Unit,
     onCancelForge: (ForgeKeyTier) -> Unit,
@@ -155,142 +177,323 @@ fun ForgeSectionView(
         ),
         label = "forge_furnace_pulse"
     )
+    val gearPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(5400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "forge_gear_rotation"
+    )
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .testTag("shop_forge_list"),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 36.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        // 1. Luxury Pro-Game Forge Hero Furnace & Wallet Bar
-        item(key = "forge_hero_header") {
-            ForgeHeroFurnaceCard(
-                shieldsCount = shieldsCount,
-                forgeState = forgeState,
-                emberPhase = emberPhase,
-                furnacePulse = furnacePulse,
-                isArabic = isArabic
-            )
-        }
-
-        // 2. Section Label
-        item(key = "forge_recipes_title") {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Whatshot,
-                        contentDescription = null,
-                        tint = Color(0xFFFF7A1A),
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (isArabic) "وصفات الصهر الملكية" else "Royal Smelting Recipes",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color.White,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 15.sp
-                        )
-                    )
-                }
-
-                Text(
-                    text = if (isArabic) "تعمل أثناء استعمال التطبيق" else "Ticks on active app usage",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Color(0xFF94A3B8),
-                        fontSize = 10.5.sp
-                    )
-                )
-            }
-        }
-
-        // 3. Four Smelting Crucible Cards (Bronze, Silver, Gold, Diamond)
-        items(ForgeKeyTier.entries, key = { it.id }) { tier ->
-            val slot = forgeState.getSlot(tier)
-            ForgeRecipeCard(
-                tier = tier,
-                slot = slot,
-                shieldsCount = shieldsCount,
-                forgeState = forgeState,
-                furnacePulse = furnacePulse,
-                isArabic = isArabic,
-                onStart = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onStartForge(tier)
-                },
-                onClaim = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onClaimForgeKey(tier)
-                },
-                onRequestCancel = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    pendingCancelTier = tier
-                }
-            )
-        }
-
-        // 4. Compact Shop Perks Coming Soon Card
-        item(key = "shop_coming_soon_footer") {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = Color(0xAA0F1626),
-                border = BorderStroke(1.dp, Color(0x33FFD700)),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("shop_tab_coming_soon")
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+    AnimatedContent(
+        targetState = activeView,
+        transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(180)) },
+        label = "forge_tab_destination_transition",
+        modifier = modifier.fillMaxSize()
+    ) { destination ->
+        when (destination) {
+            ForgeTabDestination.HUB -> {
+                // THE FORGE HUB: THE FORGE Portal + Clickable Shop Portal
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .testTag("shop_hub_list"),
+                    contentPadding = PaddingValues(top = 8.dp, bottom = 36.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(Color(0x22FFD700))
-                            .border(1.dp, Color(0x66FFD700), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Storefront,
-                            contentDescription = null,
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(22.dp)
+                    // Clickable THE FORGE Entrance Card
+                    item(key = "forge_portal_card") {
+                        ForgeHeroFurnaceCard(
+                            shieldsCount = shieldsCount,
+                            forgeState = forgeState,
+                            emberPhase = emberPhase,
+                            furnacePulse = furnacePulse,
+                            isArabic = isArabic,
+                            showEnterCta = true,
+                            onEnterClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onNavigateView(ForgeTabDestination.INSIDE_FORGE)
+                            }
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (isArabic) "صناديق وجوائز المتجر • قريباً" else "Key Vault Chests & Perks • Soon",
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                color = Color(0xFFFFD700),
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 13.5.sp
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (isArabic) {
-                                "اجمع وصهر المفاتيح البرونزية والفضية والذهبية والماسية لفتح مكافآت المتجر القادمة."
-                            } else {
-                                "Forge Bronze, Silver, Golden & Diamond Keys now to unlock upcoming Shop chests."
-                            },
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = Color(0xFF94A3B8),
-                                fontSize = 11.sp,
-                                lineHeight = 16.sp
-                            )
-                        )
+
+                    // Clickable Shop Card
+                    item(key = "shop_portal_card_item") {
+                        Surface(
+                            shape = RoundedCornerShape(18.dp),
+                            color = Color(0xAA0F1626),
+                            border = BorderStroke(1.dp, Color(0x44FFD700)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onNavigateView(ForgeTabDestination.INSIDE_SHOP)
+                                }
+                                .testTag("shop_portal_card")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0x22FFD700))
+                                        .border(1.dp, Color(0x66FFD700), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Storefront,
+                                        contentDescription = "Shop",
+                                        tint = Color(0xFFFFD700),
+                                        modifier = Modifier.size(23.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Shop",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            color = Color(0xFFFFD700),
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 15.sp
+                                        )
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (isArabic) {
+                                            "اضغط للدخول إلى المتجر وعرض رصيدك من المفاتيح"
+                                        } else {
+                                            "Tap to open Shop and view your keys balance"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = Color(0xFF94A3B8),
+                                            fontSize = 11.5.sp,
+                                            lineHeight = 16.sp
+                                        )
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0x22FFD700))
+                                        .border(1.dp, Color(0x55FFD700), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFD700),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
+            }
+
+            ForgeTabDestination.INSIDE_FORGE -> {
+                // INSIDE THE FORGE CHAMBER: Back Bar + Molten Furnace + Royal Smelting Recipes
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp)
+                        .testTag("inside_forge_chamber")
+                ) {
+                    // Chamber Header Navigation Bar
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color(0xCC161013),
+                        border = BorderStroke(
+                            1.dp,
+                            Brush.horizontalGradient(
+                                listOf(Color(0x88FF7A1A), Color(0x88FFD700))
+                            )
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp, bottom = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onNavigateView(ForgeTabDestination.HUB)
+                                    },
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0x22FFFFFF))
+                                        .testTag("forge_exit_button")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = if (isArabic) "العودة إلى The Forge" else "Back to The Forge",
+                                        tint = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "THE FORGE",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            color = Color(0xFFFFD700),
+                                            fontWeight = FontWeight.Black,
+                                            letterSpacing = 1.4.sp,
+                                            fontSize = 15.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = if (isArabic) "داخل المصهر • وصفات الصهر الملكية" else "Inside Chamber • Royal Smelting Recipes",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color(0xFFCBD5E1),
+                                            fontSize = 10.5.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = Color(0x28FF7A1A),
+                                border = BorderStroke(1.dp, Color(0x66FF7A1A))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.LocalFireDepartment,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF7A1A),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (isArabic) "المصهر" else "Forge",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color(0xFFFFB074),
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 10.5.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Unified Interior Forge Container holding Furnace Wallet + Royal Smelting Recipes
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("shop_forge_list"),
+                        contentPadding = PaddingValues(top = 4.dp, bottom = 36.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // 1. Luxury Pro-Game Forge Hero Furnace & Wallet Bar
+                        item(key = "forge_hero_header") {
+                            ForgeHeroFurnaceCard(
+                                shieldsCount = shieldsCount,
+                                forgeState = forgeState,
+                                emberPhase = emberPhase,
+                                furnacePulse = furnacePulse,
+                                isArabic = isArabic,
+                                showEnterCta = false,
+                                onEnterClick = {}
+                            )
+                        }
+
+                        // 2. Royal Smelting Recipes Section Label inside The Forge
+                        item(key = "forge_recipes_title") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Whatshot,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFF7A1A),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = if (isArabic) "وصفات الصهر الملكية" else "Royal Smelting Recipes",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 15.sp
+                                        )
+                                    )
+                                }
+
+                                Text(
+                                    text = if (isArabic) "تعمل أثناء استعمال التطبيق" else "Ticks on active app usage",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFF94A3B8),
+                                        fontSize = 10.5.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // 3. Four RPG Workshop Bays (Bronze, Silver, Gold, Diamond) inside The Forge
+                        items(ForgeKeyTier.entries, key = { it.id }) { tier ->
+                            val slot = forgeState.getSlot(tier)
+                            ForgeRecipeCard(
+                                tier = tier,
+                                slot = slot,
+                                shieldsCount = shieldsCount,
+                                forgeState = forgeState,
+                                emberPhase = emberPhase,
+                                furnacePulse = furnacePulse,
+                                gearPhase = gearPhase,
+                                isArabic = isArabic,
+                                onStart = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onStartForge(tier)
+                                },
+                                onClaim = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onClaimForgeKey(tier)
+                                },
+                                onRequestCancel = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    pendingCancelTier = tier
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            ForgeTabDestination.INSIDE_SHOP -> {
+                EmptyKeyShopPage(
+                    forgeState = forgeState,
+                    isArabic = isArabic,
+                    onBack = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onNavigateView(ForgeTabDestination.HUB)
+                    }
+                )
             }
         }
     }
@@ -363,7 +566,9 @@ private fun ForgeHeroFurnaceCard(
     forgeState: ForgeUiState,
     emberPhase: Float,
     furnacePulse: Float,
-    isArabic: Boolean
+    isArabic: Boolean,
+    showEnterCta: Boolean,
+    onEnterClick: () -> Unit
 ) {
     val activeCount = forgeState.activeSlotsCount
     val readyCount = forgeState.readySlotsCount
@@ -392,6 +597,9 @@ private fun ForgeHeroFurnaceCard(
                     )
                 ),
                 shape = RoundedCornerShape(24.dp)
+            )
+            .then(
+                if (showEnterCta) Modifier.clickable { onEnterClick() } else Modifier
             )
             .testTag("forge_hero_card")
     ) {
@@ -578,6 +786,42 @@ private fun ForgeHeroFurnaceCard(
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            if (showEnterCta) {
+                Spacer(modifier = Modifier.height(14.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFFF7A1A), Color(0xFFFFD700))
+                            )
+                        )
+                        .clickable { onEnterClick() }
+                        .testTag("enter_the_forge_button"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = Color(0xFF07090D),
+                            modifier = Modifier.size(19.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isArabic) "دخول إلى المصهر (وصفات الصهر الملكية)" else "Enter The Forge (Royal Recipes)",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                color = Color(0xFF07090D),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 13.sp
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -636,7 +880,9 @@ private fun ForgeRecipeCard(
     slot: ForgeSlotState,
     shieldsCount: Int,
     forgeState: ForgeUiState,
+    emberPhase: Float,
     furnacePulse: Float,
+    gearPhase: Float,
     isArabic: Boolean,
     onStart: () -> Unit,
     onClaim: () -> Unit,
@@ -649,56 +895,165 @@ private fun ForgeRecipeCard(
     val canStart = forgeState.canStartForging(tier, shieldsCount)
     val missingAmount = (requiredInput - availableInput).coerceAtLeast(0)
 
+    val isActive = slot.isActive
+    val isComplete = slot.isReadyToClaim
+    val isIdle = !isActive && !isComplete
+
+    val bayIndex = when (tier) {
+        ForgeKeyTier.BRONZE -> "01"
+        ForgeKeyTier.SILVER -> "02"
+        ForgeKeyTier.GOLD -> "03"
+        ForgeKeyTier.DIAMOND -> "04"
+    }
+
+    val workshopName = when (tier) {
+        ForgeKeyTier.BRONZE -> if (isArabic) "ورشة صهر البرونز" else "Bronze Smelting Bay"
+        ForgeKeyTier.SILVER -> if (isArabic) "ورشة صهر الفضة" else "Silver Crucible Bay"
+        ForgeKeyTier.GOLD -> if (isArabic) "ورشة السبيكة الذهبية" else "Royal Gold Foundry"
+        ForgeKeyTier.DIAMOND -> if (isArabic) "ورشة الجوهر الماسي" else "Diamond Core Reactor"
+    }
+
+    val bayBrush = when {
+        isComplete -> Brush.verticalGradient(
+            listOf(Color(0xFF0E251F), Color(0xFF0A141E), Color(0xFF070B12))
+        )
+        isActive -> Brush.verticalGradient(
+            listOf(Color(0xFF28150E), palette.cardBgTop, Color(0xFF0A0E17))
+        )
+        canStart -> Brush.verticalGradient(
+            listOf(Color(0xFF121824), Color(0xFF0B1019), Color(0xFF070A11))
+        )
+        else -> Brush.verticalGradient(
+            listOf(Color(0xFF0E121B), Color(0xFF090C14), Color(0xFF06080E))
+        )
+    }
+
     val borderBrush = when {
-        slot.isReadyToClaim -> Brush.horizontalGradient(
+        isComplete -> Brush.horizontalGradient(
             listOf(Color(0xFF34D399), palette.primary, Color(0xFF34D399))
         )
-        slot.isActive -> Brush.horizontalGradient(
+        isActive -> Brush.horizontalGradient(
             listOf(
-                Color(0xFFFF7A1A).copy(alpha = furnacePulse),
+                Color(0xFFFF6D00).copy(alpha = furnacePulse),
                 palette.primary,
-                Color(0xFFFF7A1A).copy(alpha = furnacePulse)
+                Color(0xFFFF6D00).copy(alpha = furnacePulse)
+            )
+        )
+        canStart -> Brush.horizontalGradient(
+            listOf(
+                palette.primary.copy(alpha = 0.50f),
+                Color(0x44334155),
+                palette.primary.copy(alpha = 0.45f)
             )
         )
         else -> Brush.horizontalGradient(
-            listOf(
-                palette.primary.copy(alpha = 0.72f),
-                palette.secondary.copy(alpha = 0.35f),
-                palette.primary.copy(alpha = 0.48f)
-            )
+            listOf(Color(0x28475569), Color(0x181E293B), Color(0x28475569))
         )
     }
+
+    val bayHeatColor = if (isActive) Color(0xFFFF6D00) else palette.primary
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(palette.cardBgTop, palette.cardBgBottom)
-                )
-            )
+            .clip(RoundedCornerShape(24.dp))
+            .background(bayBrush)
             .border(
-                width = if (slot.isActive || slot.isReadyToClaim) 1.6.dp else 1.1.dp,
+                width = when {
+                    isComplete || isActive -> 1.8.dp
+                    canStart -> 1.1.dp
+                    else -> 0.9.dp
+                },
                 brush = borderBrush,
-                shape = RoundedCornerShape(22.dp)
+                shape = RoundedCornerShape(24.dp)
             )
-            .drawBehind {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            palette.glow.copy(alpha = if (slot.isActive) 0.34f * furnacePulse else 0.18f),
-                            Color.Transparent
-                        ),
-                        radius = size.width * 0.75f
-                    ),
-                    center = Offset(size.width * 0.15f, size.height * 0.25f)
-                )
-            }
             .testTag("forge_tier_card_${tier.id}")
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Top Header: Emblem + Key Name + Rarity Tag + Owned Badge
+        // Atmospheric Workshop Ambient Canvas (Hot Furnace Glow + Sparks vs Cold Dormant Ash)
+        Canvas(modifier = Modifier.matchParentSize()) {
+            when {
+                isActive -> {
+                    // Active molten furnace glow radiating from bottom crucible
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color(0x55FF5722).copy(alpha = 0.38f * furnacePulse),
+                                palette.glow.copy(alpha = 0.24f * furnacePulse),
+                                Color.Transparent
+                            ),
+                            radius = size.width * 0.72f
+                        ),
+                        center = Offset(size.width * 0.5f, size.height * 0.44f)
+                    )
+                    // Rising glowing forge embers across the bay
+                    for (i in 0 until 14) {
+                        val seed = (i * 0.173f) % 1f
+                        val t = (emberPhase + seed) % 1f
+                        val x = size.width * (0.14f + ((i * 0.067f + sin(t * 6.28f + i) * 0.03f) % 0.72f))
+                        val y = size.height * (0.90f - t * 0.82f)
+                        val alpha = ((1f - t) * 0.85f).coerceIn(0f, 1f)
+                        val color = if (i % 2 == 0) Color(0xFFFF7A1A) else palette.primary
+                        drawCircle(
+                            color = color.copy(alpha = alpha),
+                            radius = (1.6f + (i % 3) * 0.9f).dp.toPx(),
+                            center = Offset(x, y)
+                        )
+                    }
+                }
+                isComplete -> {
+                    // Victory emerald-gold radiance
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                Color(0x4410B981).copy(alpha = 0.35f * furnacePulse),
+                                palette.glow.copy(alpha = 0.28f),
+                                Color.Transparent
+                            ),
+                            radius = size.width * 0.68f
+                        ),
+                        center = Offset(size.width * 0.5f, size.height * 0.45f)
+                    )
+                    for (i in 0 until 10) {
+                        val seed = (i * 0.19f) % 1f
+                        val t = (emberPhase + seed) % 1f
+                        val x = size.width * (0.12f + (i * 0.085f) % 0.76f)
+                        val y = size.height * (0.85f - t * 0.7f)
+                        drawCircle(
+                            color = Color(0xFF34D399).copy(alpha = ((1f - t) * 0.75f).coerceIn(0f, 1f)),
+                            radius = 2.dp.toPx(),
+                            center = Offset(x, y)
+                        )
+                    }
+                }
+                else -> {
+                    // Idle Workshop: Faint cold iron vignette + slow drifting cool ash dust
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                if (canStart) palette.glow.copy(alpha = 0.09f) else Color(0x1464748B),
+                                Color.Transparent
+                            ),
+                            radius = size.width * 0.55f
+                        ),
+                        center = Offset(size.width * 0.5f, size.height * 0.44f)
+                    )
+                    for (i in 0 until 5) {
+                        val seed = (i * 0.23f) % 1f
+                        val t = ((emberPhase * 0.5f) + seed) % 1f
+                        val x = size.width * (0.28f + i * 0.11f + sin(t * 4f + i) * 0.015f)
+                        val y = size.height * (0.62f - t * 0.38f)
+                        drawCircle(
+                            color = Color(0xFF64748B).copy(alpha = ((1f - t) * 0.22f).coerceIn(0f, 1f)),
+                            radius = 1.5.dp.toPx(),
+                            center = Offset(x, y)
+                        )
+                    }
+                }
+            }
+        }
+
+        Column(modifier = Modifier.padding(14.dp)) {
+            // 1. Workshop Top Plaque (Bay ID + Title + Live Workshop Beacon)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -708,252 +1063,415 @@ private fun ForgeRecipeCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    // Metallic Tier Sigil
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(RoundedCornerShape(15.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        palette.primary.copy(alpha = 0.28f),
-                                        palette.secondary.copy(alpha = 0.16f)
-                                    )
-                                )
-                            )
-                            .border(1.4.dp, palette.primary.copy(alpha = 0.85f), RoundedCornerShape(15.dp)),
-                        contentAlignment = Alignment.Center
+                    // Bay Number Badge
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = when {
+                            isComplete -> Color(0x3310B981)
+                            isActive -> Color(0x33FF6D00)
+                            else -> Color(0x22334155)
+                        },
+                        border = BorderStroke(
+                            1.dp,
+                            when {
+                                isComplete -> Color(0xFF34D399)
+                                isActive -> Color(0xFFFF7A1A)
+                                canStart -> palette.primary.copy(alpha = 0.55f)
+                                else -> Color(0x44475569)
+                            }
+                        )
                     ) {
-                        Icon(
-                            imageVector = palette.icon,
-                            contentDescription = if (isArabic) tier.nameAr else tier.nameEn,
-                            tint = palette.primary,
-                            modifier = Modifier.size(26.dp)
+                        Text(
+                            text = "#$bayIndex",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = when {
+                                    isComplete -> Color(0xFF34D399)
+                                    isActive -> Color(0xFFFFB074)
+                                    canStart -> palette.primary
+                                    else -> Color(0xFF94A3B8)
+                                },
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.sp
+                            )
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     Column {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = palette.primary.copy(alpha = 0.16f),
-                            border = BorderStroke(0.6.dp, palette.primary.copy(alpha = 0.45f))
-                        ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = workshopName,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    color = if (isIdle && !canStart) Color(0xFFCBD5E1) else Color.White,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 14.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = if (isArabic) tier.rarityAr else tier.rarityEn,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = palette.primary,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 9.5.sp,
-                                    letterSpacing = 0.5.sp
+                                    color = if (isIdle && !canStart) Color(0xFF64748B) else palette.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                )
+                            )
+                            Text(
+                                text = " • ",
+                                color = Color(0xFF475569),
+                                fontSize = 10.sp
+                            )
+                            Text(
+                                text = if (isArabic) "في الخزينة: $ownedTierCount" else "Vault: $ownedTierCount",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Color(0xFF94A3B8),
+                                    fontSize = 10.sp
                                 )
                             )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (isArabic) tier.nameAr else tier.nameEn,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 15.5.sp
-                            )
-                        )
                     }
                 }
 
-                // Owned Count Pill
+                // Live Workshop Activity Status Pill
+                val statusLabel = when {
+                    isComplete -> if (isArabic) "جاهز ✨" else "READY ✨"
+                    isActive -> if (isArabic) "تعمل 🔥" else "ACTIVE 🔥"
+                    canStart -> if (isArabic) "خاملة ⚡" else "IDLE ⚡"
+                    else -> if (isArabic) "خاملة 💤" else "IDLE 💤"
+                }
+                val statusColor = when {
+                    isComplete -> Color(0xFF34D399)
+                    isActive -> Color(0xFFFF7A1A)
+                    canStart -> palette.primary
+                    else -> Color(0xFF64748B)
+                }
                 Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0x990A0E18),
-                    border = BorderStroke(1.dp, palette.primary.copy(alpha = 0.45f))
+                    shape = RoundedCornerShape(10.dp),
+                    color = statusColor.copy(alpha = if (isActive || isComplete) 0.22f else 0.12f),
+                    border = BorderStroke(
+                        1.dp,
+                        statusColor.copy(alpha = if (isActive) furnacePulse else 0.55f)
+                    )
                 ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "× $ownedTierCount",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                color = palette.primary,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 13.sp
-                            )
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    statusColor.copy(
+                                        alpha = if (isActive || isComplete) furnacePulse else 0.55f
+                                    )
+                                )
                         )
+                        Spacer(modifier = Modifier.width(5.dp))
                         Text(
-                            text = if (isArabic) "في الخزينة" else "Owned",
+                            text = statusLabel,
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color(0xFF94A3B8),
-                                fontSize = 9.sp
+                                color = statusColor,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 10.sp
                             )
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Visual Smelting Recipe Formula Strip
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = Color(0x99080C15),
-                border = BorderStroke(0.9.dp, Color(0x24FFFFFF)),
-                modifier = Modifier.fillMaxWidth()
+            // 2. RPG 3-Chamber Crafting Bench Arena (Ore Hopper -> Crucible Machine -> Key Mold)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        if (isActive) Color(0xB3090C14) else Color(0x99060910)
+                    )
+                    .border(
+                        1.dp,
+                        when {
+                            isComplete -> Color(0x4434D399)
+                            isActive -> Color(0x55FF7A1A)
+                            else -> Color(0x1EFFFFFF)
+                        },
+                        RoundedCornerShape(18.dp)
+                    )
+                    .padding(horizontal = 10.dp, vertical = 14.dp)
             ) {
-                Row(
+                // Conduit Pipes & Flow Particles drawn behind the 3 Chambers
+                Canvas(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .matchParentSize()
+                        .align(Alignment.Center)
+                ) {
+                    val centerY = size.height * 0.44f
+                    val leftStart = size.width * 0.24f
+                    val leftEnd = size.width * 0.39f
+                    val rightStart = size.width * 0.61f
+                    val rightEnd = size.width * 0.76f
+
+                    if (isActive) {
+                        // Hot molten glowing conduits
+                        drawLine(
+                            brush = Brush.horizontalGradient(listOf(PulseCyan.copy(alpha = 0.3f), Color(0xFFFF7A1A))),
+                            start = Offset(leftStart, centerY),
+                            end = Offset(leftEnd, centerY),
+                            strokeWidth = 3.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                        drawLine(
+                            brush = Brush.horizontalGradient(listOf(Color(0xFFFF7A1A), palette.primary)),
+                            start = Offset(rightStart, centerY),
+                            end = Offset(rightEnd, centerY),
+                            strokeWidth = 3.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+
+                        // Flowing magma droplets along conduits
+                        for (p in 0 until 2) {
+                            val pt = (emberPhase * 2f + p * 0.5f) % 1f
+                            val lx = leftStart + (leftEnd - leftStart) * pt
+                            val rx = rightStart + (rightEnd - rightStart) * pt
+                            drawCircle(
+                                color = Color(0xFFFFD700),
+                                radius = 3.dp.toPx(),
+                                center = Offset(lx, centerY)
+                            )
+                            drawCircle(
+                                color = palette.primary,
+                                radius = 3.2.dp.toPx(),
+                                center = Offset(rx, centerY)
+                            )
+                        }
+                    } else if (isComplete) {
+                        drawLine(
+                            color = Color(0x8834D399),
+                            start = Offset(leftStart, centerY),
+                            end = Offset(leftEnd, centerY),
+                            strokeWidth = 2.5.dp.toPx()
+                        )
+                        drawLine(
+                            color = Color(0xAA34D399),
+                            start = Offset(rightStart, centerY),
+                            end = Offset(rightEnd, centerY),
+                            strokeWidth = 2.5.dp.toPx()
+                        )
+                    } else {
+                        // Dormant / Idle dashed cold steel pipes
+                        val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+                        drawLine(
+                            color = Color(0x44475569),
+                            start = Offset(leftStart, centerY),
+                            end = Offset(leftEnd, centerY),
+                            strokeWidth = 2.dp.toPx(),
+                            pathEffect = dash
+                        )
+                        drawLine(
+                            color = Color(0x44475569),
+                            start = Offset(rightStart, centerY),
+                            end = Offset(rightEnd, centerY),
+                            strokeWidth = 2.dp.toPx(),
+                            pathEffect = dash
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Input Ingredient
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = if (tier.usesShields) Icons.Default.Shield else Icons.Default.VpnKey,
-                            contentDescription = null,
-                            tint = if (tier.usesShields) PulseCyan else Color(0xFFFFD700),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
-                            Text(
-                                text = when (tier) {
-                                    ForgeKeyTier.BRONZE -> if (isArabic) "10 دروع" else "10 Shields"
-                                    ForgeKeyTier.SILVER -> if (isArabic) "20 درعاً" else "20 Shields"
-                                    ForgeKeyTier.GOLD -> if (isArabic) "30 مفتاحاً" else "30 Keys"
-                                    ForgeKeyTier.DIAMOND -> if (isArabic) "100 مفتاح" else "100 Keys"
-                                },
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    color = Color.White,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 12.5.sp
-                                )
-                            )
-                            Text(
-                                text = when (tier) {
-                                    ForgeKeyTier.BRONZE, ForgeKeyTier.SILVER -> if (isArabic) "المتوفر: $availableInput" else "Have: $availableInput"
-                                    ForgeKeyTier.GOLD -> if (isArabic) "برونزي/فضي: $availableInput" else "Bronze/Silver: $availableInput"
-                                    ForgeKeyTier.DIAMOND -> if (isArabic) "كل المفاتيح: $availableInput" else "Lower Keys: $availableInput"
-                                },
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = if (availableInput >= requiredInput) Color(0xFF34D399) else Color(0xFF94A3B8),
-                                    fontSize = 10.sp
-                                )
-                            )
-                        }
+                    // LEFT CHAMBER: Raw Ore Hopper (Shields / Keys)
+                    val inputQtyText = when (tier) {
+                        ForgeKeyTier.BRONZE -> if (isArabic) "10 دروع" else "10 Shields"
+                        ForgeKeyTier.SILVER -> if (isArabic) "20 درعاً" else "20 Shields"
+                        ForgeKeyTier.GOLD -> if (isArabic) "30 مفتاحاً" else "30 Keys"
+                        ForgeKeyTier.DIAMOND -> if (isArabic) "100 مفتاح" else "100 Keys"
                     }
+                    val inputStockText = "$availableInput / $requiredInput"
+                    WorkshopStationPod(
+                        icon = if (tier.usesShields) Icons.Default.Shield else Icons.Default.VpnKey,
+                        iconTint = if (tier.usesShields) PulseCyan else Color(0xFFFFD700),
+                        title = inputQtyText,
+                        subtitle = inputStockText,
+                        subtitleColor = if (availableInput >= requiredInput) Color(0xFF34D399) else Color(0xFF94A3B8),
+                        borderColor = if (isActive) Color(0x6600F2FE) else Color(0x28475569),
+                        isDimmed = isIdle && !canStart,
+                        modifier = Modifier.weight(1f)
+                    )
 
-                    // Smelting Arrow
+                    // CENTER CHAMBER: Mechanical Crucible / Anvil Reactor
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(palette.primary.copy(alpha = 0.16f)),
+                            .weight(1f)
+                            .height(84.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = palette.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        val activeAngle = if (isActive) gearPhase else if (isComplete) gearPhase * 0.5f else 0f
+                        val strikeBeat = if (isActive) {
+                            ((sin(emberPhase * 4f * PI.toFloat()) + 1f) * 0.5f)
+                        } else 0f
+
+                        Canvas(modifier = Modifier.size(76.dp)) {
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val outerR = size.minDimension * 0.45f
+                            val innerR = size.minDimension * 0.32f
+
+                            if (isActive) {
+                                // Outer glowing rotating gear/runic ring
+                                rotate(activeAngle, pivot = center) {
+                                    drawCircle(
+                                        color = bayHeatColor.copy(alpha = 0.85f),
+                                        radius = outerR,
+                                        center = center,
+                                        style = Stroke(
+                                            width = 2.8.dp.toPx(),
+                                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(18f, 10f), 0f)
+                                        )
+                                    )
+                                    // 4 cardinal gear teeth nodes
+                                    for (g in 0 until 4) {
+                                        val rad = (g * PI / 2.0)
+                                        val tx = center.x + (outerR * cos(rad)).toFloat()
+                                        val ty = center.y + (outerR * sin(rad)).toFloat()
+                                        drawCircle(
+                                            color = Color(0xFFFFD700),
+                                            radius = 3.2.dp.toPx(),
+                                            center = Offset(tx, ty)
+                                        )
+                                    }
+                                }
+                                // Counter-rotating inner molten arc ring
+                                rotate(-activeAngle * 1.4f, pivot = center) {
+                                    drawCircle(
+                                        color = palette.primary.copy(alpha = 0.9f),
+                                        radius = innerR,
+                                        center = center,
+                                        style = Stroke(
+                                            width = 2.dp.toPx(),
+                                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 12f), 0f)
+                                        )
+                                    )
+                                }
+                                // Rhythmic forge hammer strike energy ring
+                                drawCircle(
+                                    color = Color(0xFFFFD700).copy(alpha = strikeBeat * 0.42f),
+                                    radius = outerR * (0.72f + strikeBeat * 0.25f),
+                                    center = center,
+                                    style = Stroke(width = 2.dp.toPx())
+                                )
+                            } else if (isComplete) {
+                                // Celebratory Emerald-Gold Halo
+                                rotate(activeAngle, pivot = center) {
+                                    drawCircle(
+                                        color = Color(0xFF34D399),
+                                        radius = outerR,
+                                        center = center,
+                                        style = Stroke(
+                                            width = 2.4.dp.toPx(),
+                                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 8f), 0f)
+                                        )
+                                    )
+                                }
+                                drawCircle(
+                                    color = Color(0x3310B981),
+                                    radius = innerR,
+                                    center = center
+                                )
+                            } else {
+                                // IDLE WORKSHOP: Stationary cooled iron gear frame (zero motion)
+                                drawCircle(
+                                    color = if (canStart) palette.primary.copy(alpha = 0.38f) else Color(0x38475569),
+                                    radius = outerR,
+                                    center = center,
+                                    style = Stroke(
+                                        width = 2.dp.toPx(),
+                                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f), 0f)
+                                    )
+                                )
+                                drawCircle(
+                                    color = Color(0x28334155),
+                                    radius = innerR,
+                                    center = center,
+                                    style = Stroke(width = 1.4.dp.toPx())
+                                )
+                            }
+                        }
+
+                        // Center Core Emblem (Animated striking hammer vs cooled resting anvil)
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        isComplete -> Color(0x3310B981)
+                                        isActive -> Color(0x44FF5722)
+                                        else -> Color(0x660F172A)
+                                    }
+                                )
+                                .graphicsLayer {
+                                    if (isActive) {
+                                        val beat = sin(emberPhase * 4f * PI.toFloat())
+                                        rotationZ = beat * 11f
+                                        scaleX = 1f + (beat * 0.06f)
+                                        scaleY = 1f + (beat * 0.06f)
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = when {
+                                    isComplete -> Icons.Default.AutoAwesome
+                                    isActive -> Icons.Default.Hardware
+                                    canStart -> Icons.Default.Hardware
+                                    else -> Icons.Default.Hardware
+                                },
+                                contentDescription = null,
+                                tint = when {
+                                    isComplete -> Color(0xFF34D399)
+                                    isActive -> Color(0xFFFFD700)
+                                    canStart -> palette.primary.copy(alpha = 0.72f)
+                                    else -> Color(0xFF475569)
+                                },
+                                modifier = Modifier
+                                    .size(21.dp)
+                                    .alpha(if (isIdle && !canStart) 0.5f else 1f)
+                            )
+                        }
                     }
 
-                    // Output + Duration
-                    Column(
-                        horizontalAlignment = Alignment.End,
+                    // RIGHT CHAMBER: Output Key Mold
+                    WorkshopStationPod(
+                        icon = palette.icon,
+                        iconTint = if (isIdle && !canStart) Color(0xFF64748B) else palette.primary,
+                        title = if (isArabic) "1× ${tier.nameAr}" else "1× ${tier.nameEn}",
+                        subtitle = if (isArabic) "${tier.durationHours} ساعة عمل" else "${tier.durationHours}h Craft",
+                        subtitleColor = if (isActive) Color(0xFFFFB074) else Color(0xFF94A3B8),
+                        borderColor = when {
+                            isComplete -> Color(0xFF34D399)
+                            isActive -> palette.primary.copy(alpha = 0.75f)
+                            else -> Color(0x28475569)
+                        },
+                        isDimmed = isIdle && !canStart,
                         modifier = Modifier.weight(1f)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = palette.icon,
-                                contentDescription = null,
-                                tint = palette.primary,
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isArabic) "1× مفتاح" else "1× Key",
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    color = palette.primary,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 12.5.sp
-                                )
-                            )
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.AccessTime,
-                                contentDescription = null,
-                                tint = Color(0xFF94A3B8),
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = if (isArabic) {
-                                    "${tier.durationHours} ساعة استعمال للتطبيق"
-                                } else {
-                                    "${tier.durationHours}h App Usage"
-                                },
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = Color(0xFFCBD5E1),
-                                    fontSize = 10.sp
-                                )
-                            )
-                        }
-                    }
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Dynamic Crucible State Area
+            // 3. Bottom Control Deck (Molten Gauge when Active, Ignite CTA when Idle-Ready, Locked Slate when Idle-Low, Claim when Complete)
             when {
-                slot.isReadyToClaim -> {
-                    // Ready to claim state!
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = Color(0x2810B981),
-                        border = BorderStroke(1.dp, Color(0xFF34D399).copy(alpha = 0.65f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color(0xFF34D399),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = if (isArabic) "اكتمل الصهر 100%! جاهز للاستلام" else "Smelting Complete 100%! Ready",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        color = Color(0xFF34D399),
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                )
-                            }
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = palette.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
+                isComplete -> {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -970,26 +1488,25 @@ private fun ForgeRecipeCard(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = palette.icon,
+                                imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
                                 tint = Color(0xFF07090D),
                                 modifier = Modifier.size(19.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (isArabic) "استلام ${tier.nameAr}" else "Claim ${tier.nameEn}",
+                                text = if (isArabic) "اكتمل الصهر! استلام ${tier.nameAr} ✨" else "Complete! Claim ${tier.nameEn} ✨",
                                 style = MaterialTheme.typography.labelLarge.copy(
                                     color = Color(0xFF07090D),
                                     fontWeight = FontWeight.Black,
-                                    fontSize = 13.5.sp
+                                    fontSize = 13.sp
                                 )
                             )
                         }
                     }
                 }
 
-                slot.isActive -> {
-                    // Actively smelting state!
+                isActive -> {
                     val percent = (slot.progress * 100).toInt().coerceIn(0, 100)
                     val remainingFormatted = formatForgeCountdown(slot.remainingSeconds)
 
@@ -1004,44 +1521,50 @@ private fun ForgeRecipeCard(
                                     imageVector = Icons.Default.LocalFireDepartment,
                                     contentDescription = null,
                                     tint = Color(0xFFFF7A1A),
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(5.dp))
                                 Text(
-                                    text = if (isArabic) "جاري الصهر... $remainingFormatted متبقي" else "Smelting... $remainingFormatted left",
+                                    text = if (isArabic) "متبقي $remainingFormatted" else "$remainingFormatted remaining",
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         color = Color.White,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.ExtraBold,
                                         fontSize = 12.sp
                                     )
                                 )
                             }
 
-                            Text(
-                                text = "$percent%",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    color = palette.primary,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 12.sp
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0x28FF7A1A),
+                                border = BorderStroke(0.8.dp, palette.primary.copy(alpha = 0.55f))
+                            ) {
+                                Text(
+                                    text = "$percent%",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = palette.primary,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 11.5.sp
+                                    )
                                 )
-                            )
+                            }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(7.dp))
 
-                        LinearProgressIndicator(
-                            progress = { slot.progress },
+                        // Custom Molten Gauge with Glowing Ember Tip
+                        WorkshopMoltenProgressBar(
+                            progress = slot.progress,
+                            primaryColor = palette.primary,
+                            furnacePulse = furnacePulse,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(10.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .testTag("forge_progress_${tier.id}"),
-                            color = palette.primary,
-                            trackColor = Color(0x28FFFFFF),
-                            strokeCap = StrokeCap.Round
+                                .height(14.dp)
+                                .testTag("forge_progress_${tier.id}")
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        Spacer(modifier = Modifier.height(9.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1050,12 +1573,12 @@ private fun ForgeRecipeCard(
                         ) {
                             Text(
                                 text = if (isArabic) {
-                                    "يتقدم تلقائياً مع كل ثانية استعمال للتطبيق"
+                                    "الفرن يعمل الآن • يتقدم مع استعمال التطبيق"
                                 } else {
-                                    "Progresses live during active app usage"
+                                    "Furnace active • Ticks on app usage"
                                 },
                                 style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Color(0xFF94A3B8),
+                                    color = Color(0xFFFFB074),
                                     fontSize = 10.5.sp
                                 ),
                                 modifier = Modifier.weight(1f)
@@ -1091,81 +1614,435 @@ private fun ForgeRecipeCard(
                     }
                 }
 
-                else -> {
-                    // Idle state - Start Smelting CTA
-                    if (canStart) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(palette.primary, palette.secondary)
-                                    )
+                canStart -> {
+                    // Idle Workshop Ready to Ignite
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFFFF7A1A), palette.primary)
                                 )
-                                .clickable { onStart() }
-                                .testTag("forge_start_${tier.id}"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.LocalFireDepartment,
-                                    contentDescription = null,
-                                    tint = Color(0xFF07090D),
-                                    modifier = Modifier.size(19.dp)
+                            )
+                            .clickable { onStart() }
+                            .testTag("forge_start_${tier.id}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = Color(0xFF07090D),
+                                modifier = Modifier.size(19.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isArabic) {
+                                    "إشعال الورشة وبدء الصهر (${tier.durationHours} س)"
+                                } else {
+                                    "Ignite Workshop (${tier.durationHours}h)"
+                                },
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    color = Color(0xFF07090D),
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp
                                 )
-                                Spacer(modifier = Modifier.width(7.dp))
-                                Text(
-                                    text = if (isArabic) {
-                                        "بدء صهر ${tier.nameAr} (${tier.durationHours} س)"
-                                    } else {
-                                        "Forge ${tier.nameEn} (${tier.durationHours}h)"
-                                    },
-                                    style = MaterialTheme.typography.labelLarge.copy(
-                                        color = Color(0xFF07090D),
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 13.sp
-                                    )
-                                )
-                            }
-                        }
-                    } else {
-                        Surface(
-                            shape = RoundedCornerShape(14.dp),
-                            color = Color(0x281E293B),
-                            border = BorderStroke(1.dp, Color(0x22FFFFFF)),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                                .testTag("forge_locked_${tier.id}")
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = if (tier.usesShields) {
-                                        if (isArabic) {
-                                            "تحتاج $missingAmount درعاً إضافياً لبدء الصهر"
-                                        } else {
-                                            "Need $missingAmount more Shields to forge"
-                                        }
-                                    } else {
-                                        if (isArabic) {
-                                            "تحتاج $missingAmount مفتاحاً إضافياً لبدء الصهر"
-                                        } else {
-                                            "Need $missingAmount more Keys to forge"
-                                        }
-                                    },
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        color = Color(0xFF94A3B8),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    ),
-                                    textAlign = TextAlign.Center
-                                )
-                            }
+                            )
                         }
                     }
                 }
+
+                else -> {
+                    // Dormant Idle Workshop with insufficient materials
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0x440F172A),
+                        border = BorderStroke(1.dp, Color(0x28475569)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .testTag("forge_locked_${tier.id}")
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (tier.usesShields) {
+                                    if (isArabic) {
+                                        "خاملة • تحتاج $missingAmount درعاً إضافياً للإشعال"
+                                    } else {
+                                        "Idle • Need $missingAmount more Shields"
+                                    }
+                                } else {
+                                    if (isArabic) {
+                                        "خاملة • تحتاج $missingAmount مفتاحاً إضافياً للإشعال"
+                                    } else {
+                                        "Idle • Need $missingAmount more Keys"
+                                    }
+                                },
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = Color(0xFF94A3B8),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.5.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WorkshopStationPod(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    subtitle: String,
+    subtitleColor: Color,
+    borderColor: Color,
+    isDimmed: Boolean,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.alpha(if (isDimmed) 0.72f else 1f),
+        shape = RoundedCornerShape(14.dp),
+        color = Color(0xCC0D1320),
+        border = BorderStroke(1.dp, borderColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 9.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(30.dp)
+                    .clip(CircleShape)
+                    .background(iconTint.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(5.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    color = Color.White,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 11.sp
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = subtitleColor,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 9.5.sp
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorkshopMoltenProgressBar(
+    progress: Float,
+    primaryColor: Color,
+    furnacePulse: Float,
+    modifier: Modifier = Modifier
+) {
+    val clamped = progress.coerceIn(0f, 1f)
+    Canvas(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF0A0E17))
+            .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(8.dp))
+    ) {
+        val barWidth = size.width * clamped
+        if (barWidth > 2f) {
+            drawRect(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        Color(0xFFFF5722),
+                        Color(0xFFFF9800),
+                        primaryColor
+                    )
+                ),
+                size = size.copy(width = barWidth)
+            )
+            // Glowing molten leading ember bead
+            drawCircle(
+                color = Color.White.copy(alpha = 0.85f * furnacePulse),
+                radius = (size.height * 0.42f),
+                center = Offset(barWidth.coerceIn(size.height * 0.5f, size.width - 2f), size.height * 0.5f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyKeyShopPage(
+    forgeState: ForgeUiState,
+    isArabic: Boolean,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val totalKeys = forgeState.bronzeKeys + forgeState.silverKeys + forgeState.goldenKeys + forgeState.diamondKeys
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+            .testTag("empty_key_shop_screen")
+    ) {
+        // Top Navigation Bar
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xCC0F1626),
+            border = BorderStroke(
+                1.dp,
+                Brush.horizontalGradient(
+                    listOf(Color(0x66FFD700), PulseCyan.copy(alpha = 0.5f))
+                )
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp, bottom = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(Color(0x22FFFFFF))
+                            .testTag("shop_exit_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = if (isArabic) "العودة إلى The Forge" else "Back to The Forge",
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            text = "Shop",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.2.sp,
+                                fontSize = 16.sp
+                            )
+                        )
+                        Text(
+                            text = if (isArabic) "متجر المفاتيح" else "Key Shop",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF94A3B8),
+                                fontSize = 10.5.sp
+                            )
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0x22FFD700),
+                    border = BorderStroke(1.dp, Color(0x55FFD700))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Storefront,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Shop",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 10.5.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        // Top Keys Balance Card (رصيدي من المفاتيح)
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xDD111726),
+            border = BorderStroke(
+                1.2.dp,
+                Brush.linearGradient(
+                    listOf(Color(0x88FFD700), PulseCyan.copy(alpha = 0.45f))
+                )
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("shop_keys_balance_card")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.VpnKey,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isArabic) "رصيدي من المفاتيح" else "My Keys Balance",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                color = Color.White,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 14.sp
+                            )
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color(0x22FFD700),
+                        border = BorderStroke(1.dp, Color(0x44FFD700))
+                    ) {
+                        Text(
+                            text = if (isArabic) "الإجمالي: $totalKeys" else "Total: $totalKeys",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFFFFD700),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.5.sp
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    WalletCurrencyChip(
+                        label = if (isArabic) "برونزي" else "Bronze",
+                        count = forgeState.bronzeKeys,
+                        accent = Color(0xFFE59A54),
+                        icon = Icons.Default.VpnKey,
+                        modifier = Modifier.weight(1f)
+                    )
+                    WalletCurrencyChip(
+                        label = if (isArabic) "فضي" else "Silver",
+                        count = forgeState.silverKeys,
+                        accent = Color(0xFFE2E8F0),
+                        icon = Icons.Default.VpnKey,
+                        modifier = Modifier.weight(1f)
+                    )
+                    WalletCurrencyChip(
+                        label = if (isArabic) "ذهبي" else "Gold",
+                        count = forgeState.goldenKeys,
+                        accent = Color(0xFFFFD700),
+                        icon = Icons.Default.VpnKey,
+                        modifier = Modifier.weight(1f)
+                    )
+                    WalletCurrencyChip(
+                        label = if (isArabic) "ماسي" else "Diamond",
+                        count = forgeState.diamondKeys,
+                        accent = Color(0xFF38BDF8),
+                        icon = Icons.Default.Diamond,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // Empty Shop Area
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(vertical = 24.dp)
+                .testTag("shop_empty_state"),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(74.dp)
+                        .clip(CircleShape)
+                        .background(Color(0x18FFFFFF))
+                        .border(1.dp, Color(0x28FFD700), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Storefront,
+                        contentDescription = null,
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = if (isArabic) "المتجر فارغ" else "Shop is empty",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = Color(0xFF94A3B8),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    ),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
