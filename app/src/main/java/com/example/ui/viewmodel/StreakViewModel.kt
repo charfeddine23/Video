@@ -5,10 +5,16 @@ import androidx.lifecycle.AndroidViewModel
 import com.example.data.model.ForgeKeyTier
 import com.example.data.model.ForgeUiState
 import com.example.data.preferences.StreakPreferencesRepository
+import com.example.ui.theme.StoreTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+
+data class ThemeTrialState(
+    val theme: StoreTheme,
+    val remainingSeconds: Int
+)
 
 enum class MilestoneStatus {
     UNLOCKED,
@@ -69,6 +75,17 @@ class StreakViewModel(
 
     private val _forgeState = MutableStateFlow(repository.loadForgeState())
     val forgeState: StateFlow<ForgeUiState> = _forgeState.asStateFlow()
+
+    private val _activeStoreTheme = MutableStateFlow(repository.loadStoreTheme())
+    val activeStoreTheme: StateFlow<StoreTheme> = _activeStoreTheme.asStateFlow()
+
+    private val _purchasedThemeIds = MutableStateFlow(repository.getPurchasedStoreThemeIds())
+    val purchasedThemeIds: StateFlow<Set<String>> = _purchasedThemeIds.asStateFlow()
+
+    private val _activeThemeTrial = MutableStateFlow(
+        repository.getActiveTrialInfo()?.let { (t, sec) -> ThemeTrialState(t, sec) }
+    )
+    val activeThemeTrial: StateFlow<ThemeTrialState?> = _activeThemeTrial.asStateFlow()
 
     fun updateProfile(name: String, avatarUri: String?, presetId: Int) {
         val safeName = name.trim().ifBlank { "Charfeddine Kahlessenane" }
@@ -425,5 +442,115 @@ class StreakViewModel(
             }
         }
         return cancelled
+    }
+
+    // --- Store Theme Economy & 1-Minute Shield Trial ---
+    fun equipOwnedStoreTheme(theme: StoreTheme, isArabic: Boolean = true): Boolean {
+        val equipped = repository.equipOwnedStoreTheme(theme)
+        if (equipped) {
+            _activeStoreTheme.value = theme
+            _activeThemeTrial.value = null
+            _uiState.update {
+                it.copy(
+                    feedbackMessage = if (isArabic) {
+                        "🎨 تم تطبيق ثيم ${theme.displayName} بنجاح"
+                    } else {
+                        "🎨 Applied ${theme.displayName} theme"
+                    }
+                )
+            }
+        }
+        return equipped
+    }
+
+    fun purchaseStoreThemeWithKeys(theme: StoreTheme, isArabic: Boolean = true): Boolean {
+        val purchased = repository.purchaseStoreTheme(theme)
+        if (purchased) {
+            _forgeState.value = repository.loadForgeState()
+            _purchasedThemeIds.value = repository.getPurchasedStoreThemeIds()
+            _activeStoreTheme.value = theme
+            _activeThemeTrial.value = null
+            _uiState.update {
+                it.copy(
+                    feedbackMessage = if (isArabic) {
+                        "🗝️ تم شراء وتفعيل ثيم ${theme.displayName} بنجاح!"
+                    } else {
+                        "🗝️ Unlocked and applied ${theme.displayName}!"
+                    }
+                )
+            }
+        } else {
+            val tier = theme.costTier
+            val tierName = when (tier) {
+                ForgeKeyTier.BRONZE -> if (isArabic) "برونزي" else "Bronze"
+                ForgeKeyTier.SILVER -> if (isArabic) "فضي" else "Silver"
+                ForgeKeyTier.GOLD -> if (isArabic) "ذهبي" else "Gold"
+                ForgeKeyTier.DIAMOND -> if (isArabic) "ماسي" else "Diamond"
+                null -> ""
+            }
+            _uiState.update {
+                it.copy(
+                    feedbackMessage = if (isArabic) {
+                        "🔒 تحتاج إلى ${theme.costAmount} مفتاح $tierName لشراء ${theme.displayName}"
+                    } else {
+                        "🔒 You need ${theme.costAmount} $tierName keys to unlock ${theme.displayName}"
+                    }
+                )
+            }
+        }
+        return purchased
+    }
+
+    fun startThemeTrialWithShield(theme: StoreTheme, isArabic: Boolean = true): Boolean {
+        val expiresAt = repository.activateTrialTheme(theme)
+        if (expiresAt != null) {
+            val updatedStreak = repository.loadInitialState()
+            _activeStoreTheme.value = theme
+            _activeThemeTrial.value = ThemeTrialState(theme = theme, remainingSeconds = 60)
+            _uiState.update {
+                it.copy(
+                    shieldsCount = updatedStreak.shieldsCount,
+                    feedbackMessage = if (isArabic) {
+                        "🛡️ تم تفعيل تجربة ${theme.displayName} لمدة دقيقة واحدة (خُصم 1 درع)"
+                    } else {
+                        "🛡️ 1-minute trial activated for ${theme.displayName} (1 Shield used)"
+                    }
+                )
+            }
+            return true
+        } else if (repository.isStoreThemeUnlocked(theme)) {
+            return equipOwnedStoreTheme(theme, isArabic)
+        } else {
+            _uiState.update {
+                it.copy(
+                    feedbackMessage = if (isArabic) {
+                        "🛡️ تحتاج إلى درع واحد على الأقل لتجربة الثيم لمدة دقيقة"
+                    } else {
+                        "🛡️ You need at least 1 Shield to start a 1-minute theme trial"
+                    }
+                )
+            }
+            return false
+        }
+    }
+
+    fun tickThemeTrialTimer(isArabic: Boolean = true) {
+        val reverted = repository.expireTrialIfNeeded()
+        if (reverted != null) {
+            _activeThemeTrial.value = null
+            _activeStoreTheme.value = reverted
+            _uiState.update {
+                it.copy(
+                    feedbackMessage = if (isArabic) {
+                        "⏱️ انتهت مدة تجربة الثيم (دقيقة واحدة) — تمت العودة إلى ${reverted.displayName}"
+                    } else {
+                        "⏱️ 1-minute theme trial ended — reverted to ${reverted.displayName}"
+                    }
+                )
+            }
+        } else {
+            val activeInfo = repository.getActiveTrialInfo()
+            _activeThemeTrial.value = activeInfo?.let { (t, sec) -> ThemeTrialState(t, sec) }
+        }
     }
 }

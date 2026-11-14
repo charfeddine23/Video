@@ -156,6 +156,9 @@ fun MilestoneRoadmapScreen(
     val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceAtLeast(0)
     val farmSecs by streakViewModel.shieldFarmSeconds.collectAsState()
     val forgeState by streakViewModel.forgeState.collectAsState()
+    val vmActiveStoreTheme by streakViewModel.activeStoreTheme.collectAsState()
+    val purchasedThemeIds by streakViewModel.purchasedThemeIds.collectAsState()
+    val activeThemeTrial by streakViewModel.activeThemeTrial.collectAsState()
     val farmMins = (farmSecs / 60).coerceIn(0, 60)
     val remainingMins = (60 - farmMins).coerceAtLeast(0)
     val isShieldVaultFull = shieldsCount >= maxShields
@@ -1080,8 +1083,18 @@ fun MilestoneRoadmapScreen(
                         ForgeSectionView(
                             shieldsCount = shieldsCount,
                             forgeState = forgeState,
-                            currentStoreTheme = currentStoreTheme,
-                            onSelectStoreTheme = onStoreThemeChange,
+                            currentStoreTheme = vmActiveStoreTheme,
+                            purchasedThemeIds = purchasedThemeIds,
+                            activeThemeTrial = activeThemeTrial,
+                            onEquipOwnedTheme = { theme ->
+                                streakViewModel.equipOwnedStoreTheme(theme, isArabic = isArabic)
+                            },
+                            onPurchaseTheme = { theme ->
+                                streakViewModel.purchaseStoreThemeWithKeys(theme, isArabic = isArabic)
+                            },
+                            onStartTrialTheme = { theme ->
+                                streakViewModel.startThemeTrialWithShield(theme, isArabic = isArabic)
+                            },
                             isArabic = isArabic,
                             activeView = forgeDestination,
                             onNavigateView = { forgeDestination = it },

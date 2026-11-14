@@ -37,6 +37,11 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_LAST_ACTIVE_DATE = "key_last_active_date"
         private const val KEY_THEME_MODE = "key_theme_mode"
         private const val KEY_ACTIVE_STORE_THEME = "key_active_store_theme"
+        private const val KEY_LAST_OWNED_STORE_THEME = "key_last_owned_store_theme"
+        private const val KEY_PURCHASED_STORE_THEMES = "key_purchased_store_themes"
+        private const val KEY_TRIAL_THEME_ID = "key_trial_theme_id"
+        private const val KEY_TRIAL_EXPIRES_AT_MS = "key_trial_expires_at_ms"
+        private const val TRIAL_DURATION_MS = 60_000L
         private const val KEY_APP_LANGUAGE = "key_app_language"
         private const val KEY_USER_NAME = "key_user_name"
         private const val KEY_USER_AVATAR_URI = "key_user_avatar_uri"
@@ -219,8 +224,115 @@ class StreakPreferencesRepository private constructor(context: Context) {
     }
 
     fun loadStoreTheme(): StoreTheme {
+        expireTrialIfNeeded()
         val savedId = prefs.getString(KEY_ACTIVE_STORE_THEME, null)
         return StoreTheme.fromId(savedId)
+    }
+
+    fun getPurchasedStoreThemeIds(): Set<String> {
+        val saved = prefs.getStringSet(KEY_PURCHASED_STORE_THEMES, emptySet()) ?: emptySet()
+        return saved + StoreTheme.DEFAULT.id + StoreTheme.LIQUID_FROSTED_GLASS.id
+    }
+
+    fun isStoreThemeUnlocked(theme: StoreTheme): Boolean {
+        return theme.isUnlockedByDefault || getPurchasedStoreThemeIds().contains(theme.id)
+    }
+
+    fun loadLastOwnedStoreTheme(): StoreTheme {
+        val savedId = prefs.getString(KEY_LAST_OWNED_STORE_THEME, null)
+        val candidate = StoreTheme.fromId(savedId)
+        return if (isStoreThemeUnlocked(candidate)) candidate else StoreTheme.LIQUID_FROSTED_GLASS
+    }
+
+    fun equipOwnedStoreTheme(theme: StoreTheme): Boolean {
+        if (!isStoreThemeUnlocked(theme)) return false
+        prefs.edit()
+            .putString(KEY_ACTIVE_STORE_THEME, theme.id)
+            .putString(KEY_LAST_OWNED_STORE_THEME, theme.id)
+            .remove(KEY_TRIAL_THEME_ID)
+            .remove(KEY_TRIAL_EXPIRES_AT_MS)
+            .commit()
+        return true
+    }
+
+    fun purchaseStoreTheme(theme: StoreTheme): Boolean {
+        if (isStoreThemeUnlocked(theme)) {
+            return equipOwnedStoreTheme(theme)
+        }
+        val tier = theme.costTier ?: return equipOwnedStoreTheme(theme)
+        val cost = theme.costAmount.coerceAtLeast(0)
+        val forgeState = loadForgeState()
+        val available = forgeState.getKeyCount(tier)
+        if (available < cost) return false
+
+        val keyPref = when (tier) {
+            ForgeKeyTier.BRONZE -> KEY_FORGE_BRONZE_KEYS
+            ForgeKeyTier.SILVER -> KEY_FORGE_SILVER_KEYS
+            ForgeKeyTier.GOLD -> KEY_FORGE_GOLDEN_KEYS
+            ForgeKeyTier.DIAMOND -> KEY_FORGE_DIAMOND_KEYS
+        }
+        val updatedSet = getPurchasedStoreThemeIds().toMutableSet().apply { add(theme.id) }
+
+        prefs.edit()
+            .putInt(keyPref, (available - cost).coerceAtLeast(0))
+            .putStringSet(KEY_PURCHASED_STORE_THEMES, updatedSet)
+            .putString(KEY_ACTIVE_STORE_THEME, theme.id)
+            .putString(KEY_LAST_OWNED_STORE_THEME, theme.id)
+            .remove(KEY_TRIAL_THEME_ID)
+            .remove(KEY_TRIAL_EXPIRES_AT_MS)
+            .commit()
+        return true
+    }
+
+    fun activateTrialTheme(theme: StoreTheme, nowMillis: Long = System.currentTimeMillis()): Long? {
+        if (isStoreThemeUnlocked(theme)) {
+            equipOwnedStoreTheme(theme)
+            return null
+        }
+        val currentStreak = loadInitialState()
+        if (currentStreak.shieldsCount < 1) return null
+
+        // Preserve current permanently owned theme before starting trial
+        val activeBefore = StoreTheme.fromId(prefs.getString(KEY_ACTIVE_STORE_THEME, null))
+        val lastOwned = if (isStoreThemeUnlocked(activeBefore)) activeBefore else loadLastOwnedStoreTheme()
+
+        val updatedShields = (currentStreak.shieldsCount - 1).coerceAtLeast(0)
+        saveStreakState(currentStreak.copy(shieldsCount = updatedShields))
+
+        val expiresAt = nowMillis + TRIAL_DURATION_MS
+        prefs.edit()
+            .putString(KEY_LAST_OWNED_STORE_THEME, lastOwned.id)
+            .putString(KEY_TRIAL_THEME_ID, theme.id)
+            .putLong(KEY_TRIAL_EXPIRES_AT_MS, expiresAt)
+            .putString(KEY_ACTIVE_STORE_THEME, theme.id)
+            .commit()
+        return expiresAt
+    }
+
+    fun getActiveTrialInfo(nowMillis: Long = System.currentTimeMillis()): Pair<StoreTheme, Int>? {
+        val trialId = prefs.getString(KEY_TRIAL_THEME_ID, null) ?: return null
+        val expiresAt = prefs.getLong(KEY_TRIAL_EXPIRES_AT_MS, 0L)
+        if (expiresAt <= nowMillis) return null
+        val theme = StoreTheme.fromId(trialId)
+        if (isStoreThemeUnlocked(theme)) return null
+        val remainingSec = (((expiresAt - nowMillis) + 999L) / 1000L).toInt().coerceIn(1, 60)
+        return theme to remainingSec
+    }
+
+    fun expireTrialIfNeeded(nowMillis: Long = System.currentTimeMillis()): StoreTheme? {
+        val trialId = prefs.getString(KEY_TRIAL_THEME_ID, null) ?: return null
+        val expiresAt = prefs.getLong(KEY_TRIAL_EXPIRES_AT_MS, 0L)
+        if (nowMillis < expiresAt) return null
+
+        val trialTheme = StoreTheme.fromId(trialId)
+        val revertTheme = loadLastOwnedStoreTheme()
+        prefs.edit()
+            .remove(KEY_TRIAL_THEME_ID)
+            .remove(KEY_TRIAL_EXPIRES_AT_MS)
+            .putString(KEY_ACTIVE_STORE_THEME, revertTheme.id)
+            .commit()
+
+        return if (!isStoreThemeUnlocked(trialTheme)) revertTheme else null
     }
 
     fun saveLanguage(language: AppLanguage) {

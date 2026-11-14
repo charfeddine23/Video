@@ -97,8 +97,8 @@ private data class AmbientParticle(
 )
 
 // Alternating 6-beat serpentine curve that keeps orbs safely away from center-screen
-// so every level card enjoys ~62% screen width and stays 100% inside screen bounds.
-private val SERPENTINE_WAVE_PATTERN = floatArrayOf(0.79f, 0.84f, 0.76f, 0.24f, 0.16f, 0.21f)
+// so every level card enjoys generous width beside its orb without overlapping.
+private val SERPENTINE_WAVE_PATTERN = floatArrayOf(0.80f, 0.85f, 0.79f, 0.21f, 0.15f, 0.20f)
 
 private fun snakeNodeXFraction(index: Int): Float {
     return SERPENTINE_WAVE_PATTERN[index % SERPENTINE_WAVE_PATTERN.size]
@@ -708,7 +708,7 @@ private fun SerpentineLevelNodeRow(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .offset(
-                            x = (orbCenterDp - 34.dp).coerceIn(10.dp, containerWidth - 80.dp),
+                            x = (orbCenterDp - 34.dp).coerceIn(10.dp, containerWidth - 92.dp),
                             y = 6.dp
                         )
                 ) {
@@ -725,24 +725,30 @@ private fun SerpentineLevelNodeRow(
             }
 
             // 3. Spacious Side Milestone Info & Claim Card
+            // Compute and apply padding strictly inside LayoutDirection.Ltr so Arabic (RTL)
+            // never mirrors start/end padding onto the same side as the mission circle.
             val isOrbOnRight = currXFraction >= 0.50f
             val screenMargin = 14.dp
-            val orbGap = 14.dp
-            val cardStartPadding = if (isOrbOnRight) screenMargin else (orbOffsetX + orbSize + orbGap)
-            val cardEndPadding = if (isOrbOnRight) ((containerWidth - orbOffsetX) + orbGap) else screenMargin
+            val orbGap = 16.dp
+            val cardLeftPadding = if (isOrbOnRight) screenMargin else (orbOffsetX + orbSize + orbGap)
+            val cardRightPadding = if (isOrbOnRight) ((containerWidth - orbOffsetX) + orbGap) else screenMargin
 
-            CompositionLocalProvider(LocalLayoutDirection provides parentLayoutDirection) {
-                Card(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .fillMaxWidth()
-                        .padding(
-                            start = cardStartPadding,
-                            end = cardEndPadding,
-                            top = 10.dp,
-                            bottom = 10.dp
-                        )
-                        .border(
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(
+                        start = cardLeftPadding,
+                        end = cardRightPadding,
+                        top = 10.dp,
+                        bottom = 10.dp
+                    )
+            ) {
+                CompositionLocalProvider(LocalLayoutDirection provides parentLayoutDirection) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
                             width = if (isCurrent || item.isMajor || (isUnlocked && !isClaimed)) 1.4.dp else 1.dp,
                             color = when {
                                 isCurrent -> aura.accentGold
@@ -877,6 +883,7 @@ private fun SerpentineLevelNodeRow(
                             }
                         }
                     }
+                }
                 }
             }
             }

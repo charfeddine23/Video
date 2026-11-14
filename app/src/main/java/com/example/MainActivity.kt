@@ -16,15 +16,22 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -42,6 +49,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -51,6 +59,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.isActive
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.model.MediaItem
 import com.example.data.update.AppUpdateChecker
@@ -103,13 +112,14 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(applicationContext) }
+            val streakViewModel: StreakViewModel = viewModel()
             var currentThemeMode by remember { mutableStateOf(prefsRepo.loadThemeMode()) }
-            var currentStoreTheme by remember { mutableStateOf(prefsRepo.loadStoreTheme()) }
+            val activeStoreTheme by streakViewModel.activeStoreTheme.collectAsState()
             var currentLanguage by remember { mutableStateOf(prefsRepo.loadLanguage()) }
 
             MyApplicationTheme(
                 themeMode = currentThemeMode,
-                storeTheme = currentStoreTheme
+                storeTheme = activeStoreTheme
             ) {
                 CompositionLocalProvider(
                     LocalLayoutDirection provides (if (currentLanguage.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr)
@@ -120,16 +130,16 @@ class MainActivity : ComponentActivity() {
                             currentThemeMode = it
                             prefsRepo.saveThemeMode(it)
                         },
-                        currentStoreTheme = currentStoreTheme,
+                        currentStoreTheme = activeStoreTheme,
                         onStoreThemeChange = {
-                            currentStoreTheme = it
-                            prefsRepo.saveStoreTheme(it)
+                            streakViewModel.equipOwnedStoreTheme(it, currentLanguage == AppLanguage.ARABIC)
                         },
                         currentLanguage = currentLanguage,
                         onLanguageChange = {
                             currentLanguage = it
                             prefsRepo.saveLanguage(it)
-                        }
+                        },
+                        streakViewModel = streakViewModel
                     )
                 }
             }
@@ -153,6 +163,7 @@ fun VideoPulseApp(
 
     val streakState by streakViewModel.uiState.collectAsState()
     val isFullScreenMode by streakViewModel.isFullScreenMode.collectAsState()
+    val activeThemeTrial by streakViewModel.activeThemeTrial.collectAsState()
     val view = LocalView.current
 
     var currentDestination by remember { mutableStateOf(NavDestination.HOME) }
@@ -275,14 +286,24 @@ fun VideoPulseApp(
         }
     }
 
-    // Active foreground app usage tracker:
-    // Core Rules: Background usage does NOT count. Awards 1 shield per 1 full hour, max 3 shields daily.
-    LaunchedEffect(isAppInForeground) {
+    // Display feedback messages from StreakViewModel (theme purchase, trials, shield rewards, etc.)
+    LaunchedEffect(streakState.feedbackMessage) {
+        val message = streakState.feedbackMessage
+        if (!message.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(message)
+            streakViewModel.clearFeedback()
+        }
+    }
+
+    // Active foreground app usage tracker + 1-minute store theme trial countdown:
+    // Core Rules: Background usage does NOT count. Awards 1 shield per 1 full hour.
+    LaunchedEffect(isAppInForeground, isArabic) {
         if (isAppInForeground) {
             while (isActive) {
                 delay(1000L)
                 if (isAppInForeground) {
                     streakViewModel.tickActiveForegroundUsage(1)
+                    streakViewModel.tickThemeTrialTimer(isArabic = isArabic)
                 }
             }
         }
@@ -498,6 +519,40 @@ fun VideoPulseApp(
         }
 
 
+
+        // Compact live indicator when a 1-minute Shield theme trial is running across the app
+        val runningTrial = activeThemeTrial
+        if (runningTrial != null && activePlayerMedia == null) {
+            val secText = runningTrial.remainingSeconds.toString().padStart(2, '0')
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 6.dp),
+                shape = RoundedCornerShape(50),
+                color = aura.surfaceElevated.copy(alpha = 0.92f),
+                border = BorderStroke(1.dp, aura.accentCyan.copy(alpha = 0.55f)),
+                shadowElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isArabic) {
+                            "🛡️ تجربة ${runningTrial.theme.displayName} • 00:$secText"
+                        } else {
+                            "🛡️ Trial: ${runningTrial.theme.displayName} • 00:$secText"
+                        },
+                        color = aura.textPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
 
         // Global Snackbar for feedback
         SnackbarHost(

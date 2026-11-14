@@ -97,6 +97,7 @@ import com.example.data.model.ForgeUiState
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.StoreTheme
 import com.example.ui.theme.aura
+import com.example.ui.viewmodel.ThemeTrialState
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -157,7 +158,11 @@ fun ForgeSectionView(
     shieldsCount: Int,
     forgeState: ForgeUiState,
     currentStoreTheme: StoreTheme,
-    onSelectStoreTheme: (StoreTheme) -> Unit,
+    purchasedThemeIds: Set<String>,
+    activeThemeTrial: ThemeTrialState?,
+    onEquipOwnedTheme: (StoreTheme) -> Unit,
+    onPurchaseTheme: (StoreTheme) -> Unit,
+    onStartTrialTheme: (StoreTheme) -> Unit,
     isArabic: Boolean,
     activeView: ForgeTabDestination,
     onNavigateView: (ForgeTabDestination) -> Unit,
@@ -384,9 +389,14 @@ fun ForgeSectionView(
 
             ForgeTabDestination.INSIDE_SHOP -> {
                 StoreThemeShopPage(
+                    shieldsCount = shieldsCount,
                     forgeState = forgeState,
                     currentStoreTheme = currentStoreTheme,
-                    onSelectStoreTheme = onSelectStoreTheme,
+                    purchasedThemeIds = purchasedThemeIds,
+                    activeThemeTrial = activeThemeTrial,
+                    onEquipOwnedTheme = onEquipOwnedTheme,
+                    onPurchaseTheme = onPurchaseTheme,
+                    onStartTrialTheme = onStartTrialTheme,
                     isArabic = isArabic,
                     onBack = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -620,7 +630,7 @@ private fun ShopStorefrontPortalCard(
                                 border = BorderStroke(0.8.dp, aura.accentCyan.copy(alpha = 0.5f))
                             ) {
                                 Text(
-                                    text = if (isArabic) "10 ثيمات" else "10 THEMES",
+                                    text = if (isArabic) "${StoreTheme.storeCatalog.size} ثيماً" else "${StoreTheme.storeCatalog.size} THEMES",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = aura.accentCyan,
@@ -631,7 +641,7 @@ private fun ShopStorefrontPortalCard(
                             }
                         }
                         Text(
-                            text = if (isArabic) "تصفح وتطبيق 10 ثيمات احترافية" else "Browse & Apply 10 Signature Themes",
+                            text = if (isArabic) "شراء بالمفاتيح أو تجربة بدرع واحد" else "Unlock with Keys or 1-Min Shield Trial",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = aura.textSecondary,
                                 fontSize = 11.5.sp

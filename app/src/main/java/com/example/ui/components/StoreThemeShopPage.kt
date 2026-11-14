@@ -27,24 +27,29 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.Diamond
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.ForgeKeyTier
 import com.example.data.model.ForgeUiState
 import com.example.ui.theme.AuraPalette
 import com.example.ui.theme.StoreTheme
@@ -74,12 +80,18 @@ import com.example.ui.theme.StoreThemeCategory
 import com.example.ui.theme.aura
 import com.example.ui.theme.auraCardBorderBrush
 import com.example.ui.theme.auraPaletteFor
+import com.example.ui.viewmodel.ThemeTrialState
 
 @Composable
 fun StoreThemeShopPage(
+    shieldsCount: Int,
     forgeState: ForgeUiState,
     currentStoreTheme: StoreTheme,
-    onSelectStoreTheme: (StoreTheme) -> Unit,
+    purchasedThemeIds: Set<String>,
+    activeThemeTrial: ThemeTrialState?,
+    onEquipOwnedTheme: (StoreTheme) -> Unit,
+    onPurchaseTheme: (StoreTheme) -> Unit,
+    onStartTrialTheme: (StoreTheme) -> Unit,
     isArabic: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -93,9 +105,9 @@ fun StoreThemeShopPage(
 
     val displayedThemes = remember(selectedCategory) {
         if (selectedCategory == null) {
-            StoreTheme.storeThemes
+            StoreTheme.storeCatalog
         } else {
-            StoreTheme.storeThemes.filter { it.category == selectedCategory }
+            StoreTheme.storeCatalog.filter { it.category == selectedCategory }
         }
     }
 
@@ -182,7 +194,7 @@ fun StoreThemeShopPage(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = if (isArabic) "10 ثيمات" else "10 Themes",
+                            text = if (isArabic) "${StoreTheme.storeCatalog.size} ثيماً" else "${StoreTheme.storeCatalog.size} Themes",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = aura.accentGold,
                                 fontWeight = FontWeight.ExtraBold,
@@ -194,7 +206,7 @@ fun StoreThemeShopPage(
             }
         }
 
-        // Scrollable Shop Content: Keys Balance + Active Theme Banner + Category Chips + 10 Theme Showcase Cards
+        // Scrollable Shop Content
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -202,7 +214,7 @@ fun StoreThemeShopPage(
             contentPadding = PaddingValues(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Top Keys Balance Card (رصيدي من المفاتيح)
+            // Top Keys & Shields Balance Card
             item(key = "shop_keys_balance") {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
@@ -236,7 +248,7 @@ fun StoreThemeShopPage(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (isArabic) "رصيدي من المفاتيح" else "My Keys Balance",
+                                    text = if (isArabic) "رصيدي من الدروع والمفاتيح" else "My Shields & Keys",
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         color = aura.textPrimary,
                                         fontWeight = FontWeight.ExtraBold,
@@ -251,7 +263,7 @@ fun StoreThemeShopPage(
                                 border = BorderStroke(1.dp, aura.accentGold.copy(alpha = 0.35f))
                             ) {
                                 Text(
-                                    text = if (isArabic) "الإجمالي: $totalKeys" else "Total: $totalKeys",
+                                    text = if (isArabic) "المفاتيح: $totalKeys" else "Keys: $totalKeys",
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = aura.accentGold,
@@ -266,8 +278,15 @@ fun StoreThemeShopPage(
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            StoreKeyBalanceChip(
+                                label = if (isArabic) "دروع" else "Shields",
+                                count = shieldsCount,
+                                accent = aura.accentEmerald,
+                                icon = Icons.Default.Shield,
+                                modifier = Modifier.weight(1f)
+                            )
                             StoreKeyBalanceChip(
                                 label = if (isArabic) "برونزي" else "Bronze",
                                 count = forgeState.bronzeKeys,
@@ -301,7 +320,88 @@ fun StoreThemeShopPage(
                 }
             }
 
-            // Currently Applied Theme Banner + Reset to Default
+            // Live 1-Minute Trial Countdown Banner (shown when trial is running)
+            if (activeThemeTrial != null) {
+                item(key = "active_trial_banner") {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = aura.accentFlameSoft,
+                        border = BorderStroke(
+                            1.2.dp,
+                            Brush.horizontalGradient(listOf(aura.accentFlame, aura.accentGold))
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("active_theme_trial_banner")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccessTime,
+                                    contentDescription = null,
+                                    tint = aura.accentFlame,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = if (isArabic) {
+                                            "تجربة مجانية نشطة: ${activeThemeTrial.theme.displayName}"
+                                        } else {
+                                            "1-Min Trial Active: ${activeThemeTrial.theme.displayName}"
+                                        },
+                                        style = MaterialTheme.typography.labelLarge.copy(
+                                            color = aura.textPrimary,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 12.sp
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = if (isArabic) {
+                                            "يعود الثيم تلقائياً بعد انتهاء الدقيقة"
+                                        } else {
+                                            "Auto-reverts when timer reaches 00:00"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = aura.textSecondary,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = aura.surfaceElevated,
+                                border = BorderStroke(1.dp, aura.accentFlame.copy(alpha = 0.6f))
+                            ) {
+                                Text(
+                                    text = String.format("00:%02d", activeThemeTrial.remainingSeconds.coerceIn(0, 60)),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = aura.accentFlame,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 13.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Currently Applied Theme Banner + Reset
             item(key = "active_theme_banner") {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
@@ -368,7 +468,7 @@ fun StoreThemeShopPage(
                                     .clip(RoundedCornerShape(10.dp))
                                     .clickable {
                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onSelectStoreTheme(StoreTheme.DEFAULT)
+                                        onEquipOwnedTheme(StoreTheme.DEFAULT)
                                     }
                                     .testTag("store_reset_default_theme")
                             ) {
@@ -423,7 +523,7 @@ fun StoreThemeShopPage(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     StoreCategoryChip(
-                        label = if (isArabic) "الكل (10)" else "All (10)",
+                        label = if (isArabic) "الكل (${StoreTheme.storeCatalog.size})" else "All (${StoreTheme.storeCatalog.size})",
                         isSelected = selectedCategory == null,
                         onClick = {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -431,7 +531,7 @@ fun StoreThemeShopPage(
                         }
                     )
                     StoreThemeCategory.entries.forEach { category ->
-                        val count = StoreTheme.storeThemes.count { it.category == category }
+                        val count = StoreTheme.storeCatalog.count { it.category == category }
                         StoreCategoryChip(
                             label = if (isArabic) "${category.labelAr} ($count)" else "${category.labelEn} ($count)",
                             isSelected = selectedCategory == category,
@@ -444,32 +544,56 @@ fun StoreThemeShopPage(
                 }
             }
 
-            // 10 Store Theme Showcase Cards
+            // Catalog Theme Showcase Cards
             items(displayedThemes, key = { it.id }) { theme ->
+                val isUnlocked = theme.isUnlockedByDefault || purchasedThemeIds.contains(theme.id)
                 val isApplied = currentStoreTheme == theme
+                val isOnTrial = activeThemeTrial?.theme == theme
+                val trialSec = if (isOnTrial) activeThemeTrial?.remainingSeconds ?: 0 else 0
+                val availableTierKeys = theme.costTier?.let { forgeState.getKeyCount(it) } ?: Int.MAX_VALUE
+                val canAffordPurchase = isUnlocked || availableTierKeys >= theme.costAmount
+
                 StoreThemeShowcaseCard(
                     theme = theme,
+                    isUnlocked = isUnlocked,
                     isApplied = isApplied,
+                    isOnTrial = isOnTrial,
+                    trialRemainingSeconds = trialSec,
+                    canAffordPurchase = canAffordPurchase,
+                    canAffordTrial = shieldsCount >= 1,
                     parentIsDark = aura.isDark,
                     isArabic = isArabic,
                     onInspect = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         inspectedTheme = theme
                     },
-                    onApply = {
+                    onEquipOwned = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSelectStoreTheme(theme)
+                        onEquipOwnedTheme(theme)
+                    },
+                    onPurchase = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onPurchaseTheme(theme)
+                    },
+                    onStartTrial = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onStartTrialTheme(theme)
                     }
                 )
             }
         }
     }
 
-    // Detailed Preview & Apply Dialog when user taps a theme card
+    // Detailed Preview & Purchase / 1-Min Trial Dialog
     val activeInspection = inspectedTheme
     if (activeInspection != null) {
-        val previewPalette = auraPaletteFor(activeInspection, aura.isDark)
+        val previewPalette = remember(activeInspection, aura.isDark) {
+            auraPaletteFor(activeInspection, if (activeInspection == StoreTheme.NEUMORPHISM) false else aura.isDark)
+        }
+        val isUnlocked = activeInspection.isUnlockedByDefault || purchasedThemeIds.contains(activeInspection.id)
         val isAlreadyApplied = currentStoreTheme == activeInspection
+        val isOnTrial = activeThemeTrial?.theme == activeInspection
+
         AlertDialog(
             onDismissRequest = { inspectedTheme = null },
             containerColor = aura.dialogBg,
@@ -495,20 +619,24 @@ fun StoreThemeShopPage(
                         )
                     }
                     Spacer(modifier = Modifier.height(6.dp))
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = previewPalette.accentViolet.copy(alpha = 0.16f),
-                        border = BorderStroke(0.9.dp, previewPalette.accentViolet.copy(alpha = 0.5f))
-                    ) {
-                        Text(
-                            text = activeInspection.badgeLabel,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = previewPalette.accentViolet,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 10.sp
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = previewPalette.accentViolet.copy(alpha = 0.16f),
+                            border = BorderStroke(0.9.dp, previewPalette.accentViolet.copy(alpha = 0.5f))
+                        ) {
+                            Text(
+                                text = activeInspection.badgeLabel,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = if (aura.isDark) previewPalette.accentViolet else aura.textPrimary,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 10.sp
+                                )
                             )
-                        )
+                        }
+
+                        PricePillBadge(theme = activeInspection, isUnlocked = isUnlocked, isArabic = isArabic)
                     }
                 }
             },
@@ -550,27 +678,67 @@ fun StoreThemeShopPage(
                             )
                         }
                     }
+
+                    if (!isUnlocked) {
+                        OutlinedButton(
+                            onClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onStartTrialTheme(activeInspection)
+                                inspectedTheme = null
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, aura.accentEmerald.copy(alpha = 0.65f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("dialog_trial_theme_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = aura.accentEmerald,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = if (isOnTrial) {
+                                    if (isArabic) "تجربة جارية (00:${String.format("%02d", activeThemeTrial?.remainingSeconds ?: 0)})" else "Trial Running"
+                                } else {
+                                    if (isArabic) "تفعيل للتجربة 1 دقيقة (بدرع واحد 🛡️)" else "Try for 1 Minute (1 Shield 🛡️)"
+                                },
+                                color = aura.accentEmerald,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        onSelectStoreTheme(activeInspection)
+                        if (isUnlocked) {
+                            onEquipOwnedTheme(activeInspection)
+                        } else {
+                            onPurchaseTheme(activeInspection)
+                        }
                         inspectedTheme = null
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isAlreadyApplied) aura.accentEmerald else previewPalette.accentCyan,
-                        contentColor = if (isAlreadyApplied) Color.White else previewPalette.primaryCtaContent
+                        containerColor = if (isAlreadyApplied && isUnlocked) aura.accentEmerald else previewPalette.accentCyan,
+                        contentColor = if (isAlreadyApplied && isUnlocked) Color.White else previewPalette.primaryCtaContent
                     ),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.testTag("dialog_apply_theme_button")
                 ) {
                     Text(
-                        text = if (isAlreadyApplied) {
-                            if (isArabic) "مُطبّق حالياً ✓" else "Currently Active ✓"
-                        } else {
-                            if (isArabic) "تطبيق على التطبيق" else "Apply to App"
+                        text = when {
+                            isUnlocked && isAlreadyApplied -> if (isArabic) "مُطبّق حالياً ✓" else "Applied ✓"
+                            isUnlocked -> if (isArabic) "تطبيق على التطبيق" else "Apply Theme"
+                            else -> {
+                                val costLabel = formatThemeCostText(activeInspection, isArabic)
+                                if (isArabic) "شراء ($costLabel)" else "Buy ($costLabel)"
+                            }
                         },
                         fontWeight = FontWeight.ExtraBold
                     )
@@ -591,17 +759,35 @@ fun StoreThemeShopPage(
 @Composable
 private fun StoreThemeShowcaseCard(
     theme: StoreTheme,
+    isUnlocked: Boolean,
     isApplied: Boolean,
+    isOnTrial: Boolean,
+    trialRemainingSeconds: Int,
+    canAffordPurchase: Boolean,
+    canAffordTrial: Boolean,
     parentIsDark: Boolean,
     isArabic: Boolean,
     onInspect: () -> Unit,
-    onApply: () -> Unit
+    onEquipOwned: () -> Unit,
+    onPurchase: () -> Unit,
+    onStartTrial: () -> Unit
 ) {
     val aura = MaterialTheme.aura
-    val previewAura = remember(theme, parentIsDark) { auraPaletteFor(theme, parentIsDark) }
+    val previewAura = remember(theme, parentIsDark) {
+        val useDark = when (theme) {
+            StoreTheme.NEUMORPHISM -> false
+            StoreTheme.LIQUID_FROSTED_GLASS, StoreTheme.GLASS_MORPHISM_PSD_MOCKUP -> parentIsDark
+            else -> true
+        }
+        auraPaletteFor(theme, useDark)
+    }
 
     val cardBorderColor by animateColorAsState(
-        targetValue = if (isApplied) previewAura.accentCyan else aura.borderSubtle,
+        targetValue = when {
+            isOnTrial -> aura.accentFlame
+            isApplied -> previewAura.accentCyan
+            else -> aura.borderSubtle
+        },
         animationSpec = tween(250),
         label = "theme_card_border"
     )
@@ -610,9 +796,12 @@ private fun StoreThemeShowcaseCard(
         shape = RoundedCornerShape(22.dp),
         color = aura.surfaceCard,
         border = BorderStroke(
-            width = if (isApplied) 1.8.dp else 1.dp,
-            brush = if (isApplied) {
-                Brush.linearGradient(listOf(previewAura.accentCyan, previewAura.accentViolet))
+            width = if (isApplied || isOnTrial) 1.8.dp else 1.dp,
+            brush = if (isApplied || isOnTrial) {
+                Brush.linearGradient(
+                    if (isOnTrial) listOf(aura.accentFlame, aura.accentGold)
+                    else listOf(previewAura.accentCyan, previewAura.accentViolet)
+                )
             } else {
                 Brush.linearGradient(listOf(cardBorderColor, aura.borderMuted))
             }
@@ -630,7 +819,7 @@ private fun StoreThemeShowcaseCard(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Card Header: Icon + Exact Name + Style Badge
+            // Card Header: Icon + Exact Name + Rarity/Price Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -692,22 +881,7 @@ private fun StoreThemeShowcaseCard(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = previewAura.accentViolet.copy(alpha = 0.16f),
-                    border = BorderStroke(0.8.dp, previewAura.accentViolet.copy(alpha = 0.5f))
-                ) {
-                    Text(
-                        text = theme.badgeLabel,
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = if (aura.isDark) previewAura.accentViolet else aura.textPrimary,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 9.sp,
-                            letterSpacing = 0.5.sp
-                        )
-                    )
-                }
+                PricePillBadge(theme = theme, isUnlocked = isUnlocked, isArabic = isArabic)
             }
 
             // Live Interactive Mini-App UI Preview
@@ -717,10 +891,10 @@ private fun StoreThemeShowcaseCard(
                 isArabic = isArabic,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(106.dp)
+                    .height(104.dp)
             )
 
-            // Footer: Swatch Dots + Apply Button
+            // Swatches Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -739,54 +913,54 @@ private fun StoreThemeShowcaseCard(
                     ).forEach { colorDot ->
                         Box(
                             modifier = Modifier
-                                .size(15.dp)
+                                .size(14.dp)
                                 .clip(CircleShape)
                                 .background(colorDot)
                                 .border(1.dp, aura.borderSubtle, CircleShape)
                         )
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = aura.accentGoldBg,
-                        border = BorderStroke(0.7.dp, aura.accentGold.copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text = if (isArabic) "مجاني • 0 🗝️" else "Free • 0 🗝️",
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = aura.accentGold,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.5.sp
-                            )
-                        )
-                    }
                 }
 
+                Surface(
+                    shape = RoundedCornerShape(7.dp),
+                    color = previewAura.accentViolet.copy(alpha = 0.14f),
+                    border = BorderStroke(0.7.dp, previewAura.accentViolet.copy(alpha = 0.45f))
+                ) {
+                    Text(
+                        text = theme.badgeLabel,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = if (aura.isDark) previewAura.accentViolet else aura.textPrimary,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 9.sp,
+                            letterSpacing = 0.4.sp
+                        )
+                    )
+                }
+            }
+
+            // Action Buttons Row (Owned -> Apply / Applied; Locked -> Buy with Keys + 1-Min Trial with 1 Shield)
+            if (isUnlocked) {
                 Box(
                     modifier = Modifier
-                        .height(38.dp)
-                        .clip(RoundedCornerShape(11.dp))
+                        .fillMaxWidth()
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(
                             if (isApplied) {
-                                Brush.horizontalGradient(
-                                    listOf(aura.accentEmeraldSoft, aura.accentEmeraldSoft)
-                                )
+                                Brush.horizontalGradient(listOf(aura.accentEmeraldSoft, aura.accentEmeraldSoft))
                             } else {
-                                Brush.horizontalGradient(
-                                    listOf(previewAura.accentCyan, previewAura.accentViolet)
-                                )
+                                Brush.horizontalGradient(listOf(previewAura.accentCyan, previewAura.accentViolet))
                             }
                         )
                         .then(
                             if (isApplied) {
-                                Modifier.border(1.dp, aura.accentEmerald, RoundedCornerShape(11.dp))
+                                Modifier.border(1.dp, aura.accentEmerald, RoundedCornerShape(12.dp))
                             } else {
                                 Modifier
                             }
                         )
-                        .clickable { onApply() }
-                        .padding(horizontal = 14.dp)
+                        .clickable { onEquipOwned() }
                         .testTag("apply_theme_button_${theme.id}"),
                     contentAlignment = Alignment.Center
                 ) {
@@ -795,21 +969,132 @@ private fun StoreThemeShowcaseCard(
                             imageVector = if (isApplied) Icons.Default.CheckCircle else Icons.Default.Palette,
                             contentDescription = null,
                             tint = if (isApplied) aura.accentEmerald else Color(0xFF07090D),
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = if (isApplied) {
-                                if (isArabic) "مُطبّق ✓" else "Applied ✓"
+                                if (isArabic) "مُطبّق على التطبيق ✓" else "Applied ✓"
                             } else {
-                                if (isArabic) "تطبيق" else "Apply"
+                                if (isArabic) "تطبيق الثيم" else "Apply Theme"
                             },
-                            style = MaterialTheme.typography.labelMedium.copy(
+                            style = MaterialTheme.typography.labelLarge.copy(
                                 color = if (isApplied) aura.accentEmerald else Color(0xFF07090D),
                                 fontWeight = FontWeight.Black,
-                                fontSize = 12.sp
+                                fontSize = 12.5.sp
                             )
                         )
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Purchase with Keys Button
+                    val costText = formatThemeCostText(theme, isArabic)
+                    val tierAccent = keyTierColor(theme.costTier, aura.isDark)
+                    Box(
+                        modifier = Modifier
+                            .weight(1.15f)
+                            .height(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (canAffordPurchase) {
+                                    Brush.horizontalGradient(listOf(tierAccent, aura.accentGold))
+                                } else {
+                                    Brush.horizontalGradient(listOf(aura.surfaceSubtle, aura.surfaceSubtle))
+                                }
+                            )
+                            .border(
+                                1.dp,
+                                if (canAffordPurchase) tierAccent else aura.borderSubtle,
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onPurchase() }
+                            .padding(horizontal = 8.dp)
+                            .testTag("buy_theme_button_${theme.id}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (canAffordPurchase) Icons.Default.VpnKey else Icons.Default.Lock,
+                                contentDescription = null,
+                                tint = if (canAffordPurchase) Color(0xFF07090D) else aura.textSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = if (isArabic) "شراء • $costText" else "Buy • $costText",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = if (canAffordPurchase) Color(0xFF07090D) else aura.textSecondary,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // Try for 1 Minute (1 Shield) Button
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                when {
+                                    isOnTrial -> aura.accentFlameSoft
+                                    canAffordTrial -> aura.accentEmeraldSoft
+                                    else -> aura.surfaceSubtle
+                                }
+                            )
+                            .border(
+                                1.dp,
+                                when {
+                                    isOnTrial -> aura.accentFlame
+                                    canAffordTrial -> aura.accentEmerald.copy(alpha = 0.65f)
+                                    else -> aura.borderSubtle
+                                },
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { onStartTrial() }
+                            .padding(horizontal = 8.dp)
+                            .testTag("trial_theme_button_${theme.id}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = if (isOnTrial) Icons.Default.AccessTime else Icons.Default.Shield,
+                                contentDescription = null,
+                                tint = when {
+                                    isOnTrial -> aura.accentFlame
+                                    canAffordTrial -> aura.accentEmerald
+                                    else -> aura.textTertiary
+                                },
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = when {
+                                    isOnTrial -> String.format("00:%02d", trialRemainingSeconds.coerceIn(0, 60))
+                                    isArabic -> "تجربة 1د • 1 🛡️"
+                                    else -> "Try 1m • 1 🛡️"
+                                },
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    color = when {
+                                        isOnTrial -> aura.accentFlame
+                                        canAffordTrial -> aura.accentEmerald
+                                        else -> aura.textTertiary
+                                    },
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 11.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -817,11 +1102,100 @@ private fun StoreThemeShowcaseCard(
     }
 }
 
-/**
- * Renders a faithful mini preview of how the app looks with that specific theme applied,
- * including theme-specific effects (SynthWave horizon grid, Holographic prism rim, Liquid spheres,
- * Frosted blur glass, PSD Mockup artboard frames, Neumorphism dual bevels).
- */
+@Composable
+private fun PricePillBadge(
+    theme: StoreTheme,
+    isUnlocked: Boolean,
+    isArabic: Boolean
+) {
+    val aura = MaterialTheme.aura
+    val tierColor = keyTierColor(theme.costTier, aura.isDark)
+
+    when {
+        theme.isUnlockedByDefault -> {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = aura.accentEmeraldSoft,
+                border = BorderStroke(0.9.dp, aura.accentEmerald.copy(alpha = 0.6f))
+            ) {
+                Text(
+                    text = if (isArabic) "مجاني • افتراضي" else "FREE • DEFAULT",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = aura.accentEmerald,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 9.5.sp
+                    )
+                )
+            }
+        }
+        isUnlocked -> {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = aura.accentEmeraldSoft,
+                border = BorderStroke(0.9.dp, aura.accentEmerald.copy(alpha = 0.6f))
+            ) {
+                Text(
+                    text = if (isArabic) "مملوك ✓" else "OWNED ✓",
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = aura.accentEmerald,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 9.5.sp
+                    )
+                )
+            }
+        }
+        else -> {
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = tierColor.copy(alpha = 0.16f),
+                border = BorderStroke(0.9.dp, tierColor.copy(alpha = 0.6f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = if (theme.costTier == ForgeKeyTier.DIAMOND) Icons.Default.Diamond else Icons.Default.VpnKey,
+                        contentDescription = null,
+                        tint = tierColor,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = formatThemeCostText(theme, isArabic),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = tierColor,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 9.5.sp
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun formatThemeCostText(theme: StoreTheme, isArabic: Boolean): String {
+    val tier = theme.costTier ?: return if (isArabic) "مجاني" else "Free"
+    val tierLabel = when (tier) {
+        ForgeKeyTier.BRONZE -> if (isArabic) "برونزي" else "Bronze"
+        ForgeKeyTier.SILVER -> if (isArabic) "فضي" else "Silver"
+        ForgeKeyTier.GOLD -> if (isArabic) "ذهبي" else "Gold"
+        ForgeKeyTier.DIAMOND -> if (isArabic) "ماسي" else "Diamond"
+    }
+    return "${theme.costAmount} $tierLabel"
+}
+
+private fun keyTierColor(tier: ForgeKeyTier?, isDark: Boolean): Color = when (tier) {
+    ForgeKeyTier.BRONZE -> if (isDark) Color(0xFFE59A54) else Color(0xFFB45309)
+    ForgeKeyTier.SILVER -> if (isDark) Color(0xFFE2E8F0) else Color(0xFF475569)
+    ForgeKeyTier.GOLD -> if (isDark) Color(0xFFFFD700) else Color(0xFFA16207)
+    ForgeKeyTier.DIAMOND -> if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    null -> if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+}
+
 @Composable
 private fun ThemeLiveMiniPreview(
     theme: StoreTheme,
@@ -840,7 +1214,6 @@ private fun ThemeLiveMiniPreview(
                 shape = shape
             )
     ) {
-        // Signature Theme Backdrop inside the mini preview
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
@@ -877,7 +1250,7 @@ private fun ThemeLiveMiniPreview(
                 )
             }
 
-            if (theme == StoreTheme.SYNTHWAVE_RETRO) {
+            if (theme == StoreTheme.SYNTHWAVE) {
                 val horizonY = h * 0.62f
                 drawLine(
                     color = previewAura.accentViolet.copy(alpha = 0.65f),
@@ -908,14 +1281,12 @@ private fun ThemeLiveMiniPreview(
             }
         }
 
-        // Miniature App Interface inside the Preview
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Mini Top Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -956,7 +1327,6 @@ private fun ThemeLiveMiniPreview(
                 }
             }
 
-            // Mini Floating Card (demonstrating surfaceCard + borderBrush + CTA + Progress)
             Surface(
                 shape = RoundedCornerShape(11.dp),
                 color = previewAura.surfaceCard,
@@ -982,7 +1352,6 @@ private fun ThemeLiveMiniPreview(
                             overflow = TextOverflow.Ellipsis
                         )
                         Spacer(modifier = Modifier.height(4.dp))
-                        // Mini progress track + active bar
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(0.85f)
@@ -1072,14 +1441,14 @@ private fun StoreKeyBalanceChip(
         border = BorderStroke(0.9.dp, accent.copy(alpha = 0.45f))
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 7.dp),
+            modifier = Modifier.padding(horizontal = 3.dp, vertical = 7.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
                 tint = accent,
-                modifier = Modifier.size(14.dp)
+                modifier = Modifier.size(13.dp)
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
@@ -1087,7 +1456,7 @@ private fun StoreKeyBalanceChip(
                 style = MaterialTheme.typography.labelLarge.copy(
                     color = aura.textPrimary,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize = 13.sp
+                    fontSize = 12.5.sp
                 ),
                 maxLines = 1
             )
@@ -1095,7 +1464,7 @@ private fun StoreKeyBalanceChip(
                 text = label,
                 style = MaterialTheme.typography.labelSmall.copy(
                     color = accent.copy(alpha = 0.9f),
-                    fontSize = 9.sp,
+                    fontSize = 8.5.sp,
                     fontWeight = FontWeight.SemiBold
                 ),
                 maxLines = 1,
@@ -1107,14 +1476,15 @@ private fun StoreKeyBalanceChip(
 
 private fun themeIconFor(theme: StoreTheme): ImageVector = when (theme) {
     StoreTheme.DEFAULT -> Icons.Default.AutoAwesome
+    StoreTheme.LIQUID_FROSTED_GLASS -> Icons.Default.WaterDrop
     StoreTheme.TOKYO_NIGHT -> Icons.Default.ColorLens
     StoreTheme.CATPPUCCIN_MOCHA -> Icons.Default.Palette
-    StoreTheme.SYNTHWAVE_RETRO -> Icons.Default.AutoAwesome
     StoreTheme.NORD_ARCTIC -> Icons.Default.BlurOn
-    StoreTheme.DRACULA_PRO -> Icons.Default.Diamond
-    StoreTheme.LIQUID_FROSTED_GLASS -> Icons.Default.WaterDrop
-    StoreTheme.HOLOGRAPHIC_LIQUID_GLASS -> Icons.Default.AutoAwesome
     StoreTheme.FROSTED_GLASSMORPHISM -> Icons.Default.BlurOn
-    StoreTheme.GLASS_MORPHISM_PSD_MOCKUP -> Icons.Default.Layers
     StoreTheme.NEUMORPHISM -> Icons.Default.TouchApp
+    StoreTheme.SYNTHWAVE -> Icons.Default.AutoAwesome
+    StoreTheme.RETRO_GLOW -> Icons.Default.WbTwilight
+    StoreTheme.DRACULA_PRO -> Icons.Default.Diamond
+    StoreTheme.HOLOGRAPHIC_LIQUID_GLASS -> Icons.Default.AutoAwesome
+    StoreTheme.GLASS_MORPHISM_PSD_MOCKUP -> Icons.Default.Layers
 }
