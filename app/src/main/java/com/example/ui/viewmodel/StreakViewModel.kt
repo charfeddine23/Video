@@ -2,6 +2,8 @@ package com.example.ui.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import com.example.data.model.ForgeKeyTier
+import com.example.data.model.ForgeUiState
 import com.example.data.preferences.StreakPreferencesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -64,6 +66,9 @@ class StreakViewModel(
 
     private val _shieldFarmSeconds = MutableStateFlow(repository.getShieldFarmAccumulatedSeconds())
     val shieldFarmSeconds: StateFlow<Int> = _shieldFarmSeconds.asStateFlow()
+
+    private val _forgeState = MutableStateFlow(repository.loadForgeState())
+    val forgeState: StateFlow<ForgeUiState> = _forgeState.asStateFlow()
 
     fun updateProfile(name: String, avatarUri: String?, presetId: Int) {
         val safeName = name.trim().ifBlank { "Charfeddine Kahlessenane" }
@@ -196,6 +201,7 @@ class StreakViewModel(
     fun tickActiveForegroundUsage(seconds: Int = 1) {
         val (updatedState, earnedShield) = repository.tickActiveForegroundUsage(seconds)
         _shieldFarmSeconds.value = repository.getShieldFarmAccumulatedSeconds()
+        _forgeState.value = repository.loadForgeState()
         if (earnedShield) {
             val todayEarned = repository.getShieldsEarnedToday()
             _uiState.update { current ->
@@ -361,5 +367,63 @@ class StreakViewModel(
             }
         }
         return count
+    }
+
+    // --- The Forge Actions ---
+    fun startForge(tier: ForgeKeyTier, isArabic: Boolean = true): Boolean {
+        val started = repository.startForge(tier)
+        if (started) {
+            val updatedStreak = repository.loadInitialState()
+            _forgeState.value = repository.loadForgeState()
+            val tierName = if (isArabic) tier.nameAr else tier.nameEn
+            _uiState.update {
+                it.copy(
+                    shieldsCount = updatedStreak.shieldsCount,
+                    feedbackMessage = if (isArabic) {
+                        "🔥 بدأ صهر $tierName! وقت الإنجاز: ${tier.durationHours} ساعة"
+                    } else {
+                        "🔥 Smelting $tierName started! Duration: ${tier.durationHours}h"
+                    }
+                )
+            }
+        }
+        return started
+    }
+
+    fun claimForgeKey(tier: ForgeKeyTier, isArabic: Boolean = true): Boolean {
+        val claimed = repository.claimForgeKey(tier)
+        if (claimed) {
+            _forgeState.value = repository.loadForgeState()
+            val tierName = if (isArabic) tier.nameAr else tier.nameEn
+            _uiState.update {
+                it.copy(
+                    feedbackMessage = if (isArabic) {
+                        "🗝️ تم استلام $tierName بنجاح وإضافته إلى خزينتك!"
+                    } else {
+                        "🗝️ Claimed $tierName and added to your vault!"
+                    }
+                )
+            }
+        }
+        return claimed
+    }
+
+    fun cancelForge(tier: ForgeKeyTier, isArabic: Boolean = true): Boolean {
+        val cancelled = repository.cancelForge(tier)
+        if (cancelled) {
+            val updatedStreak = repository.loadInitialState()
+            _forgeState.value = repository.loadForgeState()
+            _uiState.update {
+                it.copy(
+                    shieldsCount = updatedStreak.shieldsCount,
+                    feedbackMessage = if (isArabic) {
+                        "↩️ تم إلغاء الصهر واسترداد الموارد بالكامل"
+                    } else {
+                        "↩️ Smelting cancelled and resources refunded"
+                    }
+                )
+            }
+        }
+        return cancelled
     }
 }

@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -78,6 +79,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.VaultProgressionRegistry
+import com.example.ui.components.ForgeSectionView
 import com.example.ui.components.SerpentineRoadmapView
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.PulseCyan
@@ -137,6 +139,7 @@ fun MilestoneRoadmapScreen(
     val flameTokens = if (streakDays >= 5) (streakDays / 5) * 2 else 0
     val dailyShieldsToday = streakViewModel.getShieldsEarnedToday().coerceAtLeast(0)
     val farmSecs by streakViewModel.shieldFarmSeconds.collectAsState()
+    val forgeState by streakViewModel.forgeState.collectAsState()
     val farmMins = (farmSecs / 60).coerceIn(0, 60)
     val remainingMins = (60 - farmMins).coerceAtLeast(0)
     val isShieldVaultFull = shieldsCount >= maxShields
@@ -808,6 +811,108 @@ fun MilestoneRoadmapScreen(
                                 }
                             }
 
+                            // Forged Keys Vault Summary in Inventory
+                            item(key = "inventory_forged_keys_section") {
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .border(
+                                            1.dp,
+                                            Brush.horizontalGradient(
+                                                listOf(
+                                                    Color(0x88FFD700),
+                                                    PulseCyan.copy(alpha = 0.55f)
+                                                )
+                                            ),
+                                            RoundedCornerShape(18.dp)
+                                        )
+                                        .testTag("inventory_forged_keys_card"),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color(0xDD111726))
+                                ) {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    imageVector = Icons.Default.VpnKey,
+                                                    contentDescription = null,
+                                                    tint = Color(0xFFFFD700),
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Text(
+                                                    text = if (isArabic) "خزينة المفاتيح المصهورة (The Forge)" else "Forged Keys Vault",
+                                                    style = MaterialTheme.typography.titleSmall.copy(
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        fontSize = 14.sp
+                                                    )
+                                                )
+                                            }
+
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = Color(0x28FFD700),
+                                                border = BorderStroke(1.dp, Color(0x66FFD700)),
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .clickable {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        activeSectionTab = RoadmapSectionTab.SHOP
+                                                    }
+                                            ) {
+                                                Text(
+                                                    text = if (isArabic) "فتح Forge 🔥" else "Open Forge 🔥",
+                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = Color(0xFFFFD700),
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        fontSize = 10.5.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            InventoryStatChip(
+                                                label = if (isArabic) "برونزي" else "Bronze",
+                                                value = "${forgeState.bronzeKeys}",
+                                                accent = Color(0xFFE59A54),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            InventoryStatChip(
+                                                label = if (isArabic) "فضي" else "Silver",
+                                                value = "${forgeState.silverKeys}",
+                                                accent = Color(0xFFE2E8F0),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            InventoryStatChip(
+                                                label = if (isArabic) "ذهبي" else "Gold",
+                                                value = "${forgeState.goldenKeys}",
+                                                accent = Color(0xFFFFD700),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            InventoryStatChip(
+                                                label = if (isArabic) "ماسي" else "Diamond",
+                                                value = "${forgeState.diamondKeys}",
+                                                accent = Color(0xFF38BDF8),
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             // Section 2: Collectible Badges & Titles in Inventory
                             item(key = "inventory_badges_header") {
                                 Spacer(modifier = Modifier.height(18.dp))
@@ -923,79 +1028,20 @@ fun MilestoneRoadmapScreen(
                     }
 
                     RoadmapSectionTab.SHOP -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 24.dp, vertical = 20.dp)
-                                .testTag("shop_tab_coming_soon"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Surface(
-                                shape = RoundedCornerShape(24.dp),
-                                color = Color(0xD9121826),
-                                border = BorderStroke(
-                                    1.2.dp,
-                                    Brush.horizontalGradient(
-                                        listOf(
-                                            Color(0x88FFD700).copy(alpha = ambientGlow),
-                                            PulseCyan.copy(alpha = 0.55f)
-                                        )
-                                    )
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 36.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(74.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.radialGradient(
-                                                    listOf(Color(0x44FFD700), Color(0x1400F2FE))
-                                                )
-                                            )
-                                            .border(1.5.dp, Color(0xFFFFD700).copy(alpha = ambientGlow), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Storefront,
-                                            contentDescription = null,
-                                            tint = Color(0xFFFFD700),
-                                            modifier = Modifier.size(36.dp)
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.height(18.dp))
-
-                                    Text(
-                                        text = if (isArabic) "قريباً" else "Soon",
-                                        style = MaterialTheme.typography.headlineMedium.copy(
-                                            color = Color(0xFFFFD700),
-                                            fontWeight = FontWeight.ExtraBold
-                                        )
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    Text(
-                                        text = if (isArabic) {
-                                            "متجر الدروع والمكافآت قيد التجهيز وسيكون متاحاً قريباً"
-                                        } else {
-                                            "Shields & Rewards Shop is coming soon"
-                                        },
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            color = Color(0xFF94A3B8),
-                                            fontSize = 13.sp
-                                        ),
-                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                    )
-                                }
+                        ForgeSectionView(
+                            shieldsCount = shieldsCount,
+                            forgeState = forgeState,
+                            isArabic = isArabic,
+                            onStartForge = { tier ->
+                                streakViewModel.startForge(tier, isArabic = isArabic)
+                            },
+                            onClaimForgeKey = { tier ->
+                                streakViewModel.claimForgeKey(tier, isArabic = isArabic)
+                            },
+                            onCancelForge = { tier ->
+                                streakViewModel.cancelForge(tier, isArabic = isArabic)
                             }
-                        }
+                        )
                     }
                 }
             }

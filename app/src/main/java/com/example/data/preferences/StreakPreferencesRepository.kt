@@ -2,6 +2,9 @@ package com.example.data.preferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.data.model.ForgeKeyTier
+import com.example.data.model.ForgeSlotState
+import com.example.data.model.ForgeUiState
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.ThemeMode
 import com.example.ui.viewmodel.StreakUiState
@@ -73,6 +76,12 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_EYE_PROTECTION = "key_eye_protection"
         private const val KEY_FULL_SCREEN_MODE = "key_full_screen_mode"
         private const val KEY_LAST_STATUS_BAR_HEIGHT_DP = "key_last_status_bar_height_dp"
+
+        // The Forge (Shields & Keys Smelting)
+        private const val KEY_FORGE_BRONZE_KEYS = "key_forge_bronze_keys"
+        private const val KEY_FORGE_SILVER_KEYS = "key_forge_silver_keys"
+        private const val KEY_FORGE_GOLDEN_KEYS = "key_forge_golden_keys"
+        private const val KEY_FORGE_DIAMOND_KEYS = "key_forge_diamond_keys"
 
         @Volatile
         private var instance: StreakPreferencesRepository? = null
@@ -360,12 +369,23 @@ class StreakPreferencesRepository private constructor(context: Context) {
             }
         }
 
-        prefs.edit()
+        val editor = prefs.edit()
             .putString(KEY_SHIELDS_EARNED_TODAY_DATE, today)
             .putInt(KEY_SHIELDS_EARNED_TODAY_COUNT, todayEarned)
             .putInt(KEY_SHIELD_FARM_SECONDS, farmSeconds)
             .putLong(KEY_TOTAL_ACTIVE_WATCH_SECONDS, totalActiveSecs)
-            .apply()
+
+        // Advance any active Forge smelting slots (all tiers progress on active foreground app usage)
+        for (tier in ForgeKeyTier.entries) {
+            if (prefs.getBoolean(forgeActiveKey(tier), false)) {
+                val prevElapsed = prefs.getInt(forgeElapsedKey(tier), 0)
+                if (prevElapsed < tier.durationSeconds) {
+                    val nextElapsed = (prevElapsed + seconds).coerceAtMost(tier.durationSeconds)
+                    editor.putInt(forgeElapsedKey(tier), nextElapsed)
+                }
+            }
+        }
+        editor.apply()
 
         if (newShields != current.shieldsCount) {
             val updatedState = current.copy(shieldsCount = newShields)
@@ -691,6 +711,133 @@ class StreakPreferencesRepository private constructor(context: Context) {
 
         saveStreakState(current.copy(shieldsCount = newShields))
         return newlyClaimed
+    }
+
+    // --- The Forge Persistence ---
+    private fun forgeActiveKey(tier: ForgeKeyTier) = "key_forge_active_${tier.id}"
+    private fun forgeElapsedKey(tier: ForgeKeyTier) = "key_forge_elapsed_${tier.id}"
+    private fun forgeRefundShieldsKey(tier: ForgeKeyTier) = "key_forge_refund_shields_${tier.id}"
+    private fun forgeRefundBronzeKey(tier: ForgeKeyTier) = "key_forge_refund_bronze_${tier.id}"
+    private fun forgeRefundSilverKey(tier: ForgeKeyTier) = "key_forge_refund_silver_${tier.id}"
+    private fun forgeRefundGoldKey(tier: ForgeKeyTier) = "key_forge_refund_gold_${tier.id}"
+
+    fun loadForgeState(): ForgeUiState {
+        val bronze = prefs.getInt(KEY_FORGE_BRONZE_KEYS, 0).coerceAtLeast(0)
+        val silver = prefs.getInt(KEY_FORGE_SILVER_KEYS, 0).coerceAtLeast(0)
+        val gold = prefs.getInt(KEY_FORGE_GOLDEN_KEYS, 0).coerceAtLeast(0)
+        val diamond = prefs.getInt(KEY_FORGE_DIAMOND_KEYS, 0).coerceAtLeast(0)
+        val slots = ForgeKeyTier.entries.associateWith { tier ->
+            ForgeSlotState(
+                tier = tier,
+                isActive = prefs.getBoolean(forgeActiveKey(tier), false),
+                elapsedSeconds = prefs.getInt(forgeElapsedKey(tier), 0).coerceIn(0, tier.durationSeconds),
+                refundShields = prefs.getInt(forgeRefundShieldsKey(tier), 0).coerceAtLeast(0),
+                refundBronzeKeys = prefs.getInt(forgeRefundBronzeKey(tier), 0).coerceAtLeast(0),
+                refundSilverKeys = prefs.getInt(forgeRefundSilverKey(tier), 0).coerceAtLeast(0),
+                refundGoldKeys = prefs.getInt(forgeRefundGoldKey(tier), 0).coerceAtLeast(0)
+            )
+        }
+        return ForgeUiState(
+            bronzeKeys = bronze,
+            silverKeys = silver,
+            goldenKeys = gold,
+            diamondKeys = diamond,
+            slots = slots
+        )
+    }
+
+    fun startForge(tier: ForgeKeyTier): Boolean {
+        val currentStreak = loadInitialState()
+        val currentForge = loadForgeState()
+        if (currentForge.getSlot(tier).isActive) return false
+
+        return if (tier.usesShields) {
+            if (currentStreak.shieldsCount < tier.requiredShields) return false
+            val newShields = (currentStreak.shieldsCount - tier.requiredShields).coerceAtLeast(0)
+            saveStreakState(currentStreak.copy(shieldsCount = newShields))
+            prefs.edit()
+                .putBoolean(forgeActiveKey(tier), true)
+                .putInt(forgeElapsedKey(tier), 0)
+                .putInt(forgeRefundShieldsKey(tier), tier.requiredShields)
+                .putInt(forgeRefundBronzeKey(tier), 0)
+                .putInt(forgeRefundSilverKey(tier), 0)
+                .putInt(forgeRefundGoldKey(tier), 0)
+                .commit()
+            true
+        } else {
+            if (currentForge.availableKeysFor(tier) < tier.requiredKeys) return false
+            var remainingNeeded = tier.requiredKeys
+            val usedBronze = minOf(currentForge.bronzeKeys, remainingNeeded)
+            remainingNeeded -= usedBronze
+            val usedSilver = minOf(currentForge.silverKeys, remainingNeeded)
+            remainingNeeded -= usedSilver
+            val usedGold = if (tier == ForgeKeyTier.DIAMOND) minOf(currentForge.goldenKeys, remainingNeeded) else 0
+            remainingNeeded -= usedGold
+            if (remainingNeeded > 0) return false
+
+            prefs.edit()
+                .putInt(KEY_FORGE_BRONZE_KEYS, (currentForge.bronzeKeys - usedBronze).coerceAtLeast(0))
+                .putInt(KEY_FORGE_SILVER_KEYS, (currentForge.silverKeys - usedSilver).coerceAtLeast(0))
+                .putInt(KEY_FORGE_GOLDEN_KEYS, (currentForge.goldenKeys - usedGold).coerceAtLeast(0))
+                .putBoolean(forgeActiveKey(tier), true)
+                .putInt(forgeElapsedKey(tier), 0)
+                .putInt(forgeRefundShieldsKey(tier), 0)
+                .putInt(forgeRefundBronzeKey(tier), usedBronze)
+                .putInt(forgeRefundSilverKey(tier), usedSilver)
+                .putInt(forgeRefundGoldKey(tier), usedGold)
+                .commit()
+            true
+        }
+    }
+
+    fun claimForgeKey(tier: ForgeKeyTier): Boolean {
+        val currentForge = loadForgeState()
+        val slot = currentForge.getSlot(tier)
+        if (!slot.isReadyToClaim) return false
+
+        val targetKeyPref = when (tier) {
+            ForgeKeyTier.BRONZE -> KEY_FORGE_BRONZE_KEYS
+            ForgeKeyTier.SILVER -> KEY_FORGE_SILVER_KEYS
+            ForgeKeyTier.GOLD -> KEY_FORGE_GOLDEN_KEYS
+            ForgeKeyTier.DIAMOND -> KEY_FORGE_DIAMOND_KEYS
+        }
+        val nextCount = currentForge.getKeyCount(tier) + 1
+
+        prefs.edit()
+            .putInt(targetKeyPref, nextCount)
+            .putBoolean(forgeActiveKey(tier), false)
+            .putInt(forgeElapsedKey(tier), 0)
+            .putInt(forgeRefundShieldsKey(tier), 0)
+            .putInt(forgeRefundBronzeKey(tier), 0)
+            .putInt(forgeRefundSilverKey(tier), 0)
+            .putInt(forgeRefundGoldKey(tier), 0)
+            .commit()
+        return true
+    }
+
+    fun cancelForge(tier: ForgeKeyTier): Boolean {
+        val currentStreak = loadInitialState()
+        val currentForge = loadForgeState()
+        val slot = currentForge.getSlot(tier)
+        if (!slot.isActive || slot.isReadyToClaim) return false
+
+        if (slot.refundShields > 0) {
+            val restoredShields = (currentStreak.shieldsCount + slot.refundShields).coerceAtMost(currentStreak.maxShields)
+            saveStreakState(currentStreak.copy(shieldsCount = restoredShields))
+        }
+
+        prefs.edit()
+            .putInt(KEY_FORGE_BRONZE_KEYS, currentForge.bronzeKeys + slot.refundBronzeKeys)
+            .putInt(KEY_FORGE_SILVER_KEYS, currentForge.silverKeys + slot.refundSilverKeys)
+            .putInt(KEY_FORGE_GOLDEN_KEYS, currentForge.goldenKeys + slot.refundGoldKeys)
+            .putBoolean(forgeActiveKey(tier), false)
+            .putInt(forgeElapsedKey(tier), 0)
+            .putInt(forgeRefundShieldsKey(tier), 0)
+            .putInt(forgeRefundBronzeKey(tier), 0)
+            .putInt(forgeRefundSilverKey(tier), 0)
+            .putInt(forgeRefundGoldKey(tier), 0)
+            .commit()
+        return true
     }
 }
 
