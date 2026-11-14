@@ -59,16 +59,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -76,6 +81,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -92,6 +98,7 @@ import com.example.ui.theme.PulseCyan
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
 
 private data class ForgeTierPalette(
     val primary: Color,
@@ -637,6 +644,16 @@ private fun ForgeHeroFurnaceCard(
                     center = Offset(size.width * xRatio, size.height * yRatio)
                 )
             }
+        }
+
+        if (activeCount > 0) {
+            ActiveMetalworkingParticleOverlay(
+                tierAccent = Color(0xFFFFD700),
+                showIngotOnAnvil = false,
+                emissionOriginY = 0.30f,
+                sparkScale = 1.15f,
+                modifier = Modifier.matchParentSize()
+            )
         }
 
         Column(
@@ -1284,6 +1301,17 @@ private fun ForgeRecipeCard(
                     }
                 }
 
+                // Real-time ballistic spark & glowing molten metalworking physics layer when smelting is active
+                if (isActive) {
+                    ActiveMetalworkingParticleOverlay(
+                        tierAccent = palette.primary,
+                        showIngotOnAnvil = true,
+                        emissionOriginY = 0.62f,
+                        sparkScale = 1.0f,
+                        modifier = Modifier.matchParentSize()
+                    )
+                }
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1802,6 +1830,253 @@ private fun WorkshopMoltenProgressBar(
                 radius = (size.height * 0.42f),
                 center = Offset(barWidth.coerceIn(size.height * 0.5f, size.width - 2f), size.height * 0.5f)
             )
+        }
+    }
+}
+
+private class ForgeSparkParticle(
+    var x: Float = 0.5f,
+    var y: Float = 0.5f,
+    var prevX: Float = 0.5f,
+    var prevY: Float = 0.5f,
+    var vx: Float = 0f,
+    var vy: Float = 0f,
+    var life: Float = 0f,
+    var maxLife: Float = 1f,
+    var sizePx: Float = 2f,
+    var isBallistic: Boolean = true
+)
+
+private class MetalworkingEngine(
+    private val originY: Float
+) {
+    val sparks = MutableList(48) { ForgeSparkParticle() }
+    var strikeCycleSec: Float = 0f
+    var strikeFlash: Float = 1f
+    private var ambientSpawnTimer: Float = 0f
+    private var nextSlot: Int = 0
+
+    init {
+        triggerHammerBurst(count = 20)
+    }
+
+    fun step(dtSec: Float) {
+        val dt = dtSec.coerceIn(0.001f, 0.05f)
+        strikeCycleSec += dt
+        if (strikeCycleSec >= 1.15f) {
+            strikeCycleSec -= 1.15f
+            strikeFlash = 1f
+            triggerHammerBurst(count = 18)
+        } else {
+            strikeFlash = (strikeFlash - dt * 2.4f).coerceAtLeast(0f)
+        }
+
+        ambientSpawnTimer += dt
+        if (ambientSpawnTimer >= 0.06f) {
+            ambientSpawnTimer = 0f
+            spawnRisingEmber()
+        }
+
+        for (p in sparks) {
+            if (p.life <= 0f) continue
+            p.prevX = p.x
+            p.prevY = p.y
+            p.life -= dt
+
+            if (p.isBallistic) {
+                p.vy += 1.55f * dt // gravity pulls glowing metal sparks downward
+                p.vx *= 0.985f
+                p.x += p.vx * dt
+                p.y += p.vy * dt
+                // Bounce lightly off workshop floor
+                if (p.y > 0.92f && p.vy > 0f) {
+                    p.y = 0.92f
+                    p.vy = -p.vy * 0.36f
+                    p.vx *= 0.72f
+                }
+            } else {
+                // Rising radiant heat embers curl subtly upward
+                p.x += (p.vx + sin(p.life * 9f) * 0.04f) * dt
+                p.y += p.vy * dt
+            }
+        }
+    }
+
+    private fun allocateSpark(): ForgeSparkParticle {
+        val p = sparks[nextSlot]
+        nextSlot = (nextSlot + 1) % sparks.size
+        return p
+    }
+
+    private fun triggerHammerBurst(count: Int) {
+        repeat(count) {
+            val p = allocateSpark()
+            val angle = Random.nextFloat() * PI.toFloat() * 1.15f - PI.toFloat() * 1.075f // upward & sideways arc
+            val speed = 0.24f + Random.nextFloat() * 0.56f
+            val sx = 0.5f + (Random.nextFloat() - 0.5f) * 0.05f
+            val sy = originY + (Random.nextFloat() - 0.5f) * 0.03f
+            p.x = sx
+            p.y = sy
+            p.prevX = sx
+            p.prevY = sy
+            p.vx = cos(angle) * speed * 0.85f
+            p.vy = sin(angle) * speed - 0.16f
+            p.maxLife = 0.42f + Random.nextFloat() * 0.55f
+            p.life = p.maxLife
+            p.sizePx = 1.6f + Random.nextFloat() * 2.2f
+            p.isBallistic = true
+        }
+    }
+
+    private fun spawnRisingEmber() {
+        val p = allocateSpark()
+        val sx = 0.5f + (Random.nextFloat() - 0.5f) * 0.14f
+        val sy = originY + (Random.nextFloat() - 0.5f) * 0.04f
+        p.x = sx
+        p.y = sy
+        p.prevX = sx
+        p.prevY = sy
+        p.vx = (Random.nextFloat() - 0.5f) * 0.08f
+        p.vy = -(0.18f + Random.nextFloat() * 0.28f)
+        p.maxLife = 0.75f + Random.nextFloat() * 0.65f
+        p.life = p.maxLife
+        p.sizePx = 1.3f + Random.nextFloat() * 1.6f
+        p.isBallistic = false
+    }
+}
+
+@Composable
+private fun ActiveMetalworkingParticleOverlay(
+    tierAccent: Color,
+    showIngotOnAnvil: Boolean,
+    emissionOriginY: Float,
+    sparkScale: Float,
+    modifier: Modifier = Modifier
+) {
+    val engine = remember(emissionOriginY) { MetalworkingEngine(emissionOriginY) }
+    var frameTick by remember { mutableLongStateOf(0L) }
+
+    LaunchedEffect(engine) {
+        var lastNanos = 0L
+        while (true) {
+            withFrameNanos { now ->
+                if (lastNanos != 0L) {
+                    val dt = (now - lastNanos) / 1_000_000_000f
+                    engine.step(dt)
+                }
+                lastNanos = now
+                frameTick = now
+            }
+        }
+    }
+
+    Canvas(modifier = modifier) {
+        // Defer state read exclusively to the Draw phase so zero Composables recompose at 60fps
+        @Suppress("UNUSED_VARIABLE")
+        val tick = frameTick
+        val w = size.width
+        val h = size.height
+        val origin = Offset(w * 0.5f, h * emissionOriginY)
+        val flash = engine.strikeFlash
+
+        // 1. Heated Glowing Metal Ingot & Hammer Impact Shockwave
+        if (showIngotOnAnvil) {
+            val ingotW = (w * 0.14f).coerceIn(28.dp.toPx(), 48.dp.toPx())
+            val ingotH = 6.5.dp.toPx()
+            val ingotTopLeft = Offset(origin.x - ingotW / 2f, origin.y - ingotH / 2f)
+
+            // Thermal bloom radiating from heated metal billet
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFF59D).copy(alpha = 0.34f + flash * 0.42f),
+                        Color(0xFFFF6D00).copy(alpha = 0.26f + flash * 0.22f),
+                        Color.Transparent
+                    ),
+                    radius = ingotW * (1.15f + flash * 0.55f)
+                ),
+                center = origin
+            )
+
+            // Dark steel anvil horn base beneath glowing billet
+            drawRoundRect(
+                color = Color(0xFF1E293B),
+                topLeft = Offset(origin.x - ingotW * 0.65f, origin.y + ingotH * 0.35f),
+                size = Size(ingotW * 1.3f, 5.dp.toPx()),
+                cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+            )
+
+            // Incandescent heated metal bar (white-yellow hot on strike -> molten orange between blows)
+            val coreColor = lerp(Color(0xFFFF9100), Color(0xFFFFFDE7), flash)
+            val edgeColor = lerp(Color(0xFFD50000), Color(0xFFFF6D00), flash)
+            drawRoundRect(
+                brush = Brush.horizontalGradient(listOf(edgeColor, coreColor, edgeColor)),
+                topLeft = ingotTopLeft,
+                size = Size(ingotW, ingotH),
+                cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+            )
+
+            // Expanding hammer-strike shockwave ring
+            if (flash > 0.02f) {
+                val expand = 1f - flash
+                drawCircle(
+                    color = Color(0xFFFFE082).copy(alpha = flash * 0.65f),
+                    radius = ingotW * (0.45f + expand * 1.15f),
+                    center = origin,
+                    style = Stroke(width = (2.4f * flash).dp.toPx())
+                )
+            }
+        } else if (flash > 0.05f) {
+            // Subtle incandescent furnace burst pulse in Hero card
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFFFFE082).copy(alpha = flash * 0.24f),
+                        Color(0xFFFF6D00).copy(alpha = flash * 0.14f),
+                        Color.Transparent
+                    ),
+                    radius = w * 0.38f
+                ),
+                center = origin
+            )
+        }
+
+        // 2. Render all active ballistic sparks & glowing embers with blackbody cooling colors
+        for (p in engine.sparks) {
+            if (p.life <= 0f) continue
+            val heat = (p.life / p.maxLife).coerceIn(0f, 1f)
+            val cur = Offset(p.x * w, p.y * h)
+            val prev = Offset(p.prevX * w, p.prevY * h)
+
+            val sparkColor = when {
+                heat > 0.72f -> lerp(Color(0xFFFFD54F), Color(0xFFFFFDE7), (heat - 0.72f) / 0.28f)
+                heat > 0.35f -> lerp(Color(0xFFFF6D00), tierAccent, (heat - 0.35f) / 0.37f)
+                else -> lerp(Color(0xFF991B1B), Color(0xFFFF5722), heat / 0.35f)
+            }.copy(alpha = (heat * 1.15f).coerceIn(0f, 1f))
+
+            if (p.isBallistic) {
+                // Stretched hot-metal streak trail
+                val trailVec = cur - prev
+                val streakStart = cur - (trailVec * 2.2f)
+                drawLine(
+                    color = sparkColor,
+                    start = streakStart,
+                    end = cur,
+                    strokeWidth = (p.sizePx * sparkScale).coerceAtLeast(1.2f),
+                    cap = StrokeCap.Round
+                )
+                drawCircle(
+                    color = Color.White.copy(alpha = heat * 0.65f),
+                    radius = (p.sizePx * 0.45f * sparkScale),
+                    center = cur
+                )
+            } else {
+                drawCircle(
+                    color = sparkColor.copy(alpha = heat * 0.78f),
+                    radius = p.sizePx * sparkScale,
+                    center = cur
+                )
+            }
         }
     }
 }
