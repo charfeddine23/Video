@@ -55,6 +55,7 @@ import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.AutoAwesome
 import com.example.ui.components.AuraPulseBrandHeader
 import com.example.ui.components.FlameParticleComponent
+import com.example.ui.theme.AuraAtmosphericLayer
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.aura
@@ -78,47 +79,8 @@ fun HomeScreen(
             .background(aura.background)
             .testTag("home_screen_minimal")
     ) {
-        // Ambient liquid neon glow behind the central flame and extending cleanly to top edge
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0x28FF5722),
-                                Color(0x1400F2FE),
-                                Color.Transparent
-                            ),
-                            startY = 0f,
-                            endY = size.height * 0.24f
-                        )
-                    )
-                    // Central warm flame glow
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(
-                                Color(0x30FF5722),
-                                Color(0x18FF2D73),
-                                Color.Transparent
-                            ),
-                            radius = size.width * 0.95f
-                        ),
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.35f)
-                    )
-                    // Lower cyan ambient glow
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(
-                                Color(0x1500F2FE),
-                                Color.Transparent
-                            ),
-                            radius = size.width * 0.8f
-                        ),
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.85f)
-                    )
-                }
-        )
+        // Active Store Theme Atmospheric Backdrop
+        AuraAtmosphericLayer()
 
         LazyColumn(
             modifier = Modifier

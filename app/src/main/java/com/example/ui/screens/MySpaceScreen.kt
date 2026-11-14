@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.BuildConfig
 import com.example.ui.theme.AppLanguage
+import com.example.ui.theme.AuraAtmosphericLayer
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
@@ -126,24 +127,8 @@ fun MySpaceScreen(
             .background(aura.background)
             .testTag("my_space_screen")
     ) {
-        // Ambient background glow
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(
-                                aura.accentCyan.copy(alpha = 0.10f),
-                                aura.accentFlame.copy(alpha = 0.06f),
-                                Color.Transparent
-                            ),
-                            radius = size.width * 0.95f
-                        ),
-                        center = Offset(size.width * 0.5f, size.height * 0.2f)
-                    )
-                }
-        )
+        // Active Store Theme Atmospheric Backdrop
+        AuraAtmosphericLayer()
 
         LazyColumn(
             modifier = Modifier

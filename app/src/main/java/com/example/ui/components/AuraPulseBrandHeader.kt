@@ -56,7 +56,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.StoreTheme
 import com.example.ui.theme.aura
+import com.example.ui.theme.auraCardBorderBrush
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlin.math.cos
@@ -267,6 +269,8 @@ fun AuraPulseBrandHeader(
                                 )
                             }
                         )
+                    } else if (aura.storeTheme != StoreTheme.DEFAULT) {
+                        auraCardBorderBrush(aura)
                     } else {
                         // Liquid iridescent glass border
                         Brush.sweepGradient(
@@ -285,6 +289,7 @@ fun AuraPulseBrandHeader(
             color = when {
                 isFrozen && aura.isDark -> Color(0xCC081324)
                 isFrozen -> Color(0xF5EBF8FF)
+                aura.storeTheme != StoreTheme.DEFAULT -> aura.surfaceCard
                 aura.isDark -> Color(0xD90B0F19)
                 else -> aura.surfaceElevated
             },

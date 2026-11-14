@@ -57,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.aura
+import com.example.ui.theme.auraCardBorderBrush
 
 enum class NavDestination(
     val label: String,
@@ -83,13 +84,8 @@ fun VideoPulseBottomBar(
         modifier = modifier
             .fillMaxWidth()
             .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        aura.borderSubtle,
-                        Color.Transparent
-                    )
-                ),
+                width = if (aura.isGlassStyle || aura.isNeumorphic) 1.25.dp else 1.dp,
+                brush = auraCardBorderBrush(aura),
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ),
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),

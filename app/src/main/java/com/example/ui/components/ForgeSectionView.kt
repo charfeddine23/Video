@@ -95,6 +95,7 @@ import com.example.data.model.ForgeKeyTier
 import com.example.data.model.ForgeSlotState
 import com.example.data.model.ForgeUiState
 import com.example.ui.theme.PulseCyan
+import com.example.ui.theme.StoreTheme
 import com.example.ui.theme.aura
 import kotlin.math.PI
 import kotlin.math.cos
@@ -155,6 +156,8 @@ enum class ForgeTabDestination {
 fun ForgeSectionView(
     shieldsCount: Int,
     forgeState: ForgeUiState,
+    currentStoreTheme: StoreTheme,
+    onSelectStoreTheme: (StoreTheme) -> Unit,
     isArabic: Boolean,
     activeView: ForgeTabDestination,
     onNavigateView: (ForgeTabDestination) -> Unit,
@@ -380,8 +383,10 @@ fun ForgeSectionView(
             }
 
             ForgeTabDestination.INSIDE_SHOP -> {
-                EmptyKeyShopPage(
+                StoreThemeShopPage(
                     forgeState = forgeState,
+                    currentStoreTheme = currentStoreTheme,
+                    onSelectStoreTheme = onSelectStoreTheme,
                     isArabic = isArabic,
                     onBack = {
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -615,7 +620,7 @@ private fun ShopStorefrontPortalCard(
                                 border = BorderStroke(0.8.dp, aura.accentCyan.copy(alpha = 0.5f))
                             ) {
                                 Text(
-                                    text = if (isArabic) "البوتيك" else "BOUTIQUE",
+                                    text = if (isArabic) "10 ثيمات" else "10 THEMES",
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = aura.accentCyan,
@@ -626,7 +631,7 @@ private fun ShopStorefrontPortalCard(
                             }
                         }
                         Text(
-                            text = if (isArabic) "عرض الجوائز واستبدال المفاتيح" else "Rewards Showcase & Key Exchange",
+                            text = if (isArabic) "تصفح وتطبيق 10 ثيمات احترافية" else "Browse & Apply 10 Signature Themes",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = aura.textSecondary,
                                 fontSize = 11.5.sp
@@ -681,18 +686,18 @@ private fun ShopStorefrontPortalCard(
                 ) {
                     val showcaseSlots = listOf(
                         Triple(
-                            if (isArabic) "صناديق" else "Crates",
-                            if (isArabic) "برونز / فضة" else "Bronze / Silver",
+                            if (isArabic) "سايبر وموكا" else "Cyber & Cozy",
+                            if (isArabic) "Tokyo • Mocha" else "5 Palettes",
                             if (aura.isDark) Color(0xFFE59A54) else Color(0xFFB45309)
                         ),
                         Triple(
-                            if (isArabic) "عروض ملكية" else "Royal Drops",
-                            if (isArabic) "ذهبي" else "Gold Tier",
+                            if (isArabic) "زجاج سائل" else "Liquid Glass",
+                            if (isArabic) "Holo • Frosted" else "Glassmorphism",
                             aura.accentGold
                         ),
                         Triple(
-                            if (isArabic) "حزم حصرية" else "Vault Packs",
-                            if (isArabic) "ماسي" else "Diamond",
+                            if (isArabic) "تصميم بارز" else "Soft & PSD",
+                            if (isArabic) "Neumorphism" else "Depth UI",
                             aura.accentCyan
                         )
                     )
@@ -2294,249 +2299,6 @@ private fun ActiveMetalworkingParticleOverlay(
                     color = sparkColor.copy(alpha = heat * 0.78f),
                     radius = p.sizePx * sparkScale,
                     center = cur
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyKeyShopPage(
-    forgeState: ForgeUiState,
-    isArabic: Boolean,
-    onBack: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val aura = MaterialTheme.aura
-    val totalKeys = forgeState.bronzeKeys + forgeState.silverKeys + forgeState.goldenKeys + forgeState.diamondKeys
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .testTag("empty_key_shop_screen")
-    ) {
-        // Top Navigation Bar
-        Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = if (aura.isDark) Color(0xCC0F1626) else aura.surfaceElevated,
-            border = BorderStroke(
-                1.dp,
-                Brush.horizontalGradient(
-                    listOf(aura.accentGold.copy(alpha = 0.45f), aura.accentCyan.copy(alpha = 0.5f))
-                )
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp, bottom = 10.dp)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(aura.iconButtonBg)
-                            .testTag("shop_exit_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = if (isArabic) "العودة إلى The Forge" else "Back to The Forge",
-                            tint = aura.textPrimary
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = "Shop",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                color = aura.accentGold,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.2.sp,
-                                fontSize = 16.sp
-                            )
-                        )
-                        Text(
-                            text = if (isArabic) "متجر المفاتيح" else "Key Shop",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = aura.textSecondary,
-                                fontSize = 10.5.sp
-                            )
-                        )
-                    }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = aura.accentGoldBg,
-                    border = BorderStroke(1.dp, aura.accentGold.copy(alpha = 0.45f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Storefront,
-                            contentDescription = null,
-                            tint = aura.accentGold,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Shop",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = aura.accentGold,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 10.5.sp
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
-        // Top Keys Balance Card (رصيدي من المفاتيح)
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = if (aura.isDark) Color(0xDD111726) else aura.surfaceElevated,
-            border = BorderStroke(
-                1.2.dp,
-                Brush.linearGradient(
-                    listOf(aura.accentGold.copy(alpha = 0.55f), aura.accentCyan.copy(alpha = 0.45f))
-                )
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("shop_keys_balance_card")
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(14.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.VpnKey,
-                            contentDescription = null,
-                            tint = aura.accentGold,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = if (isArabic) "رصيدي من المفاتيح" else "My Keys Balance",
-                            style = MaterialTheme.typography.titleSmall.copy(
-                                color = aura.textPrimary,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 14.sp
-                            )
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = aura.accentGoldBg,
-                        border = BorderStroke(1.dp, aura.accentGold.copy(alpha = 0.35f))
-                    ) {
-                        Text(
-                            text = if (isArabic) "الإجمالي: $totalKeys" else "Total: $totalKeys",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = aura.accentGold,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 10.5.sp
-                            )
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    WalletCurrencyChip(
-                        label = if (isArabic) "برونزي" else "Bronze",
-                        count = forgeState.bronzeKeys,
-                        accent = if (aura.isDark) Color(0xFFE59A54) else Color(0xFFB45309),
-                        icon = Icons.Default.VpnKey,
-                        modifier = Modifier.weight(1f)
-                    )
-                    WalletCurrencyChip(
-                        label = if (isArabic) "فضي" else "Silver",
-                        count = forgeState.silverKeys,
-                        accent = if (aura.isDark) Color(0xFFE2E8F0) else Color(0xFF475569),
-                        icon = Icons.Default.VpnKey,
-                        modifier = Modifier.weight(1f)
-                    )
-                    WalletCurrencyChip(
-                        label = if (isArabic) "ذهبي" else "Gold",
-                        count = forgeState.goldenKeys,
-                        accent = aura.accentGold,
-                        icon = Icons.Default.VpnKey,
-                        modifier = Modifier.weight(1f)
-                    )
-                    WalletCurrencyChip(
-                        label = if (isArabic) "ماسي" else "Diamond",
-                        count = forgeState.diamondKeys,
-                        accent = if (aura.isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
-                        icon = Icons.Default.Diamond,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // Empty Shop Area
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .padding(vertical = 24.dp)
-                .testTag("shop_empty_state"),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(horizontal = 24.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(74.dp)
-                        .clip(CircleShape)
-                        .background(aura.surfaceGlass)
-                        .border(1.dp, aura.accentGold.copy(alpha = 0.25f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Storefront,
-                        contentDescription = null,
-                        tint = aura.textTertiary,
-                        modifier = Modifier.size(34.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(
-                    text = if (isArabic) "المتجر فارغ" else "Shop is empty",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = aura.textSecondary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    ),
-                    textAlign = TextAlign.Center
                 )
             }
         }

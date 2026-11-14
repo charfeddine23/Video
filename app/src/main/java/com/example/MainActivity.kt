@@ -73,6 +73,7 @@ import com.example.ui.screens.WatchScreen
 import com.example.ui.theme.AppLanguage
 import com.example.ui.theme.LocalStableStatusBarTop
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.StoreTheme
 import com.example.ui.theme.ThemeMode
 import com.example.ui.theme.aura
 import com.example.ui.theme.rememberStableStatusBarTopDp
@@ -103,9 +104,13 @@ class MainActivity : ComponentActivity() {
         setContent {
             val prefsRepo = remember { com.example.data.preferences.StreakPreferencesRepository.getInstance(applicationContext) }
             var currentThemeMode by remember { mutableStateOf(prefsRepo.loadThemeMode()) }
+            var currentStoreTheme by remember { mutableStateOf(prefsRepo.loadStoreTheme()) }
             var currentLanguage by remember { mutableStateOf(prefsRepo.loadLanguage()) }
 
-            MyApplicationTheme(themeMode = currentThemeMode) {
+            MyApplicationTheme(
+                themeMode = currentThemeMode,
+                storeTheme = currentStoreTheme
+            ) {
                 CompositionLocalProvider(
                     LocalLayoutDirection provides (if (currentLanguage.isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr)
                 ) {
@@ -114,6 +119,11 @@ class MainActivity : ComponentActivity() {
                         onThemeModeChange = {
                             currentThemeMode = it
                             prefsRepo.saveThemeMode(it)
+                        },
+                        currentStoreTheme = currentStoreTheme,
+                        onStoreThemeChange = {
+                            currentStoreTheme = it
+                            prefsRepo.saveStoreTheme(it)
                         },
                         currentLanguage = currentLanguage,
                         onLanguageChange = {
@@ -131,6 +141,8 @@ class MainActivity : ComponentActivity() {
 fun VideoPulseApp(
     currentThemeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    currentStoreTheme: StoreTheme,
+    onStoreThemeChange: (StoreTheme) -> Unit,
     currentLanguage: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     streakViewModel: StreakViewModel = viewModel()
@@ -442,6 +454,8 @@ fun VideoPulseApp(
                 maxShields = streakState.maxShields,
                 currentThemeMode = currentThemeMode,
                 onThemeModeChange = onThemeModeChange,
+                currentStoreTheme = currentStoreTheme,
+                onStoreThemeChange = onStoreThemeChange,
                 currentLanguage = currentLanguage,
                 onLanguageChange = onLanguageChange,
                 onBack = {

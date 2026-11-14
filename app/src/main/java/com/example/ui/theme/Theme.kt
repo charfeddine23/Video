@@ -51,7 +51,16 @@ data class AuraPalette(
     val accentDanger: Color,
     val primaryCtaBg: Color,
     val primaryCtaContent: Color,
-    val unselectedChipBg: Color
+    val unselectedChipBg: Color,
+    val storeTheme: StoreTheme = StoreTheme.DEFAULT,
+    val ambientPrimary: Color = accentCyan,
+    val ambientSecondary: Color = accentViolet,
+    val ambientTertiary: Color = accentFlame,
+    val isGlassStyle: Boolean = false,
+    val isNeumorphic: Boolean = false,
+    val hasGridBackdrop: Boolean = false,
+    val borderBrushStart: Color = borderSubtle,
+    val borderBrushEnd: Color = borderMuted
 )
 
 val DarkAuraPalette = AuraPalette(
@@ -169,6 +178,7 @@ private val LightPulseColorScheme = lightColorScheme(
 @Composable
 fun MyApplicationTheme(
     themeMode: ThemeMode = ThemeMode.DARK,
+    storeTheme: StoreTheme = StoreTheme.DEFAULT,
     content: @Composable () -> Unit
 ) {
     val systemInDark = isSystemInDarkTheme()
@@ -178,8 +188,12 @@ fun MyApplicationTheme(
         ThemeMode.SYSTEM -> systemInDark
     }
 
-    val colorScheme = if (isDark) VideoPulseColorScheme else LightPulseColorScheme
-    val auraPalette = if (isDark) DarkAuraPalette else LightAuraPalette
+    val auraPalette = auraPaletteFor(storeTheme, isDark)
+    val colorScheme = if (storeTheme == StoreTheme.DEFAULT) {
+        if (isDark) VideoPulseColorScheme else LightPulseColorScheme
+    } else {
+        materialColorSchemeFor(storeTheme, isDark, auraPalette)
+    }
 
     CompositionLocalProvider(LocalAuraPalette provides auraPalette) {
         MaterialTheme(

@@ -102,6 +102,7 @@ import com.example.data.model.LocalDeviceVideo
 import com.example.data.model.MediaItem
 import com.example.data.util.LocalMediaScanner
 import com.example.ui.components.SmartFallbackCover
+import com.example.ui.theme.AuraAtmosphericLayer
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.TextDark
@@ -292,34 +293,7 @@ fun WatchScreen(
             .testTag("watch_screen_part2")
     ) {
         // Liquid Glass M5 Ambient Glow extending into hidden status bar area
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.14f else 0.08f),
-                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.08f else 0.04f),
-                                Color.Transparent
-                            ),
-                            startY = 0f,
-                            endY = size.height * 0.22f
-                        )
-                    )
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(
-                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.10f else 0.06f),
-                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.06f else 0.03f),
-                                Color.Transparent
-                            ),
-                            radius = size.width * 0.95f
-                        ),
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.5f, size.height * 0.18f)
-                    )
-                }
-        )
+        AuraAtmosphericLayer()
 
         Column(
             modifier = Modifier

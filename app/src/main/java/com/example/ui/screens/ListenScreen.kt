@@ -112,6 +112,7 @@ import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.model.LocalAudioTrack
 import com.example.data.util.LocalMediaScanner
+import com.example.ui.theme.AuraAtmosphericLayer
 import com.example.ui.theme.GlassBorder
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
@@ -432,22 +433,23 @@ fun ListenScreen(
                     Brush.verticalGradient(
                         colors = if (aura.isDark) {
                             listOf(
-                                Color(0xAA0B0F19),
-                                Color(0xDE0B0F19),
-                                Color(0xF50B0F19),
-                                Color(0xFF0B0F19)
+                                aura.background.copy(alpha = 0.68f),
+                                aura.background.copy(alpha = 0.87f),
+                                aura.background.copy(alpha = 0.96f),
+                                aura.background
                             )
                         } else {
                             listOf(
-                                Color(0xD9F3F6FB),
-                                Color(0xECF3F6FB),
-                                Color(0xFAF3F6FB),
-                                Color(0xFFF3F6FB)
+                                aura.background.copy(alpha = 0.85f),
+                                aura.background.copy(alpha = 0.92f),
+                                aura.background.copy(alpha = 0.98f),
+                                aura.background
                             )
                         }
                     )
                 )
         )
+        AuraAtmosphericLayer()
 
         // Main Audio Player Content
         Column(

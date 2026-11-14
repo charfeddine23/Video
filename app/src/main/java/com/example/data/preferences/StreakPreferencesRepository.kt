@@ -6,6 +6,7 @@ import com.example.data.model.ForgeKeyTier
 import com.example.data.model.ForgeSlotState
 import com.example.data.model.ForgeUiState
 import com.example.ui.theme.AppLanguage
+import com.example.ui.theme.StoreTheme
 import com.example.ui.theme.ThemeMode
 import com.example.ui.viewmodel.StreakUiState
 import java.text.SimpleDateFormat
@@ -35,6 +36,7 @@ class StreakPreferencesRepository private constructor(context: Context) {
         private const val KEY_IS_GOAL_COMPLETED_TODAY = "key_is_goal_completed_today"
         private const val KEY_LAST_ACTIVE_DATE = "key_last_active_date"
         private const val KEY_THEME_MODE = "key_theme_mode"
+        private const val KEY_ACTIVE_STORE_THEME = "key_active_store_theme"
         private const val KEY_APP_LANGUAGE = "key_app_language"
         private const val KEY_USER_NAME = "key_user_name"
         private const val KEY_USER_AVATAR_URI = "key_user_avatar_uri"
@@ -208,6 +210,17 @@ class StreakPreferencesRepository private constructor(context: Context) {
         } catch (_: Exception) {
             ThemeMode.DARK
         }
+    }
+
+    fun saveStoreTheme(storeTheme: StoreTheme) {
+        prefs.edit()
+            .putString(KEY_ACTIVE_STORE_THEME, storeTheme.id)
+            .apply()
+    }
+
+    fun loadStoreTheme(): StoreTheme {
+        val savedId = prefs.getString(KEY_ACTIVE_STORE_THEME, null)
+        return StoreTheme.fromId(savedId)
     }
 
     fun saveLanguage(language: AppLanguage) {

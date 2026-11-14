@@ -87,6 +87,8 @@ import com.example.ui.components.ForgeSectionView
 import com.example.ui.components.ForgeTabDestination
 import com.example.ui.components.SerpentineRoadmapView
 import com.example.ui.theme.AppLanguage
+import com.example.ui.theme.AuraAtmosphericLayer
+import com.example.ui.theme.StoreTheme
 import com.example.ui.theme.ThemeMode
 import com.example.ui.theme.aura
 import com.example.ui.viewmodel.StreakViewModel
@@ -119,6 +121,8 @@ fun MilestoneRoadmapScreen(
     maxShields: Int = 1000,
     currentThemeMode: ThemeMode,
     onThemeModeChange: (ThemeMode) -> Unit,
+    currentStoreTheme: StoreTheme = StoreTheme.DEFAULT,
+    onStoreThemeChange: (StoreTheme) -> Unit = {},
     currentLanguage: AppLanguage,
     onLanguageChange: (AppLanguage) -> Unit,
     onBack: () -> Unit,
@@ -236,24 +240,8 @@ fun MilestoneRoadmapScreen(
             .background(aura.background)
             .testTag("achievements_shields_rewards_screen")
     ) {
-        // Ambient background glow
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(
-                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.16f else 0.10f),
-                                aura.accentFlame.copy(alpha = if (aura.isDark) 0.09f else 0.06f),
-                                Color.Transparent
-                            ),
-                            radius = size.width * 1.1f
-                        ),
-                        center = Offset(size.width * 0.5f, size.height * 0.15f)
-                    )
-                }
-        )
+        // Active Store Theme Atmospheric Backdrop
+        AuraAtmosphericLayer()
 
         Column(
             modifier = Modifier
@@ -1092,6 +1080,8 @@ fun MilestoneRoadmapScreen(
                         ForgeSectionView(
                             shieldsCount = shieldsCount,
                             forgeState = forgeState,
+                            currentStoreTheme = currentStoreTheme,
+                            onSelectStoreTheme = onStoreThemeChange,
                             isArabic = isArabic,
                             activeView = forgeDestination,
                             onNavigateView = { forgeDestination = it },

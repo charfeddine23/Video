@@ -80,6 +80,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.AppLanguage
+import com.example.ui.theme.AuraAtmosphericLayer
 import com.example.ui.theme.PulseCyan
 import com.example.ui.theme.PulseViolet
 import com.example.ui.theme.ThemeMode
@@ -142,23 +143,7 @@ fun SystemSettingsScreen(
             .background(aura.background)
             .testTag("system_settings_screen")
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(
-                                aura.accentCyan.copy(alpha = if (aura.isDark) 0.14f else 0.08f),
-                                aura.accentViolet.copy(alpha = if (aura.isDark) 0.09f else 0.05f),
-                                Color.Transparent
-                            ),
-                            radius = size.width * 0.95f
-                        ),
-                        center = Offset(size.width * 0.5f, size.height * 0.14f)
-                    )
-                }
-        )
+        AuraAtmosphericLayer()
 
         Column(
             modifier = Modifier
